@@ -23,7 +23,7 @@ export const PricingPage: React.FC<Props> = ({ onBack, onProActivated }) => {
       window.location.href = data.url;
     } catch {
       setActivating(null);
-      alert('Payment setup failed. Please try again or email hello@findmewith.ai');
+      alert('Payment setup failed. Please try again or email hello@genierocket.com');
     }
   };
 
@@ -165,7 +165,7 @@ export const PricingPage: React.FC<Props> = ({ onBack, onProActivated }) => {
         <div style={{ textAlign: 'center', marginTop: '32px' }}>
           <p style={{ fontSize: '13px', color: '#6b7280' }}>All plans include a <strong>7-day free trial</strong> · No credit card required to start · Cancel any time</p>
           <p style={{ fontSize: '13px', color: '#6b7280', marginTop: '6px' }}>
-            Questions? Email <a href="mailto:hello@findmewith.ai" style={{ color: '#7c3aed', fontWeight: 600 }}>hello@findmewith.ai</a>
+            Questions? Email <a href="mailto:hello@genierocket.com" style={{ color: '#7c3aed', fontWeight: 600 }}>hello@genierocket.com</a>
           </p>
         </div>
       </div>
