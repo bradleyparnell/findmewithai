@@ -1,17 +1,19 @@
 import React from 'react';
-import { Search, Star, Settings } from 'lucide-react';
+import { Search, Star, Settings, LayoutDashboard } from 'lucide-react';
 
 interface Props {
   step: string;
   isPro: boolean;
   siteUrl: string;
+  user?: any;
   onNavigate: (step: string) => void;
   onNewCheck: () => void;
   onUpgrade: () => void;
   onManageSubscription: () => void;
+  onDashboard: () => void;
 }
 
-export const Nav: React.FC<Props> = ({ step, isPro, siteUrl, onNavigate, onNewCheck, onUpgrade, onManageSubscription }) => {
+export const Nav: React.FC<Props> = ({ step, isPro, siteUrl, user, onNavigate, onNewCheck, onUpgrade, onManageSubscription, onDashboard }) => {
   const steps = [
     { id: 'score', label: '① Your Score' },
     { id: 'content', label: '② Fix Content' },
@@ -49,6 +51,23 @@ export const Nav: React.FC<Props> = ({ step, isPro, siteUrl, onNavigate, onNewCh
 
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           {domain && <span style={{ fontSize: '11px', color: '#9ca3af', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{domain}</span>}
+
+          {/* Dashboard link for logged-in users */}
+          {user && (
+            <button
+              onClick={onDashboard}
+              title="My Dashboard"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '4px',
+                background: step === 'dashboard' ? '#7c3aed' : '#f5f3ff',
+                color: step === 'dashboard' ? 'white' : '#7c3aed',
+                borderRadius: '100px', padding: '4px 11px', fontSize: '11px', fontWeight: 700, border: 'none', cursor: 'pointer'
+              }}
+            >
+              <LayoutDashboard size={11} /> My Dashboard
+            </button>
+          )}
+
           {isPro ? (
             <button
               onClick={onManageSubscription}
