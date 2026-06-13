@@ -1,0 +1,173 @@
+import React, { useState } from 'react';
+import { Copy, Check, HelpCircle, User, BookOpen, ArrowRight } from 'lucide-react';
+import { LockOverlay } from './LockOverlay';
+import type { AnalysisResult } from '../types';
+
+interface Props {
+  siteUrl: string;
+  result: AnalysisResult | null;
+  isPro: boolean;
+  onUpgrade: () => void;
+  onNext: () => void;
+}
+
+type Tab = 'faq' | 'about' | 'howto';
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      onClick={() => { navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+      style={copied
+        ? { background: '#10b981', color: 'white', border: 'none', borderRadius: '8px', padding: '6px 14px', fontWeight: 600, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }
+        : { background: '#7c3aed', color: 'white', border: 'none', borderRadius: '8px', padding: '6px 14px', fontWeight: 600, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}
+    >
+      {copied ? <><Check size={13} /> Copied!</> : <><Copy size={13} /> Copy</>}
+    </button>
+  );
+}
+
+function makeFaq(businessType: string, questions: string): string {
+  const qs = questions.split('\n').filter(q => q.trim());
+  if (!businessType || !qs.length) return '';
+  const htmlItems = qs.map(q => `  <div class="faq-item">\n    <h3>${q.trim()}</h3>\n    <p><!-- Your answer here --></p>\n  </div>`).join('\n');
+  const schema = JSON.stringify({ "@context": "https://schema.org", "@type": "FAQPage", mainEntity: qs.map(q => ({ "@type": "Question", name: q.trim(), acceptedAnswer: { "@type": "Answer", text: "<!-- Your answer here -->" } })) }, null, 2);
+  return `<!-- FAQ Section — add to your FAQ or homepage -->\n<section>\n  <h2>Frequently Asked Questions About ${businessType}</h2>\n${htmlItems}\n</section>\n\n<!-- Paste just before </body> — this is what AI reads -->\n<script type="application/ld+json">\n${schema}\n</script>`;
+}
+
+function makeAbout(name: string, desc: string, location: string, website: string, phone: string): string {
+  if (!name) return '';
+  const schema: Record<string, unknown> = { "@context": "https://schema.org", "@type": "Organization", name, description: desc };
+  if (website) schema.url = website;
+  if (phone) schema.telephone = phone;
+  if (location) schema.address = { "@type": "PostalAddress", addressLocality: location };
+  return `<!-- About Section -->\n<section>\n  <h1>About ${name}</h1>\n  <p>${desc}</p>\n  ${location ? `<p>Located in ${location}.</p>` : ''}\n  ${phone ? `<p>Call us: <a href="tel:${phone}">${phone}</a></p>` : ''}\n</section>\n\n<!-- Paste just before </body> -->\n<script type="application/ld+json">\n${JSON.stringify(schema, null, 2)}\n</script>`;
+}
+
+function makeHowTo(title: string, stepsText: string): string {
+  const steps = stepsText.split('\n').filter(s => s.trim());
+  if (!title || !steps.length) return '';
+  const schema = JSON.stringify({ "@context": "https://schema.org", "@type": "HowTo", name: title, step: steps.map((s, i) => ({ "@type": "HowToStep", position: i + 1, name: `Step ${i + 1}`, text: s.trim() })) }, null, 2);
+  return `<!-- How-To Guide -->\n<section>\n  <h2>${title}</h2>\n  <ol>\n${steps.map(s => `    <li>${s.trim()}</li>`).join('\n')}\n  </ol>\n</section>\n\n<!-- Paste just before </body> -->\n<script type="application/ld+json">\n${schema}\n</script>`;
+}
+
+export const ContentStep: React.FC<Props> = ({ siteUrl, isPro, onUpgrade, onNext }) => {
+  const [tab, setTab] = useState<Tab>('faq');
+  const [output, setOutput] = useState('');
+  const [faqBusiness, setFaqBusiness] = useState('');
+  const [faqQuestions, setFaqQuestions] = useState('');
+  const [aboutName, setAboutName] = useState('');
+  const [aboutDesc, setAboutDesc] = useState('');
+  const [aboutLocation, setAboutLocation] = useState('');
+  const [aboutPhone, setAboutPhone] = useState('');
+  const [howToTitle, setHowToTitle] = useState('');
+  const [howToSteps, setHowToSteps] = useState('');
+
+  const tabs = [
+    { id: 'faq' as Tab,   icon: <HelpCircle size={15} />, label: 'FAQ Section',        proOnly: false },
+    { id: 'about' as Tab, icon: <User size={15} />,       label: 'About Your Business', proOnly: true  },
+    { id: 'howto' as Tab, icon: <BookOpen size={15} />,   label: 'How-To Guide',        proOnly: true  },
+  ];
+
+  const inputStyle = { padding: '10px 14px', border: '1.5px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', outline: 'none', width: '100%', boxSizing: 'border-box' as const };
+  const labelStyle = { fontSize: '13px', fontWeight: 600 as const, color: '#111827', display: 'block' as const, marginBottom: '7px' };
+
+  const handleGenerate = () => {
+    if (tab === 'faq')   setOutput(makeFaq(faqBusiness, faqQuestions));
+    if (tab === 'about') setOutput(makeAbout(aboutName, aboutDesc, aboutLocation, siteUrl, aboutPhone));
+    if (tab === 'howto') setOutput(makeHowTo(howToTitle, howToSteps));
+  };
+
+  return (
+    <div style={{ maxWidth: '700px', margin: '0 auto', padding: '36px 24px 60px' }}>
+      <div style={{ marginBottom: '26px' }}>
+        <h1 style={{ fontSize: '26px', fontWeight: 900, color: '#111827', marginBottom: '8px' }}>✍️ Let's write content AI can understand</h1>
+        <p style={{ color: '#6b7280', fontSize: '15px', lineHeight: 1.6 }}>Fill in a few details and we'll generate content that helps AI search engines understand and recommend your business.</p>
+      </div>
+
+      {!isPro && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '12px', padding: '12px 16px', marginBottom: '20px' }}>
+          <div style={{ fontSize: '13px', color: '#374151' }}>✨ <strong>Free:</strong> FAQ Section · Upgrade for About + How-To Guide</div>
+          <button onClick={onUpgrade} style={{ fontSize: '12px', fontWeight: 700, color: '#7c3aed', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Upgrade →</button>
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' as const }}>
+        {tabs.map(t => {
+          const locked = t.proOnly && !isPro;
+          return (
+            <button key={t.id} onClick={() => { setTab(t.id); setOutput(''); }} style={{ display: 'flex', alignItems: 'center', gap: '7px', padding: '9px 16px', borderRadius: '10px', border: tab === t.id ? '2px solid #7c3aed' : '1px solid #e5e7eb', background: tab === t.id ? '#f5f3ff' : 'white', color: locked ? '#9ca3af' : tab === t.id ? '#7c3aed' : '#6b7280', fontWeight: tab === t.id ? 700 : 500, cursor: 'pointer', fontSize: '13px' }}>
+              {t.icon} {t.label} {locked && '🔒'}
+            </button>
+          );
+        })}
+      </div>
+
+      <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '18px', padding: '26px', marginBottom: '20px', position: 'relative' }}>
+        {tab === 'faq' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+            <div>
+              <label style={labelStyle}>What type of business are you? <span style={{ color: '#9ca3af', fontWeight: 400 }}>(e.g. "a plumbing company")</span></label>
+              <input type="text" style={inputStyle} placeholder="a local bakery" value={faqBusiness} onChange={e => setFaqBusiness(e.target.value)} />
+            </div>
+            <div>
+              <label style={labelStyle}>What questions do customers always ask? <span style={{ color: '#9ca3af', fontWeight: 400 }}>(one per line)</span></label>
+              <textarea style={{ ...inputStyle, resize: 'vertical' }} rows={5} placeholder={"Do you offer delivery?\nWhat are your hours?\nHow much does it cost?"} value={faqQuestions} onChange={e => setFaqQuestions(e.target.value)} />
+            </div>
+          </div>
+        )}
+        {tab === 'about' && !isPro && <LockOverlay feature="About Your Business" onUpgrade={onUpgrade} />}
+        {tab === 'about' && isPro && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+            <div><label style={labelStyle}>Your business name</label><input type="text" style={inputStyle} placeholder="Acme Plumbing Co." value={aboutName} onChange={e => setAboutName(e.target.value)} /></div>
+            <div><label style={labelStyle}>What do you do? <span style={{ color: '#9ca3af', fontWeight: 400 }}>(1–2 sentences)</span></label><textarea style={{ ...inputStyle, resize: 'vertical' }} rows={3} placeholder="We provide residential plumbing services throughout Austin, TX." value={aboutDesc} onChange={e => setAboutDesc(e.target.value)} /></div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+              <div><label style={labelStyle}>Your city / location</label><input type="text" style={inputStyle} placeholder="Austin, TX" value={aboutLocation} onChange={e => setAboutLocation(e.target.value)} /></div>
+              <div><label style={labelStyle}>Phone <span style={{ color: '#9ca3af', fontWeight: 400 }}>(optional)</span></label><input type="tel" style={inputStyle} placeholder="(555) 123-4567" value={aboutPhone} onChange={e => setAboutPhone(e.target.value)} /></div>
+            </div>
+          </div>
+        )}
+        {tab === 'howto' && !isPro && <LockOverlay feature="How-To Guide" onUpgrade={onUpgrade} />}
+        {tab === 'howto' && isPro && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+            <div><label style={labelStyle}>What are you teaching people to do?</label><input type="text" style={inputStyle} placeholder="How to order a custom cake" value={howToTitle} onChange={e => setHowToTitle(e.target.value)} /></div>
+            <div><label style={labelStyle}>List the steps <span style={{ color: '#9ca3af', fontWeight: 400 }}>(one per line)</span></label><textarea style={{ ...inputStyle, resize: 'vertical' }} rows={6} placeholder={"Browse our cake flavors online\nChoose your size and add a message\nSelect a pickup date\nPay and get a confirmation email"} value={howToSteps} onChange={e => setHowToSteps(e.target.value)} /></div>
+          </div>
+        )}
+        {(!['about', 'howto'].includes(tab) || isPro) && (
+          <button onClick={handleGenerate} style={{ width: '100%', background: '#7c3aed', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '15px', padding: '12px', cursor: 'pointer', marginTop: '18px' }}>
+            Generate My Content ✨
+          </button>
+        )}
+      </div>
+
+      {output && (
+        <div style={{ background: 'white', border: '1px solid #ddd6fe', borderRadius: '16px', overflow: 'hidden', marginBottom: '20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 18px', borderBottom: '1px solid #ddd6fe', background: '#f5f3ff' }}>
+            <div>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: '#7c3aed' }}>Your content is ready! 🎉</div>
+              <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>Copy this and paste it into your website or send to your web developer</div>
+            </div>
+            <CopyButton text={output} />
+          </div>
+          <pre style={{ margin: 0, padding: '18px', fontSize: '11.5px', lineHeight: 1.7, overflowX: 'auto', color: '#374151', background: 'white', whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxHeight: '280px', overflowY: 'auto' }}>
+            {output}
+          </pre>
+          <div style={{ padding: '12px 18px', background: '#fffbeb', borderTop: '1px solid #fde68a', fontSize: '12px', color: '#6b7280', lineHeight: 1.55 }}>
+            📌 <strong>Where to put it:</strong> Add the HTML to the relevant page. The <code style={{ background: '#f3f4f6', padding: '1px 4px', borderRadius: '3px' }}>script</code> tag goes just before <code style={{ background: '#f3f4f6', padding: '1px 4px', borderRadius: '3px' }}>&lt;/body&gt;</code>. Not sure how? Just email this to your web developer — it's a 2-minute job.
+          </div>
+        </div>
+      )}
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '14px', padding: '18px 22px' }}>
+        <div>
+          <div style={{ fontSize: '14px', fontWeight: 700, color: '#111827' }}>Next up: Get your code snippet</div>
+          <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>One small piece of code makes a big difference for AI visibility</div>
+        </div>
+        <button onClick={onNext} style={{ background: '#f59e0b', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 700, fontSize: '13px', padding: '8px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', whiteSpace: 'nowrap' as const }}>
+          Get Code <ArrowRight size={14} />
+        </button>
+      </div>
+    </div>
+  );
+};

@@ -1,0 +1,83 @@
+/* ============================================================
+   findmewith.ai — Design System
+   White-first, purple primary, amber accent
+   ============================================================ */
+
+:root {
+  /* Backgrounds */
+  --color-bg-white: #ffffff;
+  --color-bg-page: #fafafa;
+
+  /* Text */
+  --color-text-heading: #111827;
+  --color-text-body: #374151;
+  --color-text-muted: #6b7280;
+  --color-text-faint: #9ca3af;
+
+  /* Brand Purple */
+  --brand-purple: #7c3aed;
+  --brand-purple-dark: #5b21b6;
+  --brand-purple-mid: #8b5cf6;
+  --brand-purple-light: #ede9fe;
+  --brand-purple-xlight: #f5f3ff;
+
+  /* Brand Amber */
+  --brand-amber: #f59e0b;
+  --brand-amber-dark: #d97706;
+  --brand-amber-light: #fef3c7;
+  --brand-amber-xlight: #fffbeb;
+
+  /* Semantic */
+  --color-success: #10b981;
+  --color-error: #ef4444;
+  --color-border: #f3f4f6;
+  --color-border-soft: #e5e7eb;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  background: var(--color-bg-white) !important;
+  color: var(--color-text-body);
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  margin: 0;
+  padding: 0;
+}
+
+.bg-base-100, .bg-base-200, .bg-base-300 {
+  background-color: var(--color-bg-white) !important;
+}
+
+.input, .textarea, .select {
+  background-color: var(--color-bg-white) !important;
+  color: var(--color-text-body) !important;
+  border-color: var(--color-border-soft) !important;
+}
+
+.input:focus, .textarea:focus, .select:focus {
+  border-color: var(--brand-purple) !important;
+  outline-color: var(--brand-purple) !important;
+}
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--brand-purple-xlight); border-radius: 99px; }
+::-webkit-scrollbar-thumb { background: var(--brand-purple-light); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: var(--brand-purple-mid); }
+
+pre, code {
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+}
+
+.transition-all { transition: all 0.2s ease; }
+
+.skeleton-box {
+  background: linear-gradient(90deg, var(--brand-purple-xlight) 25%, var(--brand-purple-light) 50%, var(--brand-purple-xlight) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+}
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}

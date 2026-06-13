@@ -1,0 +1,154 @@
+import React, { useState } from 'react';
+import { Check, ArrowLeft, Search, Star, Zap, Building2 } from 'lucide-react';
+
+interface Props {
+  onBack: () => void;
+  onProActivated: () => void;
+}
+
+export const PricingPage: React.FC<Props> = ({ onBack, onProActivated }) => {
+  const [annual, setAnnual] = useState(false);
+  const [activating, setActivating] = useState(false);
+
+  const handleProCta = async () => {
+    setActivating(true);
+    // TODO: Replace with Stripe checkout
+    await new Promise(r => setTimeout(r, 1200));
+    onProActivated();
+  };
+
+  const plans = [
+    {
+      name: 'Free', icon: <Search size={20} />, price: '$0', period: 'forever',
+      desc: 'See how you score and take your first step',
+      cta: 'Current plan', ctaStyle: 'outline' as const, highlight: false,
+      annualNote: '',
+      features: [
+        { text: 'AI visibility score for any website', ok: true },
+        { text: "Plain-English breakdown of what's missing", ok: true },
+        { text: 'Your AI introduction file (llms.txt)', ok: true },
+        { text: 'FAQ content generator', ok: true },
+        { text: 'About & How-To content generators', ok: false },
+        { text: 'All 4 code snippets', ok: false },
+        { text: 'Monitor up to 5 websites', ok: false },
+        { text: 'Weekly score alerts by email', ok: false },
+        { text: 'PDF report to share with developers', ok: false },
+      ],
+    },
+    {
+      name: 'Pro', icon: <Zap size={20} />,
+      price: annual ? '$249' : '$29', period: annual ? 'per year' : 'per month',
+      annualNote: annual ? 'Save $99 vs monthly' : 'Or $249/year — save $99',
+      desc: 'Everything you need to get found by AI',
+      cta: 'Start free 7-day trial', ctaStyle: 'primary' as const, highlight: true,
+      features: [
+        { text: 'Everything in Free', ok: true },
+        { text: 'All content generators (FAQ, About, How-To)', ok: true },
+        { text: 'All 4 code snippets', ok: true },
+        { text: 'Monitor up to 5 websites', ok: true },
+        { text: 'Weekly score alerts by email', ok: true },
+        { text: 'PDF report to share with developers', ok: true },
+        { text: 'Priority support', ok: true },
+        { text: 'White-label reports', ok: false },
+        { text: 'Client dashboard', ok: false },
+      ],
+    },
+    {
+      name: 'Agency', icon: <Building2 size={20} />,
+      price: annual ? '$999' : '$99', period: annual ? 'per year' : 'per month',
+      annualNote: annual ? 'Save $189 vs monthly' : 'Or $999/year — save $189',
+      desc: 'Run this for all your clients and resell it',
+      cta: 'Contact us', ctaStyle: 'amber' as const, highlight: false,
+      features: [
+        { text: 'Everything in Pro', ok: true },
+        { text: 'Unlimited client websites', ok: true },
+        { text: 'White-label reports with your logo', ok: true },
+        { text: 'Client-sharing dashboard', ok: true },
+        { text: 'Bulk website scanning', ok: true },
+        { text: 'API access', ok: true },
+        { text: 'Dedicated account manager', ok: true },
+        { text: 'Custom integrations', ok: true },
+        { text: 'Team member seats', ok: true },
+      ],
+    },
+  ];
+
+  return (
+    <div style={{ minHeight: '100vh', background: 'linear-gradient(160deg, #f5f3ff 0%, #ffffff 50%)', padding: '0 0 60px' }}>
+      <div style={{ maxWidth: '860px', margin: '0 auto', padding: '24px 24px 0' }}>
+        <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', color: '#6b7280', fontSize: '14px', cursor: 'pointer', padding: 0, marginBottom: '32px' }}>
+          <ArrowLeft size={16} /> Back
+        </button>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center', marginBottom: '20px' }}>
+          <div style={{ width: '30px', height: '30px', background: '#7c3aed', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Search size={15} color="white" />
+          </div>
+          <span style={{ fontWeight: 800, fontSize: '16px', color: '#7c3aed' }}>findmewith.ai</span>
+        </div>
+
+        <h1 style={{ fontSize: '34px', fontWeight: 900, color: '#111827', textAlign: 'center', marginBottom: '10px', letterSpacing: '-0.4px' }}>Simple, honest pricing</h1>
+        <p style={{ textAlign: 'center', color: '#6b7280', fontSize: '16px', marginBottom: '28px' }}>Start free. Upgrade when you're ready. Cancel any time.</p>
+
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginBottom: '40px' }}>
+          <span style={{ fontSize: '14px', fontWeight: annual ? 400 : 600, color: annual ? '#6b7280' : '#111827' }}>Monthly</span>
+          <input type="checkbox" checked={annual} onChange={e => setAnnual(e.target.checked)} style={{ width: '40px', height: '22px', cursor: 'pointer', accentColor: '#7c3aed' }} />
+          <span style={{ fontSize: '14px', fontWeight: annual ? 600 : 400, color: annual ? '#111827' : '#6b7280' }}>
+            Annual{' '}
+            <span style={{ display: 'inline-block', background: '#fef3c7', color: '#d97706', borderRadius: '100px', padding: '2px 8px', fontSize: '11px', fontWeight: 700, marginLeft: '4px' }}>Save up to $99</span>
+          </span>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', alignItems: 'start' }}>
+          {plans.map(plan => (
+            <div key={plan.name} style={{ background: 'white', border: plan.highlight ? '2px solid #7c3aed' : '1px solid #e5e7eb', borderRadius: '20px', overflow: 'hidden', boxShadow: plan.highlight ? '0 8px 40px rgba(124, 58, 237, 0.15)' : '0 2px 12px rgba(0,0,0,0.04)' }}>
+              {plan.highlight && (
+                <div style={{ background: '#7c3aed', color: 'white', textAlign: 'center', padding: '7px', fontSize: '12px', fontWeight: 700 }}>⭐ Most Popular</div>
+              )}
+              <div style={{ padding: '24px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                  <div style={{ color: '#7c3aed' }}>{plan.icon}</div>
+                  <span style={{ fontSize: '16px', fontWeight: 800, color: '#111827' }}>{plan.name}</span>
+                </div>
+                <div style={{ marginBottom: '6px' }}>
+                  <span style={{ fontSize: '32px', fontWeight: 900, color: '#111827' }}>{plan.price}</span>
+                  <span style={{ fontSize: '14px', color: '#6b7280', marginLeft: '4px' }}>{plan.period}</span>
+                </div>
+                {plan.annualNote && <div style={{ fontSize: '12px', color: '#d97706', fontWeight: 600, marginBottom: '8px' }}>{plan.annualNote}</div>}
+                <p style={{ fontSize: '13px', color: '#6b7280', lineHeight: 1.5, marginBottom: '20px' }}>{plan.desc}</p>
+
+                {plan.ctaStyle === 'primary' && (
+                  <button onClick={handleProCta} disabled={activating} style={{ width: '100%', height: '40px', background: '#7c3aed', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                    {activating ? 'Activating…' : <><Star size={14} fill="white" /> {plan.cta}</>}
+                  </button>
+                )}
+                {plan.ctaStyle === 'outline' && (
+                  <button disabled style={{ width: '100%', height: '40px', background: 'white', color: '#9ca3af', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontWeight: 600, cursor: 'not-allowed' }}>{plan.cta}</button>
+                )}
+                {plan.ctaStyle === 'amber' && (
+                  <button onClick={() => window.open('mailto:hello@findmewith.ai?subject=Agency Plan', '_blank')} style={{ width: '100%', height: '40px', background: '#f59e0b', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 700, cursor: 'pointer' }}>{plan.cta}</button>
+                )}
+
+                <ul style={{ listStyle: 'none', margin: '20px 0 0', padding: 0, display: 'flex', flexDirection: 'column', gap: '9px' }}>
+                  {plan.features.map(f => (
+                    <li key={f.text} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '12px', color: f.ok ? '#374151' : '#9ca3af' }}>
+                      <Check size={13} style={{ color: f.ok ? '#7c3aed' : '#d1d5db', flexShrink: 0, marginTop: '1px' }} />
+                      {f.text}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ textAlign: 'center', marginTop: '32px' }}>
+          <p style={{ fontSize: '13px', color: '#6b7280' }}>All plans include a <strong>7-day free trial</strong> · No credit card required to start · Cancel any time</p>
+          <p style={{ fontSize: '13px', color: '#6b7280', marginTop: '6px' }}>
+            Questions? Email <a href="mailto:hello@findmewith.ai" style={{ color: '#7c3aed', fontWeight: 600 }}>hello@findmewith.ai</a>
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
