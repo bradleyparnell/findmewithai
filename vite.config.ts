@@ -6,12 +6,9 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://localhost:3001',
+        target: 'https://findmewithai-production.up.railway.app',
         changeOrigin: true,
       },
     },
-  },
-  build: {
-    outDir: 'dist',
   },
 });
