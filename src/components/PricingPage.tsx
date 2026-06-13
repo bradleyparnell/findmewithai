@@ -1,22 +1,27 @@
 import React, { useState } from 'react';
-import { Check, ArrowLeft, Search, Star, Zap, Building2 } from 'lucide-react';
+import { Check, ArrowLeft, Search, Star, Zap, Building2, Settings } from 'lucide-react';
+
+const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://findmewithai-production.up.railway.app';
 
 interface Props {
   onBack: () => void;
   onProActivated: () => void;
+  userEmail?: string;
+  isPro?: boolean;
+  onManageSubscription?: () => void;
 }
 
-export const PricingPage: React.FC<Props> = ({ onBack, onProActivated }) => {
+export const PricingPage: React.FC<Props> = ({ onBack, onProActivated, userEmail, isPro, onManageSubscription }) => {
   const [annual, setAnnual] = useState(false);
   const [activating, setActivating] = useState<string | null>(null);
 
   const handleCheckout = async (planKey: string) => {
     setActivating(planKey);
     try {
-      const res = await fetch('/api/create-checkout-session', {
+      const res = await fetch(`${BACKEND}/api/create-checkout-session`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan: planKey }),
+        body: JSON.stringify({ plan: planKey, email: userEmail || undefined }),
       });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
@@ -50,7 +55,8 @@ export const PricingPage: React.FC<Props> = ({ onBack, onProActivated }) => {
       price: annual ? '$249' : '$29', period: annual ? 'per year' : 'per month',
       annualNote: annual ? 'Save $99 vs monthly' : 'Or $249/year — save $99',
       desc: 'Everything you need to get found by AI',
-      cta: 'Start free 7-day trial', ctaStyle: 'primary' as const, highlight: true,
+      cta: isPro ? 'Your current plan' : 'Start free 7-day trial',
+      ctaStyle: 'primary' as const, highlight: true,
       features: [
         { text: 'Everything in Free', ok: true },
         { text: 'All content generators (FAQ, About, How-To)', ok: true },
@@ -68,7 +74,7 @@ export const PricingPage: React.FC<Props> = ({ onBack, onProActivated }) => {
       price: annual ? '$999' : '$99', period: annual ? 'per year' : 'per month',
       annualNote: annual ? 'Save $189 vs monthly' : 'Or $999/year — save $189',
       desc: 'Run this for all your clients and resell it',
-      cta: 'Contact us', ctaStyle: 'amber' as const, highlight: false,
+      cta: 'Get started', ctaStyle: 'amber' as const, highlight: false,
       features: [
         { text: 'Everything in Pro', ok: true },
         { text: 'Unlimited client websites', ok: true },
@@ -86,9 +92,19 @@ export const PricingPage: React.FC<Props> = ({ onBack, onProActivated }) => {
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(160deg, #f5f3ff 0%, #ffffff 50%)', padding: '0 0 60px' }}>
       <div style={{ maxWidth: '860px', margin: '0 auto', padding: '24px 24px 0' }}>
-        <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', color: '#6b7280', fontSize: '14px', cursor: 'pointer', padding: 0, marginBottom: '32px' }}>
-          <ArrowLeft size={16} /> Back
-        </button>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+          <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', color: '#6b7280', fontSize: '14px', cursor: 'pointer', padding: 0 }}>
+            <ArrowLeft size={16} /> Back
+          </button>
+          {isPro && onManageSubscription && (
+            <button
+              onClick={onManageSubscription}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#fef3c7', color: '#d97706', border: 'none', borderRadius: '100px', padding: '6px 14px', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}
+            >
+              <Settings size={13} /> Manage subscription
+            </button>
+          )}
+        </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center', marginBottom: '20px' }}>
           <div style={{ width: '30px', height: '30px', background: '#7c3aed', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -128,13 +144,22 @@ export const PricingPage: React.FC<Props> = ({ onBack, onProActivated }) => {
                 <p style={{ fontSize: '13px', color: '#6b7280', lineHeight: 1.5, marginBottom: '20px' }}>{plan.desc}</p>
 
                 {plan.ctaStyle === 'primary' && (
-                  <button
-                    onClick={() => handleCheckout(annual ? 'pro_yearly' : 'pro_monthly')}
-                    disabled={!!activating}
-                    style={{ width: '100%', height: '40px', background: '#7c3aed', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 700, cursor: activating ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', opacity: activating ? 0.8 : 1 }}
-                  >
-                    {activating ? 'Redirecting to checkout…' : <><Star size={14} fill="white" /> {plan.cta}</>}
-                  </button>
+                  isPro ? (
+                    <button
+                      onClick={onManageSubscription}
+                      style={{ width: '100%', height: '40px', background: '#f3f0ff', color: '#7c3aed', border: '1.5px solid #ddd6fe', borderRadius: '10px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                    >
+                      <Star size={14} fill="#7c3aed" /> Active plan — Manage
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleCheckout(annual ? 'pro_yearly' : 'pro_monthly')}
+                      disabled={!!activating}
+                      style={{ width: '100%', height: '40px', background: '#7c3aed', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 700, cursor: activating ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', opacity: activating ? 0.8 : 1 }}
+                    >
+                      {activating ? 'Redirecting to checkout…' : <><Star size={14} fill="white" /> {plan.cta}</>}
+                    </button>
+                  )
                 )}
                 {plan.ctaStyle === 'outline' && (
                   <button disabled style={{ width: '100%', height: '40px', background: 'white', color: '#9ca3af', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontWeight: 600, cursor: 'not-allowed' }}>{plan.cta}</button>

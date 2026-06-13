@@ -22,25 +22,120 @@ const APP_URL = process.env.APP_URL || 'https://www.findmewith.ai';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
-app.use(express.json());
 
-// ── CORS (allow all origins for API) ────────────────────────────────────────
+// ── CORS ─────────────────────────────────────────────────────────────────────
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, stripe-signature');
   res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   if (req.method === 'OPTIONS') return res.sendStatus(200);
   next();
 });
 
-// ── Serve static frontend (production) ──────────────────────────────────────
+// ── Serve static frontend ────────────────────────────────────────────────────
 const distPath = join(__dirname, '../dist');
 if (fs.existsSync(distPath)) app.use(express.static(distPath));
 
-// ── In-memory lead store ─────────────────────────────────────────────────────
+// ── Subscription store (in-memory + file backup) ─────────────────────────────
+// Map: email → { customerId, subscriptionId, plan, status, createdAt }
+const subscriptions = new Map();
+const SUB_FILE = process.env.DATA_DIR
+  ? join(process.env.DATA_DIR, 'subscriptions.json')
+  : '/tmp/subscriptions.json';
+
+function loadSubs() {
+  try {
+    if (fs.existsSync(SUB_FILE)) {
+      const data = JSON.parse(fs.readFileSync(SUB_FILE, 'utf8'));
+      Object.entries(data).forEach(([k, v]) => subscriptions.set(k, v));
+      console.log(`[subs] loaded ${subscriptions.size} subscriptions from disk`);
+    }
+  } catch (e) { console.warn('[subs] could not load:', e.message); }
+}
+
+function saveSubs() {
+  try {
+    fs.writeFileSync(SUB_FILE, JSON.stringify(Object.fromEntries(subscriptions), null, 2));
+  } catch (e) { console.warn('[subs] could not save:', e.message); }
+}
+
+loadSubs();
+
+// ── POST /api/webhook (raw body — MUST be before express.json()) ──────────────
+app.post('/api/webhook',
+  express.raw({ type: 'application/json' }),
+  async (req, res) => {
+    if (!stripe) return res.status(500).send('Stripe not configured');
+
+    const sig = req.headers['stripe-signature'];
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    let event;
+
+    if (webhookSecret) {
+      try {
+        event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+      } catch (err) {
+        console.error('[webhook] signature failed:', err.message);
+        return res.status(400).send(`Webhook Error: ${err.message}`);
+      }
+    } else {
+      // No secret yet — accept unsigned (set STRIPE_WEBHOOK_SECRET to secure)
+      try { event = JSON.parse(req.body.toString()); }
+      catch { return res.status(400).send('Invalid JSON'); }
+    }
+
+    console.log(`[webhook] ${event.type}`);
+
+    if (event.type === 'checkout.session.completed') {
+      const session = event.data.object;
+      const email = (session.customer_details?.email || session.customer_email || '').toLowerCase().trim();
+      if (email) {
+        subscriptions.set(email, {
+          customerId:     session.customer,
+          subscriptionId: session.subscription,
+          plan:           session.metadata?.plan || 'pro',
+          status:         'active',
+          createdAt:      new Date().toISOString(),
+        });
+        saveSubs();
+        console.log(`[webhook] activated: ${email}`);
+      }
+    }
+
+    if (event.type === 'customer.subscription.deleted') {
+      const sub = event.data.object;
+      for (const [email, data] of subscriptions.entries()) {
+        if (data.subscriptionId === sub.id) {
+          subscriptions.set(email, { ...data, status: 'cancelled' });
+          saveSubs();
+          console.log(`[webhook] cancelled: ${email}`);
+          break;
+        }
+      }
+    }
+
+    if (event.type === 'customer.subscription.updated') {
+      const sub = event.data.object;
+      for (const [email, data] of subscriptions.entries()) {
+        if (data.subscriptionId === sub.id) {
+          subscriptions.set(email, { ...data, status: sub.status === 'active' ? 'active' : sub.status });
+          saveSubs();
+          break;
+        }
+      }
+    }
+
+    res.json({ received: true });
+  }
+);
+
+// ── JSON body parser (after webhook route) ────────────────────────────────────
+app.use(express.json());
+
+// ── In-memory lead store ──────────────────────────────────────────────────────
 const leads = [];
 
-// ── Analyzer (pure Node.js — no Python needed) ───────────────────────────────
+// ── Analyzer (pure Node.js) ───────────────────────────────────────────────────
 
 const SCORE_WEIGHTS = {
   has_schema_org: 12, has_organization_schema: 10, has_person_schema: 5,
@@ -170,24 +265,19 @@ async function analyzeUrl(url) {
   const origin = `${parsed.protocol}//${parsed.host}`;
   const isHttps = parsed.protocol === 'https:';
 
-  // Title
   const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
   const title = titleMatch ? titleMatch[1].replace(/<[^>]+>/g, '').trim() : '';
 
-  // Meta description
   const metaDescMatch = html.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']*)["']/i) ||
                          html.match(/<meta[^>]+content=["']([^"']*)["'][^>]+name=["']description["']/i);
   const metaDesc = metaDescMatch ? metaDescMatch[1].trim() : '';
 
-  // OG tags
   const hasOgTitle = /<meta[^>]+property=["']og:title["']/i.test(html);
   const hasOgDesc  = /<meta[^>]+property=["']og:description["']/i.test(html);
 
-  // H1
   const h1Matches = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/gi) || [];
   const h1Texts = h1Matches.map(h => h.replace(/<[^>]+>/g, '').trim()).filter(Boolean);
 
-  // JSON-LD
   const jsonLdMatches = html.match(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi) || [];
   const ldTypes = [];
   for (const block of jsonLdMatches) {
@@ -200,7 +290,6 @@ async function analyzeUrl(url) {
     } catch {}
   }
 
-  // Body text
   const bodyText = html
     .replace(/<script[\s\S]*?<\/script>/gi, ' ')
     .replace(/<style[\s\S]*?<\/style>/gi, ' ')
@@ -210,10 +299,8 @@ async function analyzeUrl(url) {
     .trim();
   const wordCount = bodyText.split(/\s+/).filter(w => w.length > 2).length;
 
-  // Contact info
   const hasContactInfo = /(\+?1?[\s.\-]?\(?\d{3}\)?[\s.\-]?\d{3}[\s.\-]?\d{4}|[\w.+\-]+@[\w\-]+\.\w+)/.test(bodyText);
 
-  // Parallel checks
   const [hasRobots, hasSitemap, hasLlms] = await Promise.all([
     checkUrlExists(`${origin}/robots.txt`),
     checkUrlExists(`${origin}/sitemap.xml`),
@@ -240,20 +327,17 @@ async function analyzeUrl(url) {
     has_llms_txt:            hasLlms,
   };
 
-  // Category scores
   const categoryScores = {};
   for (const [cat, keys] of Object.entries(CATEGORIES)) {
     categoryScores[cat] = keys.reduce((sum, k) => sum + (checks[k] ? (SCORE_WEIGHTS[k] || 0) : 0), 0);
   }
   const overall = Object.values(categoryScores).reduce((a, b) => a + b, 0);
 
-  // Findings
   const findings = Object.entries(checks).map(([id, passed]) => ({
     id, label: LABELS[id] || id, status: passed ? 'pass' : 'fail',
     ...((!passed && SUGGESTIONS[id]) ? { suggestion: SUGGESTIONS[id][2] } : {}),
   }));
 
-  // Suggestions
   const impactOrder = { high: 0, medium: 1, low: 2 };
   const catOrder = { critical: 0, important: 1, 'nice-to-have': 2 };
   const suggestions = Object.entries(checks)
@@ -270,7 +354,7 @@ async function analyzeUrl(url) {
   return { url: finalUrl, score: overall, categories: categoryScores, findings, suggestions };
 }
 
-// ── POST /api/analyze ────────────────────────────────────────────────────────
+// ── POST /api/analyze ─────────────────────────────────────────────────────────
 app.post('/api/analyze', async (req, res) => {
   const { url } = req.body;
   if (!url) return res.status(400).json({ error: 'URL is required' });
@@ -283,7 +367,7 @@ app.post('/api/analyze', async (req, res) => {
   }
 });
 
-// ── POST /api/leads ──────────────────────────────────────────────────────────
+// ── POST /api/leads ───────────────────────────────────────────────────────────
 app.post('/api/leads', (req, res) => {
   const { email, url, score } = req.body;
   if (!email) return res.status(400).json({ error: 'Email required' });
@@ -292,7 +376,7 @@ app.post('/api/leads', (req, res) => {
   res.json({ ok: true });
 });
 
-// ── POST /api/create-checkout-session ────────────────────────────────────────
+// ── POST /api/create-checkout-session ─────────────────────────────────────────
 app.post('/api/create-checkout-session', async (req, res) => {
   if (!stripe) return res.status(500).json({ error: 'Payments not configured — STRIPE_SECRET_KEY missing' });
   const { plan, email } = req.body;
@@ -303,9 +387,14 @@ app.post('/api/create-checkout-session', async (req, res) => {
       mode: 'subscription',
       payment_method_types: ['card'],
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${APP_URL}/?payment=success&plan=${plan}`,
+      // {CHECKOUT_SESSION_ID} is replaced by Stripe automatically
+      success_url: `${APP_URL}/?payment=success&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url:  `${APP_URL}/?payment=cancelled`,
-      subscription_data: { trial_period_days: 7 },
+      metadata: { plan },
+      subscription_data: {
+        trial_period_days: 7,
+        metadata: { plan },
+      },
       ...(email ? { customer_email: email } : {}),
     });
     res.json({ url: session.url });
@@ -315,14 +404,109 @@ app.post('/api/create-checkout-session', async (req, res) => {
   }
 });
 
-// ── GET /api/leads (admin) ───────────────────────────────────────────────────
+// ── GET /api/verify-session — called after Stripe redirect ────────────────────
+app.get('/api/verify-session', async (req, res) => {
+  if (!stripe) return res.status(500).json({ error: 'Stripe not configured' });
+  const { session_id } = req.query;
+  if (!session_id) return res.status(400).json({ error: 'Missing session_id' });
+  try {
+    const session = await stripe.checkout.sessions.retrieve(session_id);
+    const paid = session.payment_status === 'paid' || session.status === 'complete';
+    // Trial: status is 'complete' but payment_status is 'no_payment_required'
+    const ok = paid || session.status === 'complete';
+    if (ok) {
+      const email = (session.customer_details?.email || session.customer_email || '').toLowerCase().trim();
+      if (email) {
+        subscriptions.set(email, {
+          customerId:     session.customer,
+          subscriptionId: session.subscription,
+          plan:           session.metadata?.plan || 'pro',
+          status:         'active',
+          createdAt:      new Date().toISOString(),
+        });
+        saveSubs();
+      }
+      return res.json({ ok: true, email, plan: session.metadata?.plan || 'pro' });
+    }
+    res.json({ ok: false, status: session.status });
+  } catch (err) {
+    console.error('[verify-session]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── GET /api/check-subscription — verify email has active subscription ────────
+app.get('/api/check-subscription', async (req, res) => {
+  const email = (req.query.email || '').toLowerCase().trim();
+  if (!email) return res.status(400).json({ error: 'Email required' });
+
+  // Check in-memory store first
+  const cached = subscriptions.get(email);
+  if (cached && cached.status === 'active') {
+    return res.json({ active: true, plan: cached.plan });
+  }
+
+  // Fall back to querying Stripe directly (handles server restarts)
+  if (stripe) {
+    try {
+      const customers = await stripe.customers.list({ email, limit: 1 });
+      if (customers.data.length > 0) {
+        const customerId = customers.data[0].id;
+        const subs = await stripe.subscriptions.list({ customer: customerId, status: 'active', limit: 1 });
+        if (subs.data.length > 0) {
+          const activeSub = subs.data[0];
+          const plan = activeSub.metadata?.plan || 'pro';
+          subscriptions.set(email, { customerId, subscriptionId: activeSub.id, plan, status: 'active' });
+          saveSubs();
+          return res.json({ active: true, plan });
+        }
+      }
+    } catch (e) { console.warn('[check-subscription]', e.message); }
+  }
+
+  res.json({ active: false });
+});
+
+// ── POST /api/create-portal-session — Stripe Customer Portal ─────────────────
+app.post('/api/create-portal-session', async (req, res) => {
+  if (!stripe) return res.status(500).json({ error: 'Stripe not configured' });
+  const email = (req.body.email || '').toLowerCase().trim();
+  if (!email) return res.status(400).json({ error: 'Email required' });
+
+  let customerId = subscriptions.get(email)?.customerId;
+
+  // Look up in Stripe if not cached
+  if (!customerId) {
+    try {
+      const customers = await stripe.customers.list({ email, limit: 1 });
+      if (customers.data.length > 0) customerId = customers.data[0].id;
+    } catch (e) { console.warn('[portal]', e.message); }
+  }
+
+  if (!customerId) {
+    return res.status(404).json({ error: 'No subscription found for this email' });
+  }
+
+  try {
+    const portalSession = await stripe.billingPortal.sessions.create({
+      customer: customerId,
+      return_url: APP_URL,
+    });
+    res.json({ url: portalSession.url });
+  } catch (err) {
+    console.error('[portal error]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── GET /api/leads (admin) ────────────────────────────────────────────────────
 app.get('/api/leads', (req, res) => {
   if (req.headers['x-admin-key'] !== process.env.ADMIN_KEY)
     return res.status(401).json({ error: 'Unauthorized' });
   res.json(leads);
 });
 
-// ── SPA fallback ─────────────────────────────────────────────────────────────
+// ── SPA fallback ──────────────────────────────────────────────────────────────
 app.get('*', (_req, res) => {
   const index = join(__dirname, '../dist/index.html');
   if (fs.existsSync(index)) return res.sendFile(index);

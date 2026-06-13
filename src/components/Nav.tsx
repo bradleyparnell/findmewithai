@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, Star } from 'lucide-react';
+import { Search, Star, Settings } from 'lucide-react';
 
 interface Props {
   step: string;
@@ -8,9 +8,10 @@ interface Props {
   onNavigate: (step: string) => void;
   onNewCheck: () => void;
   onUpgrade: () => void;
+  onManageSubscription: () => void;
 }
 
-export const Nav: React.FC<Props> = ({ step, isPro, siteUrl, onNavigate, onNewCheck, onUpgrade }) => {
+export const Nav: React.FC<Props> = ({ step, isPro, siteUrl, onNavigate, onNewCheck, onUpgrade, onManageSubscription }) => {
   const steps = [
     { id: 'score', label: '① Your Score' },
     { id: 'content', label: '② Fix Content' },
@@ -49,9 +50,13 @@ export const Nav: React.FC<Props> = ({ step, isPro, siteUrl, onNavigate, onNewCh
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           {domain && <span style={{ fontSize: '11px', color: '#9ca3af', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{domain}</span>}
           {isPro ? (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#fef3c7', color: '#d97706', borderRadius: '100px', padding: '3px 10px', fontSize: '11px', fontWeight: 700 }}>
-              <Star size={10} fill="currentColor" /> PRO
-            </span>
+            <button
+              onClick={onManageSubscription}
+              title="Manage your subscription"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#fef3c7', color: '#d97706', borderRadius: '100px', padding: '3px 10px', fontSize: '11px', fontWeight: 700, border: 'none', cursor: 'pointer' }}
+            >
+              <Star size={10} fill="currentColor" /> PRO <Settings size={9} style={{ opacity: 0.7 }} />
+            </button>
           ) : (
             <button onClick={onUpgrade} style={{ padding: '5px 13px', borderRadius: '20px', border: '1.5px solid #7c3aed', background: 'transparent', color: '#7c3aed', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>
               Upgrade
