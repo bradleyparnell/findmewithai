@@ -16,6 +16,21 @@ const App: React.FC = () => {
   const [siteUrl, setSiteUrl] = useState('');
   const [isPro, setIsPro] = useState(() => localStorage.getItem('fmw_pro') === 'true');
 
+  // Scroll to top on every step change
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+  }, [step]);
+
+  // Handle Stripe success redirect (?payment=success)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('payment') === 'success') {
+      setIsPro(true);
+      window.history.replaceState({}, '', '/');
+      setStep('score');
+    }
+  }, []);
+
   useEffect(() => {
     localStorage.setItem('fmw_pro', String(isPro));
   }, [isPro]);

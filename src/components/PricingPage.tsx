@@ -8,13 +8,23 @@ interface Props {
 
 export const PricingPage: React.FC<Props> = ({ onBack, onProActivated }) => {
   const [annual, setAnnual] = useState(false);
-  const [activating, setActivating] = useState(false);
+  const [activating, setActivating] = useState<string | null>(null);
 
-  const handleProCta = async () => {
-    setActivating(true);
-    // TODO: Replace with Stripe checkout
-    await new Promise(r => setTimeout(r, 1200));
-    onProActivated();
+  const handleCheckout = async (planKey: string) => {
+    setActivating(planKey);
+    try {
+      const res = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan: planKey }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      window.location.href = data.url;
+    } catch {
+      setActivating(null);
+      alert('Payment setup failed. Please try again or email hello@findmewith.ai');
+    }
   };
 
   const plans = [
@@ -118,15 +128,25 @@ export const PricingPage: React.FC<Props> = ({ onBack, onProActivated }) => {
                 <p style={{ fontSize: '13px', color: '#6b7280', lineHeight: 1.5, marginBottom: '20px' }}>{plan.desc}</p>
 
                 {plan.ctaStyle === 'primary' && (
-                  <button onClick={handleProCta} disabled={activating} style={{ width: '100%', height: '40px', background: '#7c3aed', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-                    {activating ? 'Activating…' : <><Star size={14} fill="white" /> {plan.cta}</>}
+                  <button
+                    onClick={() => handleCheckout(annual ? 'pro_yearly' : 'pro_monthly')}
+                    disabled={!!activating}
+                    style={{ width: '100%', height: '40px', background: '#7c3aed', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 700, cursor: activating ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', opacity: activating ? 0.8 : 1 }}
+                  >
+                    {activating ? 'Redirecting to checkout…' : <><Star size={14} fill="white" /> {plan.cta}</>}
                   </button>
                 )}
                 {plan.ctaStyle === 'outline' && (
                   <button disabled style={{ width: '100%', height: '40px', background: 'white', color: '#9ca3af', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontWeight: 600, cursor: 'not-allowed' }}>{plan.cta}</button>
                 )}
                 {plan.ctaStyle === 'amber' && (
-                  <button onClick={() => window.open('mailto:hello@findmewith.ai?subject=Agency Plan', '_blank')} style={{ width: '100%', height: '40px', background: '#f59e0b', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 700, cursor: 'pointer' }}>{plan.cta}</button>
+                  <button
+                    onClick={() => handleCheckout(annual ? 'agency_yearly' : 'agency_monthly')}
+                    disabled={!!activating}
+                    style={{ width: '100%', height: '40px', background: '#f59e0b', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 700, cursor: activating ? 'wait' : 'pointer', opacity: activating ? 0.8 : 1 }}
+                  >
+                    {activating ? 'Redirecting…' : plan.cta}
+                  </button>
                 )}
 
                 <ul style={{ listStyle: 'none', margin: '20px 0 0', padding: 0, display: 'flex', flexDirection: 'column', gap: '9px' }}>

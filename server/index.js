@@ -5,6 +5,20 @@ import { URL } from 'url';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import fs from 'fs';
+import Stripe from 'stripe';
+
+const stripe = process.env.STRIPE_SECRET_KEY
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2023-10-16' })
+  : null;
+
+const PRICE_IDS = {
+  pro_monthly:    process.env.STRIPE_PRO_MONTHLY_PRICE_ID,
+  pro_yearly:     process.env.STRIPE_PRO_YEARLY_PRICE_ID,
+  agency_monthly: process.env.STRIPE_AGENCY_MONTHLY_PRICE_ID,
+  agency_yearly:  process.env.STRIPE_AGENCY_YEARLY_PRICE_ID,
+};
+
+const APP_URL = process.env.APP_URL || 'https://www.findmewith.ai';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -276,6 +290,29 @@ app.post('/api/leads', (req, res) => {
   leads.push({ email, url, score, createdAt: new Date().toISOString() });
   console.log(`[lead] ${email} | ${url} | score: ${score}`);
   res.json({ ok: true });
+});
+
+// ── POST /api/create-checkout-session ────────────────────────────────────────
+app.post('/api/create-checkout-session', async (req, res) => {
+  if (!stripe) return res.status(500).json({ error: 'Payments not configured — STRIPE_SECRET_KEY missing' });
+  const { plan, email } = req.body;
+  const priceId = PRICE_IDS[plan];
+  if (!priceId) return res.status(400).json({ error: `Unknown plan: ${plan}` });
+  try {
+    const session = await stripe.checkout.sessions.create({
+      mode: 'subscription',
+      payment_method_types: ['card'],
+      line_items: [{ price: priceId, quantity: 1 }],
+      success_url: `${APP_URL}/?payment=success&plan=${plan}`,
+      cancel_url:  `${APP_URL}/?payment=cancelled`,
+      subscription_data: { trial_period_days: 7 },
+      ...(email ? { customer_email: email } : {}),
+    });
+    res.json({ url: session.url });
+  } catch (err) {
+    console.error('[stripe error]', err.message);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ── GET /api/leads (admin) ───────────────────────────────────────────────────
