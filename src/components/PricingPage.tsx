@@ -38,6 +38,7 @@ export const PricingPage: React.FC<Props> = ({ onBack, onProActivated, userEmail
       desc: 'See how you score and take your first step',
       cta: 'Current plan', ctaStyle: 'outline' as const, highlight: false,
       annualNote: '',
+      note: '',
       features: [
         { text: 'AI visibility score for any website', ok: true },
         { text: "Plain-English breakdown of what's missing", ok: true },
@@ -57,13 +58,14 @@ export const PricingPage: React.FC<Props> = ({ onBack, onProActivated, userEmail
       desc: 'Everything you need to get found by AI',
       cta: isPro ? 'Your current plan' : 'Start free 7-day trial',
       ctaStyle: 'primary' as const, highlight: true,
+      note: '',
       features: [
         { text: 'Everything in Free', ok: true },
         { text: 'All content generators (FAQ, About, How-To)', ok: true },
         { text: 'All 4 code snippets', ok: true },
-        { text: 'Monitor up to 5 websites', ok: true },
-        { text: 'Weekly score alerts by email', ok: true },
-        { text: 'PDF report to share with developers', ok: true },
+        { text: 'Monitor up to 5 websites', ok: true, soon: true },
+        { text: 'Weekly score alerts by email', ok: true, soon: true },
+        { text: 'PDF report to share with developers', ok: true, soon: true },
         { text: 'Priority support', ok: true },
         { text: 'White-label reports', ok: false },
         { text: 'Client dashboard', ok: false },
@@ -74,17 +76,18 @@ export const PricingPage: React.FC<Props> = ({ onBack, onProActivated, userEmail
       price: annual ? '$999' : '$99', period: annual ? 'per year' : 'per month',
       annualNote: annual ? 'Save $189 vs monthly' : 'Or $999/year — save $189',
       desc: 'Run this for all your clients and resell it',
-      cta: 'Get started', ctaStyle: 'amber' as const, highlight: false,
+      cta: 'Join the waitlist', ctaStyle: 'amber' as const, highlight: false,
+      note: 'Agency features are rolling out soon. Join the waitlist and lock in founding pricing.',
       features: [
         { text: 'Everything in Pro', ok: true },
-        { text: 'Unlimited client websites', ok: true },
-        { text: 'White-label reports with your logo', ok: true },
-        { text: 'Client-sharing dashboard', ok: true },
-        { text: 'Bulk website scanning', ok: true },
-        { text: 'API access', ok: true },
-        { text: 'Dedicated account manager', ok: true },
-        { text: 'Custom integrations', ok: true },
-        { text: 'Team member seats', ok: true },
+        { text: 'Unlimited client websites', ok: true, soon: true },
+        { text: 'White-label reports with your logo', ok: true, soon: true },
+        { text: 'Client-sharing dashboard', ok: true, soon: true },
+        { text: 'Bulk website scanning', ok: true, soon: true },
+        { text: 'API access', ok: true, soon: true },
+        { text: 'Dedicated account manager', ok: true, soon: true },
+        { text: 'Custom integrations', ok: true, soon: true },
+        { text: 'Team member seats', ok: true, soon: true },
       ],
     },
   ];
@@ -165,20 +168,28 @@ export const PricingPage: React.FC<Props> = ({ onBack, onProActivated, userEmail
                   <button disabled style={{ width: '100%', height: '40px', background: 'white', color: '#9ca3af', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontWeight: 600, cursor: 'not-allowed' }}>{plan.cta}</button>
                 )}
                 {plan.ctaStyle === 'amber' && (
-                  <button
-                    onClick={() => handleCheckout(annual ? 'agency_yearly' : 'agency_monthly')}
-                    disabled={!!activating}
-                    style={{ width: '100%', height: '40px', background: '#f59e0b', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 700, cursor: activating ? 'wait' : 'pointer', opacity: activating ? 0.8 : 1 }}
+                  <a
+                    href="mailto:hello@genierocket.com?subject=Agency%20Plan%20Waitlist&body=Hi%2C%20I%27d%20like%20to%20join%20the%20Agency%20waitlist%20for%20findmewith.ai."
+                    style={{ display: 'block', width: '100%', height: '40px', background: '#f59e0b', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 700, cursor: 'pointer', textAlign: 'center', lineHeight: '40px', textDecoration: 'none', fontSize: '14px', boxSizing: 'border-box' }}
                   >
-                    {activating ? 'Redirecting…' : plan.cta}
-                  </button>
+                    {plan.cta}
+                  </a>
+                )}
+
+                {plan.note && (
+                  <p style={{ fontSize: '11px', color: '#92400e', background: '#fef3c7', borderRadius: '8px', padding: '8px 10px', margin: '12px 0 0', lineHeight: 1.5 }}>
+                    {plan.note}
+                  </p>
                 )}
 
                 <ul style={{ listStyle: 'none', margin: '20px 0 0', padding: 0, display: 'flex', flexDirection: 'column', gap: '9px' }}>
                   {plan.features.map(f => (
                     <li key={f.text} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '12px', color: f.ok ? '#374151' : '#9ca3af' }}>
                       <Check size={13} style={{ color: f.ok ? '#7c3aed' : '#d1d5db', flexShrink: 0, marginTop: '1px' }} />
-                      {f.text}
+                      <span style={{ flex: 1 }}>{f.text}</span>
+                      {f.ok && (f as any).soon && (
+                        <span style={{ background: '#f3f4f6', color: '#6b7280', borderRadius: '4px', padding: '1px 5px', fontSize: '10px', fontWeight: 700, flexShrink: 0 }}>SOON</span>
+                      )}
                     </li>
                   ))}
                 </ul>
