@@ -63,7 +63,7 @@ export const HeroStep: React.FC<Props> = ({ onAnalyzed }) => {
       <div style={{ maxWidth: '660px', margin: '0 auto', padding: '32px 28px 80px', textAlign: 'center' }}>
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#ede9fe', color: '#7c3aed', borderRadius: '100px', padding: '6px 16px', fontSize: '13px', fontWeight: 600, marginBottom: '28px' }}>
           <Sparkles size={13} />
-          Free · Takes 30 seconds · No account needed
+          Free scan · Free account · Pro when you're ready
         </div>
 
         <h1 style={{ fontSize: '40px', fontWeight: 900, lineHeight: 1.15, color: '#111827', marginBottom: '16px', letterSpacing: '-0.5px' }}>

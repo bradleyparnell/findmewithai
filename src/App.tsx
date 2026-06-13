@@ -165,6 +165,7 @@ const App: React.FC = () => {
           onFixContent={() => setStep('content')}
           onGetCode={() => setStep('code')}
           onUpgrade={handleUpgrade}
+          isPro={isPro}
         />
       )}
       {step === 'content' && (

@@ -48,9 +48,10 @@ interface Props {
   onFixContent: () => void;
   onGetCode: () => void;
   onUpgrade: () => void;
+  isPro?: boolean;
 }
 
-export const ScoreStep: React.FC<Props> = ({ result, onFixContent, onGetCode }) => {
+export const ScoreStep: React.FC<Props> = ({ result, onFixContent, onGetCode, onUpgrade, isPro }) => {
   const { score, categories, findings } = result;
   const msg = getScoreMessage(score);
   const color = scoreColor(score);
@@ -146,6 +147,23 @@ export const ScoreStep: React.FC<Props> = ({ result, onFixContent, onGetCode }) 
           <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '13px', fontWeight: 700, color: '#d97706' }}>Get the code <ArrowRight size={14} /></div>
         </button>
       </div>
+
+      {!isPro && (
+        <div style={{ marginTop: '16px', background: 'linear-gradient(135deg, #f5f3ff, #ede9fe)', border: '1.5px solid #ddd6fe', borderRadius: '18px', padding: '22px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
+          <div>
+            <div style={{ fontSize: '15px', fontWeight: 800, color: '#111827', marginBottom: '4px' }}>⚡ Want to fix everything at once?</div>
+            <div style={{ fontSize: '13px', color: '#6b7280', lineHeight: 1.55 }}>
+              Pro unlocks all content generators and code snippets — everything you need to go from invisible to unforgettable.
+            </div>
+          </div>
+          <button
+            onClick={onUpgrade}
+            style={{ background: '#7c3aed', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '14px', padding: '10px 20px', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
+          >
+            See Pro — $29/mo →
+          </button>
+        </div>
+      )}
     </div>
   );
 };

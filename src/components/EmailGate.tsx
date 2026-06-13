@@ -89,9 +89,9 @@ export const EmailGate: React.FC<Props> = ({ score, siteUrl, onSubmit }) => {
         </div>
 
         <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '20px', padding: '28px', boxShadow: '0 2px 16px rgba(0,0,0,0.04)' }}>
-          <h2 style={{ fontSize: '19px', fontWeight: 800, color: '#111827', marginBottom: '6px' }}>See your full results — free</h2>
+          <h2 style={{ fontSize: '19px', fontWeight: 800, color: '#111827', marginBottom: '6px' }}>Create your free account to see your results</h2>
           <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '20px', lineHeight: 1.55 }}>
-            We'll show you exactly what to fix and give you simple tools to do it.
+            We'll show you exactly what to fix and give you free tools to start fixing it — no credit card, ever.
           </p>
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <input
@@ -108,11 +108,11 @@ export const EmailGate: React.FC<Props> = ({ score, siteUrl, onSubmit }) => {
               disabled={loading}
               style={{ background: '#7c3aed', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '15px', height: '48px', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }}
             >
-              {loading ? 'Loading…' : 'See My Full Results →'}
+              {loading ? 'Loading…' : 'Create My Free Account →'}
             </button>
           </form>
           <p style={{ fontSize: '12px', color: '#9ca3af', marginTop: '12px', lineHeight: 1.5, textAlign: 'center' }}>
-            🔒 No spam. Occasional AI visibility tips only. Unsubscribe any time.
+            🔒 This creates your free findmewith.ai account. No spam, no credit card. Upgrade to Pro anytime.
           </p>
         </div>
       </div>
