@@ -103,7 +103,7 @@ export const ContentStep: React.FC<Props> = ({ siteUrl, isPro, onUpgrade, onNext
         })}
       </div>
 
-      <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '18px', padding: '26px', marginBottom: '20px', position: 'relative' }}>
+      <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '18px', padding: '26px', marginBottom: '20px', position: 'relative', minHeight: '260px', overflow: 'hidden' }}>
         {tab === 'faq' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
             <div>
