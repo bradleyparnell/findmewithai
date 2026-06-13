@@ -99,6 +99,16 @@ const App: React.FC = () => {
           onProActivated={handleProActivated}
         />
       )}
+      <footer style={{
+        textAlign: 'center',
+        padding: '24px 16px',
+        color: '#9ca3af',
+        fontSize: '13px',
+        borderTop: '1px solid #f3f4f6',
+        marginTop: 'auto',
+      }}>
+        © {new Date().getFullYear()} findmewith.ai — All rights reserved.
+      </footer>
     </div>
   );
 };
