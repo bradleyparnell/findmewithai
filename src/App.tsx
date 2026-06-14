@@ -53,15 +53,15 @@ const App: React.FC = () => {
       }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
         setUser(session.user);
         setUserEmail(session.user.email || '');
         localStorage.setItem('fmw_email', session.user.email || '');
 
-        // If we landed here via magic link click
-        const currentHash = window.location.hash;
-        if (currentHash.includes('access_token')) {
+        // SIGNED_IN fires when the user actually clicks a magic link
+        // INITIAL_SESSION fires on page load when already logged in — don't redirect
+        if (event === 'SIGNED_IN') {
           window.history.replaceState({}, '', '/');
 
           // Save any pending scan (from localStorage, same browser)
