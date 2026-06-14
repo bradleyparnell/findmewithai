@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Search, FileText, Code2, Sparkles, TrendingUp } from 'lucide-react';
+import { Search, FileText, Code2, Sparkles, TrendingUp, LogIn } from 'lucide-react';
 import { analyzeWebsite } from '../utils/analyzer';
 import type { AnalysisResult } from '../types';
 
 interface Props {
   onAnalyzed: (result: AnalysisResult, url: string) => void;
+  user?: any;
+  onSignIn?: (email: string) => Promise<void>;
+  onGoToDashboard?: () => void;
 }
 
 const LOADING_MESSAGES = [
@@ -15,11 +18,15 @@ const LOADING_MESSAGES = [
   'Almost there — putting it all together…',
 ];
 
-export const HeroStep: React.FC<Props> = ({ onAnalyzed }) => {
+export const HeroStep: React.FC<Props> = ({ onAnalyzed, user, onSignIn, onGoToDashboard }) => {
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingMsg, setLoadingMsg] = useState(0);
   const [error, setError] = useState('');
+  const [showSignIn, setShowSignIn] = useState(false);
+  const [signInEmail, setSignInEmail] = useState('');
+  const [signInLoading, setSignInLoading] = useState(false);
+  const [signInSent, setSignInSent] = useState(false);
 
   useEffect(() => {
     if (!loading) return;
@@ -28,6 +35,14 @@ export const HeroStep: React.FC<Props> = ({ onAnalyzed }) => {
     }, 2200);
     return () => clearInterval(interval);
   }, [loading]);
+
+  const handleSignInSubmit = async () => {
+    if (!signInEmail.trim() || !onSignIn) return;
+    setSignInLoading(true);
+    await onSignIn(signInEmail.trim());
+    setSignInSent(true);
+    setSignInLoading(false);
+  };
 
   const handleCheck = async () => {
     const trimmed = url.trim();
@@ -130,6 +145,54 @@ export const HeroStep: React.FC<Props> = ({ onAnalyzed }) => {
         <p style={{ fontSize: '13px', color: '#9ca3af', marginTop: '12px' }}>
           🔒 Free scan, no credit card. Takes about 30 seconds.
         </p>
+
+        {/* Returning user sign-in */}
+        {user ? (
+          <div style={{ marginTop: '16px' }}>
+            <button
+              onClick={onGoToDashboard}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#f5f3ff', color: '#7c3aed', border: '1.5px solid #ddd6fe', borderRadius: '100px', padding: '8px 18px', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}
+            >
+              <LogIn size={13} /> Welcome back — go to your dashboard →
+            </button>
+          </div>
+        ) : (
+          <div style={{ marginTop: '16px' }}>
+            {!showSignIn && !signInSent && (
+              <button
+                onClick={() => setShowSignIn(true)}
+                style={{ background: 'none', border: 'none', color: '#7c3aed', fontSize: '13px', fontWeight: 600, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: '2px' }}
+              >
+                Already a member? Sign in →
+              </button>
+            )}
+            {showSignIn && !signInSent && (
+              <div style={{ display: 'flex', gap: '8px', maxWidth: '400px', margin: '0 auto', alignItems: 'center' }}>
+                <input
+                  type="email"
+                  autoFocus
+                  placeholder="your@email.com"
+                  value={signInEmail}
+                  onChange={e => setSignInEmail(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && !signInLoading && handleSignInSubmit()}
+                  style={{ flex: 1, padding: '10px 14px', border: '1.5px solid #ddd6fe', borderRadius: '10px', fontSize: '14px', outline: 'none' }}
+                />
+                <button
+                  onClick={handleSignInSubmit}
+                  disabled={signInLoading}
+                  style={{ background: '#7c3aed', color: 'white', border: 'none', borderRadius: '10px', padding: '10px 16px', fontSize: '13px', fontWeight: 700, cursor: signInLoading ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', opacity: signInLoading ? 0.7 : 1 }}
+                >
+                  {signInLoading ? 'Sending…' : 'Send link →'}
+                </button>
+              </div>
+            )}
+            {signInSent && (
+              <p style={{ fontSize: '13px', color: '#059669', fontWeight: 600 }}>
+                ✅ Magic link sent! Check your inbox and click it to sign in.
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Steps */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px', marginTop: '52px' }}>

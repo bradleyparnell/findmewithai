@@ -177,6 +177,20 @@ const App: React.FC = () => {
     setStep('gate');
   };
 
+  const handleSignIn = async (email: string) => {
+    setUserEmail(email);
+    localStorage.setItem('fmw_email', email);
+    const { error: otpError } = await supabase.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: window.location.origin },
+    });
+    if (otpError) {
+      alert(`Couldn't send the magic link: ${otpError.message}\n\nPlease try again or email hello@genierocket.com for help.`);
+      return;
+    }
+    setStep('inbox');
+  };
+
   const handleEmailSubmit = async (email: string) => {
     setUserEmail(email);
     localStorage.setItem('fmw_email', email);
@@ -272,7 +286,14 @@ const App: React.FC = () => {
           onDashboard={() => setStep('dashboard')}
         />
       )}
-      {step === 'home' && <HeroStep onAnalyzed={handleAnalyzed} />}
+      {step === 'home' && (
+        <HeroStep
+          onAnalyzed={handleAnalyzed}
+          user={user}
+          onSignIn={handleSignIn}
+          onGoToDashboard={() => setStep('dashboard')}
+        />
+      )}
       {step === 'gate' && result && (
         <EmailGate score={result.score} siteUrl={siteUrl} onSubmit={handleEmailSubmit} />
       )}

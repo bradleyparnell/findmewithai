@@ -140,6 +140,7 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
   const [scanningId, setScanningId] = useState<string | null>(null);
   const [competitorError, setCompetitorError] = useState('');
   const [showHistory, setShowHistory] = useState(false);
+  const [rescanLoading, setRescanLoading] = useState(false);
 
   const latestScan = scans[0] ?? null;
 
@@ -155,6 +156,32 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  const handleRescan = async () => {
+    if (!latestScan || rescanLoading) return;
+    setRescanLoading(true);
+    try {
+      const res = await fetch(`${BACKEND}/api/analyze`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: latestScan.url }),
+      });
+      if (!res.ok) throw new Error('Analysis failed');
+      const result: AnalysisResult = await res.json();
+      await supabase.from('scans').insert({
+        user_id: user.id,
+        email: user.email,
+        url: latestScan.url,
+        score: result.score,
+        result,
+      });
+      await loadData();
+    } catch {
+      alert('Re-scan failed. Please try again.');
+    } finally {
+      setRescanLoading(false);
+    }
+  };
 
   const handleAddCompetitor = async () => {
     if (!competitorUrl.trim()) return;
@@ -323,6 +350,15 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
               >
                 View Full Report →
               </button>
+              <button
+                onClick={handleRescan}
+                disabled={rescanLoading}
+                title="Re-scan your site to get a fresh score"
+                style={{ marginTop: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', fontSize: '11px', fontWeight: 600, color: rescanLoading ? '#9ca3af' : '#6b7280', background: 'transparent', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '5px 12px', cursor: rescanLoading ? 'not-allowed' : 'pointer', width: '100%' }}
+              >
+                <RefreshCw size={10} style={{ animation: rescanLoading ? 'spin 1s linear infinite' : 'none' }} />
+                {rescanLoading ? 'Scanning…' : 'Re-scan now'}
+              </button>
             </div>
 
             {/* Category bars */}
@@ -348,12 +384,35 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
 
           {/* ── SCORE TREND ── */}
           <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '20px', padding: '22px 24px', marginBottom: '20px', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ fontSize: '14px', fontWeight: 700, color: '#111827', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <TrendingUp size={15} style={{ color: '#7c3aed' }} /> Score Over Time
+            <div style={{ fontSize: '14px', fontWeight: 700, color: '#111827', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <TrendingUp size={15} style={{ color: '#7c3aed' }} /> Your Progress Over Time
             </div>
+            {/* Plain English progress summary */}
+            {(() => {
+              if (trendData.length < 2) return null;
+              const first = trendData[0].Score as number;
+              const latest = trendData[trendData.length - 1].Score as number;
+              const delta = latest - first;
+              const firstDate = trendData[0].date;
+              if (delta > 0) return (
+                <p style={{ fontSize: '13px', color: '#059669', fontWeight: 600, margin: '0 0 14px', background: '#f0fdf4', borderRadius: '8px', padding: '8px 12px', display: 'inline-block' }}>
+                  🚀 You've improved <strong>{delta} points</strong> since {firstDate} — keep going!
+                </p>
+              );
+              if (delta < 0) return (
+                <p style={{ fontSize: '13px', color: '#d97706', fontWeight: 600, margin: '0 0 14px', background: '#fffbeb', borderRadius: '8px', padding: '8px 12px', display: 'inline-block' }}>
+                  ⚠️ Your score has dipped {Math.abs(delta)} points since {firstDate}. Re-scan to see what changed.
+                </p>
+              );
+              return (
+                <p style={{ fontSize: '13px', color: '#6b7280', fontWeight: 500, margin: '0 0 14px' }}>
+                  📊 Your score has stayed steady since {firstDate}. Try fixing an item below to move it up!
+                </p>
+              );
+            })()}
             {trendData.length < 2 ? (
               <div style={{ textAlign: 'center', padding: '24px', background: '#f9fafb', borderRadius: '12px', fontSize: '13px', color: '#6b7280' }}>
-                📈 Run more scans over time to see your progress here — this chart fills in automatically.
+                📈 Hit <strong>Re-scan now</strong> above (or check back Monday!) to start tracking your progress here.
               </div>
             ) : (
               <>

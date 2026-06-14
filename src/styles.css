@@ -3,6 +3,11 @@
    White-first, purple primary, amber accent
    ============================================================ */
 
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 :root {
   /* Backgrounds */
   --color-bg-white: #ffffff;
