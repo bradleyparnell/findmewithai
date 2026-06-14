@@ -114,6 +114,16 @@ export const HeroStep: React.FC<Props> = ({ onAnalyzed, user, onSignIn, onGoToDa
           Enter your website below and find out exactly where you stand — <em>free, in under a minute.</em>
         </p>
 
+        {/* AI platforms strip */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '28px' }}>
+          <span style={{ fontSize: '12px', color: '#9ca3af' }}>We check visibility on:</span>
+          {['ChatGPT', 'Perplexity', 'Google AI', 'Bing AI'].map(name => (
+            <span key={name} style={{ display: 'inline-flex', alignItems: 'center', background: 'white', border: '1px solid #e5e7eb', borderRadius: '100px', padding: '4px 12px', fontSize: '12px', fontWeight: 600, color: '#374151', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+              {name}
+            </span>
+          ))}
+        </div>
+
         {/* URL input */}
         <div style={{ display: 'flex', gap: '10px', maxWidth: '540px', margin: '0 auto 10px' }}>
           <input

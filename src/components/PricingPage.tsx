@@ -28,7 +28,7 @@ export const PricingPage: React.FC<Props> = ({ onBack, onProActivated, userEmail
       window.location.href = data.url;
     } catch {
       setActivating(null);
-      alert('Payment setup failed. Please try again or email hello@genierocket.com');
+      alert('Payment setup failed. Please try again or email hello@findmewithai.com');
     }
   };
 
@@ -56,7 +56,7 @@ export const PricingPage: React.FC<Props> = ({ onBack, onProActivated, userEmail
       price: annual ? '$249' : '$29', period: annual ? 'per year' : 'per month',
       annualNote: annual ? 'Save $99 vs monthly' : 'Or $249/year — save $99',
       desc: 'Everything you need to get found by AI',
-      cta: isPro ? 'Your current plan' : 'Start free 7-day trial',
+      cta: isPro ? 'Your current plan' : 'Try Pro free for 7 days',
       ctaStyle: 'primary' as const, highlight: true,
       note: '',
       features: [
@@ -64,8 +64,8 @@ export const PricingPage: React.FC<Props> = ({ onBack, onProActivated, userEmail
         { text: 'All content generators (FAQ, About, How-To)', ok: true },
         { text: 'All 4 code snippets', ok: true },
         { text: 'Monitor up to 5 websites', ok: true, soon: true },
-        { text: 'Weekly score alerts by email', ok: true, soon: true },
-        { text: 'PDF report to share with developers', ok: true, soon: true },
+        { text: 'Weekly score alerts by email', ok: true },
+        { text: 'PDF report to share with developers', ok: true },
         { text: 'Priority support', ok: true },
         { text: 'White-label reports', ok: false },
         { text: 'Client dashboard', ok: false },
@@ -155,13 +155,18 @@ export const PricingPage: React.FC<Props> = ({ onBack, onProActivated, userEmail
                       <Star size={14} fill="#7c3aed" /> Active plan — Manage
                     </button>
                   ) : (
-                    <button
-                      onClick={() => handleCheckout(annual ? 'pro_yearly' : 'pro_monthly')}
-                      disabled={!!activating}
-                      style={{ width: '100%', height: '40px', background: '#7c3aed', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 700, cursor: activating ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', opacity: activating ? 0.8 : 1 }}
-                    >
-                      {activating ? 'Redirecting to checkout…' : <><Star size={14} fill="white" /> {plan.cta}</>}
-                    </button>
+                    <>
+                      <button
+                        onClick={() => handleCheckout(annual ? 'pro_yearly' : 'pro_monthly')}
+                        disabled={!!activating}
+                        style={{ width: '100%', height: '40px', background: '#7c3aed', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 700, cursor: activating ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', opacity: activating ? 0.8 : 1 }}
+                      >
+                        {activating ? 'Redirecting to checkout…' : <><Star size={14} fill="white" /> {plan.cta}</>}
+                      </button>
+                      <p style={{ fontSize: '11px', color: '#9ca3af', textAlign: 'center', marginTop: '8px', lineHeight: 1.5 }}>
+                        Your free account stays active if you cancel — no bait and switch.
+                      </p>
+                    </>
                   )
                 )}
                 {plan.ctaStyle === 'outline' && (
@@ -169,7 +174,7 @@ export const PricingPage: React.FC<Props> = ({ onBack, onProActivated, userEmail
                 )}
                 {plan.ctaStyle === 'amber' && (
                   <a
-                    href="mailto:hello@genierocket.com?subject=Agency%20Plan%20Waitlist&body=Hi%2C%20I%27d%20like%20to%20join%20the%20Agency%20waitlist%20for%20findmewith.ai."
+                    href="mailto:hello@findmewithai.com?subject=Agency%20Plan%20Waitlist&body=Hi%2C%20I%27d%20like%20to%20join%20the%20Agency%20waitlist%20for%20findmewith.ai."
                     style={{ display: 'block', width: '100%', height: '40px', background: '#f59e0b', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 700, cursor: 'pointer', textAlign: 'center', lineHeight: '40px', textDecoration: 'none', fontSize: '14px', boxSizing: 'border-box' }}
                   >
                     {plan.cta}
@@ -198,10 +203,26 @@ export const PricingPage: React.FC<Props> = ({ onBack, onProActivated, userEmail
           ))}
         </div>
 
+        {/* FAQ */}
+        <div style={{ maxWidth: '600px', margin: '48px auto 0' }}>
+          <h2 style={{ textAlign: 'center', fontSize: '22px', fontWeight: 800, color: '#111827', marginBottom: '24px' }}>Questions we get asked a lot</h2>
+          {[
+            { q: 'Is the free plan really free?', a: 'Yes, completely. No credit card, no trial period — just a free account that stays free forever. You get your AI visibility score, a full breakdown of what\'s missing, and tools to start fixing it.' },
+            { q: 'What happens after my 7-day Pro trial?', a: "If you don't cancel, you'll be charged the plan rate. If you do cancel, your account drops back to the free plan — your scan history and results stay right where you left them." },
+            { q: 'Can I cancel any time?', a: 'Yes. No questions asked, no cancellation fees. Cancel from your account settings any time and you keep Pro access until the end of your billing period.' },
+            { q: 'What does "weekly score alerts" actually mean?', a: 'Every Monday we re-scan your website and email you your new score, what changed since last week, and your #1 thing to fix. You can see your progress over time in your dashboard.' },
+          ].map(({ q, a }) => (
+            <div key={q} style={{ borderBottom: '1px solid #e5e7eb', padding: '18px 0' }}>
+              <div style={{ fontSize: '14px', fontWeight: 700, color: '#111827', marginBottom: '6px' }}>{q}</div>
+              <div style={{ fontSize: '13px', color: '#6b7280', lineHeight: 1.7 }}>{a}</div>
+            </div>
+          ))}
+        </div>
+
         <div style={{ textAlign: 'center', marginTop: '32px' }}>
-          <p style={{ fontSize: '13px', color: '#6b7280' }}>All plans include a <strong>7-day free trial</strong> · No credit card required to start · Cancel any time</p>
+          <p style={{ fontSize: '13px', color: '#6b7280' }}>Try Pro free for 7 days · <strong>Your free account stays free forever</strong> · Cancel Pro any time</p>
           <p style={{ fontSize: '13px', color: '#6b7280', marginTop: '6px' }}>
-            Questions? Email <a href="mailto:hello@genierocket.com" style={{ color: '#7c3aed', fontWeight: 600 }}>hello@genierocket.com</a>
+            Questions? Email <a href="mailto:hello@findmewithai.com" style={{ color: '#7c3aed', fontWeight: 600 }}>hello@findmewithai.com</a>
           </p>
         </div>
       </div>

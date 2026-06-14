@@ -89,7 +89,10 @@ export const EmailGate: React.FC<Props> = ({ score, siteUrl, onSubmit }) => {
         </div>
 
         <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '20px', padding: '28px', boxShadow: '0 2px 16px rgba(0,0,0,0.04)' }}>
-          <h2 style={{ fontSize: '19px', fontWeight: 800, color: '#111827', marginBottom: '6px' }}>Create your free account to see your results</h2>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#f5f3ff', color: '#7c3aed', borderRadius: '100px', padding: '5px 14px', fontSize: '12px', fontWeight: 600, marginBottom: '14px', border: '1px solid #ddd6fe' }}>
+            🔒 Joined by 1,200+ business owners · Free forever
+          </div>
+          <h2 style={{ fontSize: '19px', fontWeight: 800, color: '#111827', marginBottom: '6px' }}>Your results are ready — where should we send them?</h2>
           <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '20px', lineHeight: 1.55 }}>
             We'll show you exactly what to fix and give you free tools to start fixing it — no credit card, ever.
           </p>

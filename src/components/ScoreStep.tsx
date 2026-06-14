@@ -456,6 +456,32 @@ export const ScoreStep: React.FC<Props> = ({ result, onFixContent, onGetCode, on
         </button>
       </div>
 
+      {/* Share your score */}
+      <div style={{ background: '#f5f3ff', border: '1px solid #ddd6fe', borderRadius: '16px', padding: '18px 22px', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+        <div>
+          <div style={{ fontSize: '14px', fontWeight: 700, color: '#111827', marginBottom: '2px' }}>📣 Share your score</div>
+          <div style={{ fontSize: '12px', color: '#6b7280' }}>Challenge your network — how does their business compare?</div>
+        </div>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <a
+            href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`I just checked my business's AI visibility on findmewith.ai — I scored ${score}%. 🤖\n\nFind out if ChatGPT and Google AI can find your business:\nhttps://findmewith.ai`)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#111827', color: 'white', borderRadius: '10px', padding: '9px 16px', fontSize: '13px', fontWeight: 700, textDecoration: 'none' }}
+          >
+            𝕏 Share on X
+          </a>
+          <a
+            href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent('https://findmewith.ai')}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#0a66c2', color: 'white', borderRadius: '10px', padding: '9px 16px', fontSize: '13px', fontWeight: 700, textDecoration: 'none' }}
+          >
+            in LinkedIn
+          </a>
+        </div>
+      </div>
+
       {/* Things working */}
       {passing.length > 0 && (
         <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '20px', padding: '26px', marginBottom: '28px' }}>
