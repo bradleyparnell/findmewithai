@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
-import { Mail, Search } from 'lucide-react';
+import { Mail, Search, AlertCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 interface Props {
   email: string;
   siteUrl: string;
   score: number;
+  linkExpired?: boolean;
+  onResent?: () => void;
 }
 
-export const InboxStep: React.FC<Props> = ({ email, siteUrl, score }) => {
+export const InboxStep: React.FC<Props> = ({ email, siteUrl, score, linkExpired = false, onResent }) => {
   const [resent, setResent] = useState(false);
   const [resending, setResending] = useState(false);
   const domain = siteUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
@@ -21,6 +23,7 @@ export const InboxStep: React.FC<Props> = ({ email, siteUrl, score }) => {
     }).catch(() => {});
     setResending(false);
     setResent(true);
+    onResent?.();
   };
 
   return (
@@ -43,7 +46,30 @@ export const InboxStep: React.FC<Props> = ({ email, siteUrl, score }) => {
 
       <div style={{ maxWidth: '440px', width: '100%', textAlign: 'center' }}>
 
-        {/* Envelope animation */}
+        {/* Expired banner */}
+        {linkExpired && !resent && (
+          <div style={{
+            background: '#fef3c7',
+            border: '1px solid #fbbf24',
+            borderRadius: '12px',
+            padding: '14px 18px',
+            marginBottom: '24px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            textAlign: 'left',
+          }}>
+            <AlertCircle size={18} color="#d97706" style={{ flexShrink: 0 }} />
+            <div>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: '#92400e' }}>That link expired</div>
+              <div style={{ fontSize: '12px', color: '#78350f', marginTop: '2px' }}>
+                Links are only valid for 1 hour. Hit the button below to get a fresh one.
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Envelope icon */}
         <div style={{
           width: '80px',
           height: '80px',
@@ -60,10 +86,10 @@ export const InboxStep: React.FC<Props> = ({ email, siteUrl, score }) => {
         </div>
 
         <h1 style={{ fontSize: '26px', fontWeight: 900, color: '#111827', marginBottom: '10px', lineHeight: 1.25 }}>
-          Check your inbox ✉️
+          {linkExpired && !resent ? 'Get a new login link' : 'Check your inbox ✉️'}
         </h1>
         <p style={{ fontSize: '15px', color: '#6b7280', lineHeight: 1.65, marginBottom: '8px' }}>
-          We sent a login link to
+          {resent ? 'New link sent to' : 'We sent a login link to'}
         </p>
         <p style={{
           fontSize: '15px',
@@ -79,64 +105,68 @@ export const InboxStep: React.FC<Props> = ({ email, siteUrl, score }) => {
           {email}
         </p>
         <p style={{ fontSize: '14px', color: '#6b7280', lineHeight: 1.65, marginBottom: '32px' }}>
-          Click the link in that email and we'll bring you straight back here to see exactly how <strong style={{ color: '#111827' }}>{domain}</strong> scores — and what to fix first.
+          Click the link in that email and we'll bring you straight back here to see exactly how{' '}
+          {domain && <strong style={{ color: '#111827' }}>{domain}</strong>} scores — and what to fix first.
         </p>
 
         {/* Score teaser */}
-        <div style={{
-          background: 'white',
-          border: '1px solid #e5e7eb',
-          borderRadius: '20px',
-          padding: '20px 24px',
-          marginBottom: '28px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '16px',
-        }}>
+        {score > 0 && (
           <div style={{
-            width: '56px',
-            height: '56px',
-            borderRadius: '50%',
-            border: '4px solid #7c3aed',
+            background: 'white',
+            border: '1px solid #e5e7eb',
+            borderRadius: '20px',
+            padding: '20px 24px',
+            marginBottom: '28px',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
+            gap: '16px',
           }}>
-            <span style={{ fontSize: '16px', fontWeight: 900, color: '#7c3aed' }}>{score}%</span>
+            <div style={{
+              width: '56px',
+              height: '56px',
+              borderRadius: '50%',
+              border: '4px solid #7c3aed',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}>
+              <span style={{ fontSize: '16px', fontWeight: 900, color: '#7c3aed' }}>{score}%</span>
+            </div>
+            <div style={{ textAlign: 'left' }}>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: '#111827' }}>Your AI visibility score is ready</div>
+              <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>Full breakdown, action plan, and fixes waiting inside</div>
+            </div>
           </div>
-          <div style={{ textAlign: 'left' }}>
-            <div style={{ fontSize: '13px', fontWeight: 700, color: '#111827' }}>Your AI visibility score is ready</div>
-            <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>Full breakdown, action plan, and fixes waiting for you inside</div>
-          </div>
-        </div>
+        )}
 
-        {/* Resend */}
+        {/* Resend / sent */}
         {!resent ? (
           <button
             onClick={handleResend}
             disabled={resending}
             style={{
-              background: 'transparent',
-              border: '1.5px solid #e5e7eb',
+              background: linkExpired ? '#7c3aed' : 'transparent',
+              border: linkExpired ? 'none' : '1.5px solid #e5e7eb',
               borderRadius: '10px',
-              padding: '10px 20px',
-              fontSize: '13px',
-              color: '#6b7280',
+              padding: '12px 24px',
+              fontSize: '14px',
+              color: linkExpired ? 'white' : '#6b7280',
               cursor: resending ? 'not-allowed' : 'pointer',
-              fontWeight: 600,
+              fontWeight: 700,
             }}
           >
-            {resending ? 'Sending…' : "Didn't get it? Resend the link"}
+            {resending ? 'Sending…' : linkExpired ? 'Send me a new link' : "Didn't get it? Resend the link"}
           </button>
         ) : (
           <p style={{ fontSize: '13px', color: '#059669', fontWeight: 600 }}>
-            ✅ Sent! Check your inbox again (and your spam folder just in case).
+            ✅ New link sent! Check your inbox (and your spam folder just in case).
           </p>
         )}
 
         <p style={{ fontSize: '12px', color: '#9ca3af', marginTop: '20px' }}>
-          The link expires in 1 hour. Need help? <a href="mailto:hello@genierocket.com" style={{ color: '#7c3aed' }}>hello@genierocket.com</a>
+          Links expire after 1 hour. Need help?{' '}
+          <a href="mailto:hello@genierocket.com" style={{ color: '#7c3aed' }}>hello@genierocket.com</a>
         </p>
       </div>
     </div>

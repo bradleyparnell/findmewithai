@@ -22,6 +22,7 @@ const App: React.FC = () => {
   const [isPro, setIsPro] = useState(() => localStorage.getItem('fmw_pro') === 'true');
   const [userEmail, setUserEmail] = useState(() => localStorage.getItem('fmw_email') || '');
   const [user, setUser] = useState<any>(null);
+  const [linkExpired, setLinkExpired] = useState(false);
 
   // Scroll to top on every step change
   useEffect(() => {
@@ -30,6 +31,20 @@ const App: React.FC = () => {
 
   // Supabase auth state listener
   useEffect(() => {
+    // Detect error hash (e.g. expired magic link) before Supabase clears it
+    const hash = window.location.hash;
+    if (hash.includes('error=')) {
+      const params = new URLSearchParams(hash.replace(/^#/, ''));
+      const errorCode = params.get('error_code') || '';
+      window.history.replaceState({}, '', '/');
+      if (errorCode === 'otp_expired' || params.get('error') === 'access_denied') {
+        // Show inbox step with expired flag so user can request a new link
+        setStep('inbox');
+        setLinkExpired(true);
+      }
+      return;
+    }
+
     // Get current session on load
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
@@ -44,38 +59,48 @@ const App: React.FC = () => {
         setUserEmail(session.user.email || '');
         localStorage.setItem('fmw_email', session.user.email || '');
 
-        // Save any pending scan
-        const pendingRaw = localStorage.getItem('fmw_pending_scan');
-        if (pendingRaw) {
-          try {
-            const pending = JSON.parse(pendingRaw);
-            await supabase.from('scans').insert({
-              user_id: session.user.id,
-              email: session.user.email,
-              url: pending.url,
-              score: pending.score,
-              result: pending.result,
-            });
-          } catch (_e) { /* silently ignore */ }
-        }
-
-        // If we landed here via magic link click, restore result and show score page
-        if (window.location.hash.includes('access_token')) {
+        // If we landed here via magic link click
+        const currentHash = window.location.hash;
+        if (currentHash.includes('access_token')) {
           window.history.replaceState({}, '', '/');
 
-          // Try to restore the pending scan result
+          // Save any pending scan (from localStorage, same browser)
+          const pendingRaw = localStorage.getItem('fmw_pending_scan');
           if (pendingRaw) {
             try {
               const pending = JSON.parse(pendingRaw);
+              await supabase.from('scans').insert({
+                user_id: session.user.id,
+                email: session.user.email,
+                url: pending.url,
+                score: pending.score,
+                result: pending.result,
+              });
               setResult(pending.result as AnalysisResult);
               setSiteUrl(pending.url);
               localStorage.removeItem('fmw_pending_scan');
               setStep('score');
               return;
-            } catch (_e) { /* fall through to dashboard */ }
+            } catch (_e) { /* fall through */ }
           }
 
-          // No pending scan — go straight to dashboard
+          // No localStorage scan — fetch most recent scan from Supabase (different browser case)
+          try {
+            const { data: scans } = await supabase
+              .from('scans')
+              .select('*')
+              .eq('user_id', session.user.id)
+              .order('created_at', { ascending: false })
+              .limit(1);
+            if (scans && scans.length > 0) {
+              setResult(scans[0].result as AnalysisResult);
+              setSiteUrl(scans[0].url);
+              setStep('score');
+              return;
+            }
+          } catch (_e) { /* fall through */ }
+
+          // No scans at all — go to dashboard
           setStep('dashboard');
         }
       } else {
@@ -246,7 +271,7 @@ const App: React.FC = () => {
         <EmailGate score={result.score} siteUrl={siteUrl} onSubmit={handleEmailSubmit} />
       )}
       {step === 'inbox' && (
-        <InboxStep email={userEmail} siteUrl={siteUrl} score={result?.score ?? 0} />
+        <InboxStep email={userEmail} siteUrl={siteUrl} score={result?.score ?? 0} linkExpired={linkExpired} onResent={() => setLinkExpired(false)} />
       )}
       {step === 'score' && result && (
         <ScoreStep
