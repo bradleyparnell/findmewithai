@@ -264,6 +264,15 @@ function generatePDFHtml(result: AnalysisResult, score: number, msg: ReturnType<
 </html>`;
 }
 
+// Which findings link to which in-app tool
+const FINDING_TOOL_LINK: Record<string, { label: string; dest: 'content' | 'code' }> = {
+  has_faq_schema:          { label: '✍️ Generate FAQ answers →', dest: 'content' },
+  has_llms_txt:            { label: '🏷️ Generate llms.txt →', dest: 'code' },
+  has_schema_org:          { label: '🏷️ Get schema code snippet →', dest: 'code' },
+  has_organization_schema: { label: '🏷️ Get organization schema →', dest: 'code' },
+  has_about_page:          { label: '✍️ Write your About page →', dest: 'content' },
+};
+
 // --- Orchard Tier sub-component ---
 interface OrchardTierProps {
   emoji: string;
@@ -272,12 +281,14 @@ interface OrchardTierProps {
   items: AnalysisResult['findings'];
   checked: Set<string>;
   onToggle: (id: string) => void;
+  onNavigate: (dest: 'content' | 'code') => void;
   accentColor: string;
   bgColor: string;
   borderColor: string;
 }
 
-const OrchardTier: React.FC<OrchardTierProps> = ({ emoji, title, subtitle, items, checked, onToggle, accentColor, bgColor, borderColor }) => {
+const OrchardTier: React.FC<OrchardTierProps> = ({ emoji, title, subtitle, items, checked, onToggle, onNavigate, accentColor, bgColor, borderColor }) => {
+  const [expanded, setExpanded] = useState<string | null>(null);
   const allChecked = items.every(f => checked.has(f.id));
   const checkedCount = items.filter(f => checked.has(f.id)).length;
 
@@ -301,59 +312,108 @@ const OrchardTier: React.FC<OrchardTierProps> = ({ emoji, title, subtitle, items
       <div style={{ background: 'white', padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
         {items.map(f => {
           const isChecked = checked.has(f.id);
+          const isExpanded = expanded === f.id;
           const timeLabel = FINDING_TIME[f.id];
           const plain = FINDING_PLAIN_ENGLISH[f.id];
+          const webInstructions = FINDING_WEB_INSTRUCTIONS[f.id];
+          const toolLink = FINDING_TOOL_LINK[f.id];
+
           return (
-            <button
+            <div
               key={f.id}
-              onClick={() => onToggle(f.id)}
               style={{
-                display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '12px 14px',
-                background: isChecked ? '#f0fdf4' : '#fafafa',
-                border: `1px solid ${isChecked ? '#86efac' : '#f0f0f0'}`,
-                borderRadius: '12px', cursor: 'pointer', textAlign: 'left', width: '100%',
+                background: isChecked ? '#f0fdf4' : isExpanded ? '#faf8ff' : '#fafafa',
+                border: `1px solid ${isChecked ? '#86efac' : isExpanded ? '#ddd6fe' : '#f0f0f0'}`,
+                borderRadius: '12px',
+                overflow: 'hidden',
                 transition: 'all 0.2s',
               }}
             >
-              {/* Checkbox */}
-              <div style={{
-                width: '20px', height: '20px', borderRadius: '6px', flexShrink: 0, marginTop: '1px',
-                background: isChecked ? '#16a34a' : 'white',
-                border: `2px solid ${isChecked ? '#16a34a' : '#d1d5db'}`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                transition: 'all 0.2s',
-              }}>
-                {isChecked && (
-                  <svg width="11" height="9" viewBox="0 0 11 9" fill="none">
-                    <path d="M1 4L4 7L10 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                )}
-              </div>
-
-              {/* Text */}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: '13px', fontWeight: 600, color: isChecked ? '#6b7280' : '#111827', textDecoration: isChecked ? 'line-through' : 'none', lineHeight: 1.4 }}>
-                  {FINDING_QUESTIONS[f.id] ?? f.label}
+              {/* Row (click to expand, checkbox to mark done) */}
+              <div
+                style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '12px 14px', cursor: 'pointer' }}
+                onClick={() => setExpanded(isExpanded ? null : f.id)}
+              >
+                {/* Checkbox — separate click to mark done */}
+                <div
+                  onClick={e => { e.stopPropagation(); onToggle(f.id); }}
+                  style={{
+                    width: '20px', height: '20px', borderRadius: '6px', flexShrink: 0, marginTop: '2px',
+                    background: isChecked ? '#16a34a' : 'white',
+                    border: `2px solid ${isChecked ? '#16a34a' : '#d1d5db'}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    transition: 'all 0.2s', cursor: 'pointer',
+                  }}
+                >
+                  {isChecked && (
+                    <svg width="11" height="9" viewBox="0 0 11 9" fill="none">
+                      <path d="M1 4L4 7L10 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  )}
                 </div>
-                {!isChecked && plain && (
-                  <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '3px', lineHeight: 1.5 }}>
-                    {plain.why.length > 100 ? plain.why.slice(0, 97) + '…' : plain.why}
+
+                {/* Text */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: isChecked ? '#6b7280' : '#111827', textDecoration: isChecked ? 'line-through' : 'none', lineHeight: 1.4 }}>
+                    {FINDING_QUESTIONS[f.id] ?? f.label}
                   </div>
-                )}
+                  {!isExpanded && !isChecked && (
+                    <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '3px' }}>
+                      Tap to see how →
+                    </div>
+                  )}
+                </div>
+
+                {/* Time badge + chevron */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                  {timeLabel && (
+                    <div style={{
+                      fontSize: '11px', fontWeight: 700, color: isChecked ? '#9ca3af' : accentColor,
+                      background: isChecked ? '#f3f4f6' : bgColor,
+                      border: `1px solid ${isChecked ? '#e5e7eb' : borderColor}`,
+                      borderRadius: '100px', padding: '3px 10px', whiteSpace: 'nowrap',
+                    }}>
+                      {timeLabel}
+                    </div>
+                  )}
+                  <div style={{ fontSize: '14px', color: '#9ca3af', transition: 'transform 0.2s', transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>▾</div>
+                </div>
               </div>
 
-              {/* Time badge */}
-              {timeLabel && (
-                <div style={{
-                  fontSize: '11px', fontWeight: 700, color: isChecked ? '#9ca3af' : accentColor,
-                  background: isChecked ? '#f3f4f6' : bgColor,
-                  border: `1px solid ${isChecked ? '#e5e7eb' : borderColor}`,
-                  borderRadius: '100px', padding: '3px 10px', whiteSpace: 'nowrap', flexShrink: 0,
-                }}>
-                  {timeLabel}
+              {/* Expanded how-to panel */}
+              {isExpanded && (
+                <div style={{ padding: '0 14px 14px 46px', borderTop: '1px solid #f0f0f0' }}>
+                  {plain && (
+                    <div style={{ marginTop: '12px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px', padding: '12px 14px', marginBottom: '10px' }}>
+                      <div style={{ fontSize: '12px', fontWeight: 700, color: '#92400e', marginBottom: '4px' }}>Why this matters</div>
+                      <div style={{ fontSize: '13px', color: '#78350f', lineHeight: 1.6 }}>{plain.why}</div>
+                    </div>
+                  )}
+                  {webInstructions && (
+                    <div style={{ background: '#f5f3ff', border: '1px solid #ddd6fe', borderRadius: '10px', padding: '12px 14px', marginBottom: '10px' }}>
+                      <div style={{ fontSize: '12px', fontWeight: 700, color: '#5b21b6', marginBottom: '4px' }}>How to fix it</div>
+                      <div style={{ fontSize: '13px', color: '#374151', lineHeight: 1.7 }}>{webInstructions}</div>
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '4px' }}>
+                    {toolLink && (
+                      <button
+                        onClick={() => onNavigate(toolLink.dest)}
+                        style={{ fontSize: '12px', fontWeight: 700, color: '#7c3aed', background: '#f5f3ff', border: '1.5px solid #ddd6fe', borderRadius: '8px', padding: '6px 14px', cursor: 'pointer' }}
+                      >
+                        {toolLink.label}
+                      </button>
+                    )}
+                    <button
+                      onClick={() => { onToggle(f.id); setExpanded(null); }}
+                      style={{ fontSize: '12px', fontWeight: 700, color: isChecked ? '#6b7280' : '#16a34a', background: isChecked ? '#f3f4f6' : '#f0fdf4', border: `1.5px solid ${isChecked ? '#e5e7eb' : '#86efac'}`, borderRadius: '8px', padding: '6px 14px', cursor: 'pointer' }}
+                    >
+                      {isChecked ? '↩ Mark as not done' : '✓ Mark as done'}
+                    </button>
+                  </div>
                 </div>
               )}
-            </button>
+            </div>
           );
         })}
       </div>
@@ -488,6 +548,7 @@ export const ScoreStep: React.FC<Props> = ({ result, onFixContent, onGetCode, on
               items={tier1Items}
               checked={checked}
               onToggle={toggleCheck}
+              onNavigate={(dest) => dest === 'content' ? onFixContent() : onGetCode()}
               accentColor="#d97706"
               bgColor="#fffbeb"
               borderColor="#fde68a"
@@ -503,6 +564,7 @@ export const ScoreStep: React.FC<Props> = ({ result, onFixContent, onGetCode, on
               items={tier2Items}
               checked={checked}
               onToggle={toggleCheck}
+              onNavigate={(dest) => dest === 'content' ? onFixContent() : onGetCode()}
               accentColor="#7c3aed"
               bgColor="#f5f3ff"
               borderColor="#ddd6fe"
@@ -518,6 +580,7 @@ export const ScoreStep: React.FC<Props> = ({ result, onFixContent, onGetCode, on
               items={tier3Items}
               checked={checked}
               onToggle={toggleCheck}
+              onNavigate={(dest) => dest === 'content' ? onFixContent() : onGetCode()}
               accentColor="#6d28d9"
               bgColor="#f5f3ff"
               borderColor="#ddd6fe"
