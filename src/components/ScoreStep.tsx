@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CheckCircle, AlertCircle, ArrowRight, TrendingUp, Lightbulb, Star, Mail, Copy, Check, FileText } from 'lucide-react';
+import { CheckCircle, ArrowRight, TrendingUp, Mail, Copy, Check, FileText } from 'lucide-react';
 import type { AnalysisResult } from '../types';
 
 const CATEGORY_INFO: Record<string, { label: string; desc: string; max: number }> = {
@@ -42,6 +42,48 @@ const FINDING_PLAIN_ENGLISH: Record<string, { why: string; fix: string }> = {
   has_sitemap:             { why: "A sitemap helps AI find every page on your site, not just the homepage.", fix: "Most website platforms generate this automatically — check your settings." },
 };
 
+const FINDING_WEB_INSTRUCTIONS: Record<string, string> = {
+  has_schema_org:          'Add Schema.org structured data markup to the website. This tells AI and search engines exactly what the business does, where it is, and how to contact it. Use schema type "LocalBusiness" or a more specific type (e.g. "Restaurant", "LawFirm"). A free generator is at https://technicalseo.com/tools/schema-markup-generator/',
+  has_organization_schema: 'Add Organization schema markup including business name, URL, logo, phone, address, and social profiles. This should be added to every page in a <script type="application/ld+json"> tag.',
+  has_faq_schema:          'Add FAQ schema markup to the homepage or a dedicated FAQ page. Write 5-8 questions customers commonly ask, with plain English answers. This dramatically increases AI recommendation visibility.',
+  content_length:          'Add more text content to the homepage and main service pages. Each key page should have at least 500 words describing what the business does, who it helps, and how. AI tools need enough text to understand and recommend the business.',
+  has_about_page:          'Create an About page at /about that tells the story of the business — who founded it, how long it\'s been running, the team, and what makes it different. Include the owner\'s name and a photo if possible.',
+  has_meta_description:    'Add a unique meta description to every page (especially the homepage). It should be 150-160 characters and describe what the page is about in plain English. This shows up in search results and helps AI understand each page.',
+  has_contact_info:        'Make sure the full contact details are visible on the homepage and in the footer: phone number, email address, and physical address (if applicable). These should be in plain HTML text, not just an image.',
+  has_llms_txt:            'Create a file at the root of the website called llms.txt. This is a plain text file that introduces the business to AI tools. It should include: business name, what it does, who it serves, key services, location, and contact info. Format guidance at https://llmstxt.org',
+  https_enabled:           'Enable SSL/HTTPS on the website. Contact the web host — most offer free SSL certificates via Let\'s Encrypt. The site should redirect all HTTP traffic to HTTPS automatically.',
+  has_sitemap:             'Generate and submit an XML sitemap at /sitemap.xml. Most CMS platforms (WordPress, Squarespace, Wix) can do this automatically with a plugin or setting. Submit it to Google Search Console as well.',
+  has_robots_txt:          'Create a robots.txt file at the root of the website. At minimum it should include: User-agent: * and Sitemap: [full URL to sitemap.xml]. Make sure it does not accidentally block search engine crawlers.',
+  has_title_tag:           'Add a unique, descriptive title tag to every page. The homepage title should include the business name and primary service/location (e.g. "Smith Plumbing — Plumbers in Austin, TX"). Keep it under 60 characters.',
+  has_h1:                  'Make sure every page has exactly one H1 heading tag that clearly describes what that page is about. It should be the main visible headline on the page.',
+  has_og_tags:             'Add Open Graph meta tags to every page: og:title, og:description, og:image, and og:url. This controls how the page looks when shared on social media and in AI-generated summaries.',
+};
+
+// --- Orchard tier config ---
+const TIER_1_IDS = ['has_llms_txt', 'has_meta_description', 'has_contact_info', 'has_robots_txt', 'has_title_tag', 'has_og_tags'];
+const TIER_2_IDS = ['has_schema_org', 'has_organization_schema', 'has_faq_schema', 'has_about_page', 'has_sitemap', 'has_h1', 'https_enabled'];
+const TIER_3_IDS = ['content_length', 'has_person_schema', 'has_article_schema'];
+
+const FINDING_TIME: Record<string, string> = {
+  has_llms_txt:            '5 min',
+  has_meta_description:    '10 min',
+  has_contact_info:        '5 min',
+  has_robots_txt:          '10 min',
+  has_title_tag:           '10 min',
+  has_og_tags:             '15 min',
+  has_schema_org:          '30 min',
+  has_organization_schema: '20 min',
+  has_faq_schema:          '45 min',
+  has_about_page:          '1–2 hrs',
+  has_sitemap:             '15 min',
+  has_h1:                  '30 min',
+  https_enabled:           '1 hr',
+  content_length:          'Ongoing',
+  has_person_schema:       '30 min',
+  has_article_schema:      'Ongoing',
+};
+
+// --- Helpers ---
 function getScoreMessage(score: number): { emoji: string; headline: string; sub: string; realWorld: string; urgency: string } {
   if (score >= 80) return {
     emoji: '🎉',
@@ -79,32 +121,6 @@ function scoreColor(score: number) {
   if (score >= 40) return '#d97706';
   return '#ef4444';
 }
-
-function getTopPriority(failing: AnalysisResult['findings']) {
-  const priorityOrder = ['has_schema_org', 'has_organization_schema', 'has_faq_schema', 'content_length', 'has_about_page', 'has_contact_info', 'has_meta_description', 'has_llms_txt'];
-  for (const id of priorityOrder) {
-    const found = failing.find(f => f.id === id);
-    if (found) return found;
-  }
-  return failing[0] ?? null;
-}
-
-const FINDING_WEB_INSTRUCTIONS: Record<string, string> = {
-  has_schema_org:          'Add Schema.org structured data markup to the website. This tells AI and search engines exactly what the business does, where it is, and how to contact it. Use schema type "LocalBusiness" or a more specific type (e.g. "Restaurant", "LawFirm"). A free generator is at https://technicalseo.com/tools/schema-markup-generator/',
-  has_organization_schema: 'Add Organization schema markup including business name, URL, logo, phone, address, and social profiles. This should be added to every page in a <script type="application/ld+json"> tag.',
-  has_faq_schema:          'Add FAQ schema markup to the homepage or a dedicated FAQ page. Write 5-8 questions customers commonly ask, with plain English answers. This dramatically increases AI recommendation visibility.',
-  content_length:          'Add more text content to the homepage and main service pages. Each key page should have at least 500 words describing what the business does, who it helps, and how. AI tools need enough text to understand and recommend the business.',
-  has_about_page:          'Create an About page at /about that tells the story of the business — who founded it, how long it\'s been running, the team, and what makes it different. Include the owner\'s name and a photo if possible.',
-  has_meta_description:    'Add a unique meta description to every page (especially the homepage). It should be 150-160 characters and describe what the page is about in plain English. This shows up in search results and helps AI understand each page.',
-  has_contact_info:        'Make sure the full contact details are visible on the homepage and in the footer: phone number, email address, and physical address (if applicable). These should be in plain HTML text, not just an image.',
-  has_llms_txt:            'Create a file at the root of the website called llms.txt. This is a plain text file that introduces the business to AI tools. It should include: business name, what it does, who it serves, key services, location, and contact info. Format guidance at https://llmstxt.org',
-  https_enabled:           'Enable SSL/HTTPS on the website. Contact the web host — most offer free SSL certificates via Let\'s Encrypt. The site should redirect all HTTP traffic to HTTPS automatically.',
-  has_sitemap:             'Generate and submit an XML sitemap at /sitemap.xml. Most CMS platforms (WordPress, Squarespace, Wix) can do this automatically with a plugin or setting. Submit it to Google Search Console as well.',
-  has_robots_txt:          'Create a robots.txt file at the root of the website. At minimum it should include: User-agent: * and Sitemap: [full URL to sitemap.xml]. Make sure it does not accidentally block search engine crawlers.',
-  has_title_tag:           'Add a unique, descriptive title tag to every page. The homepage title should include the business name and primary service/location (e.g. "Smith Plumbing — Plumbers in Austin, TX"). Keep it under 60 characters.',
-  has_h1:                  'Make sure every page has exactly one H1 heading tag that clearly describes what that page is about. It should be the main visible headline on the page.',
-  has_og_tags:             'Add Open Graph meta tags to every page: og:title, og:description, og:image, and og:url. This controls how the page looks when shared on social media and in AI-generated summaries.',
-};
 
 function buildWebPersonEmail(url: string, score: number, failing: AnalysisResult['findings']): { subject: string; body: string } {
   const subject = `Website updates needed — AI search visibility report for ${url}`;
@@ -197,8 +213,6 @@ function generatePDFHtml(result: AnalysisResult, score: number, msg: ReturnType<
 </head>
 <body>
 <div class="page">
-
-  <!-- Header -->
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:36px;padding-bottom:20px;border-bottom:2px solid #f3f0ff;">
     <div>
       <div style="font-size:22px;font-weight:900;color:#7c3aed;letter-spacing:-0.5px;">findmewith.ai</div>
@@ -209,46 +223,34 @@ function generatePDFHtml(result: AnalysisResult, score: number, msg: ReturnType<
       <div style="font-size:13px;font-weight:600;color:#374151;margin-top:2px;">${result.url}</div>
     </div>
   </div>
-
-  <!-- Score hero -->
   <div style="background:linear-gradient(135deg,#f5f3ff,#ffffff);border:1px solid #ddd6fe;border-radius:20px;padding:32px;text-align:center;margin-bottom:24px;">
     <div style="font-size:72px;font-weight:900;color:${color};line-height:1;">${score}<span style="font-size:30px;font-weight:600;">%</span></div>
     <div style="font-size:14px;color:#6b7280;margin:8px 0 12px;">AI search engines can identify <strong>${score}%</strong> of what makes your business worth recommending</div>
     <div style="font-size:20px;font-weight:800;color:#111827;margin-bottom:6px;">${msg.emoji} ${msg.headline}</div>
     <div style="font-size:14px;color:#6b7280;max-width:480px;margin:0 auto;line-height:1.65;">${msg.sub}</div>
   </div>
-
-  <!-- Plain English -->
   <div style="background:#fffbeb;border:1.5px solid #fde68a;border-radius:14px;padding:20px 24px;margin-bottom:24px;">
     <div style="font-weight:700;font-size:14px;color:#92400e;margin-bottom:8px;">🗣️ What this means in plain English</div>
     <div style="font-size:14px;color:#78350f;line-height:1.7;margin-bottom:8px;">${msg.realWorld}</div>
     <div style="font-size:13px;color:#d97706;font-weight:600;">${msg.urgency}</div>
   </div>
-
-  <!-- Category breakdown -->
   <div style="background:white;border:1px solid #e5e7eb;border-radius:16px;padding:24px;margin-bottom:24px;">
     <div style="font-size:16px;font-weight:700;color:#111827;margin-bottom:4px;">📊 How you score in each area</div>
     <div style="font-size:13px;color:#9ca3af;margin-bottom:18px;">Each area shows how much of the picture AI has about your business.</div>
     ${categoryRows}
   </div>
-
-  <!-- Fix list -->
   ${failing.length > 0 ? `
   <div class="page-break" style="background:white;border:1px solid #e5e7eb;border-radius:16px;padding:24px;margin-bottom:24px;">
     <div style="font-size:16px;font-weight:700;color:#111827;margin-bottom:4px;">🔧 What to fix (${failing.length} ${failing.length === 1 ? 'item' : 'items'})</div>
     <div style="font-size:13px;color:#9ca3af;margin-bottom:16px;">Fix these one at a time — start with #1 for the biggest impact.</div>
     ${fixRows}
   </div>` : ''}
-
-  <!-- Passing -->
   ${passing.length > 0 ? `
   <div style="background:white;border:1px solid #e5e7eb;border-radius:16px;padding:24px;margin-bottom:24px;">
     <div style="font-size:16px;font-weight:700;color:#111827;margin-bottom:4px;">✅ Already working (${passing.length})</div>
     <div style="font-size:13px;color:#9ca3af;margin-bottom:12px;">These are things AI can already see about your business.</div>
     <div>${passingChips}</div>
   </div>` : ''}
-
-  <!-- Footer -->
   <div style="text-align:center;padding:24px;background:#f9fafb;border-radius:12px;border:1px solid #f0f0f0;">
     <div style="font-size:16px;font-weight:800;color:#7c3aed;margin-bottom:6px;">findmewith.ai</div>
     <div style="font-size:13px;color:#6b7280;line-height:1.65;">
@@ -256,16 +258,110 @@ function generatePDFHtml(result: AnalysisResult, score: number, msg: ReturnType<
       Re-scan your site anytime at <strong>findmewith.ai</strong> to track your progress.
     </div>
   </div>
-
 </div>
-
-<script>
-  window.onload = function() { window.print(); };
-</script>
+<script>window.onload = function() { window.print(); };</script>
 </body>
 </html>`;
 }
 
+// --- Orchard Tier sub-component ---
+interface OrchardTierProps {
+  emoji: string;
+  title: string;
+  subtitle: string;
+  items: AnalysisResult['findings'];
+  checked: Set<string>;
+  onToggle: (id: string) => void;
+  accentColor: string;
+  bgColor: string;
+  borderColor: string;
+}
+
+const OrchardTier: React.FC<OrchardTierProps> = ({ emoji, title, subtitle, items, checked, onToggle, accentColor, bgColor, borderColor }) => {
+  const allChecked = items.every(f => checked.has(f.id));
+  const checkedCount = items.filter(f => checked.has(f.id)).length;
+
+  return (
+    <div style={{ marginBottom: '14px', border: `1.5px solid ${allChecked ? '#86efac' : borderColor}`, borderRadius: '16px', overflow: 'hidden', transition: 'border-color 0.3s' }}>
+      {/* Tier header */}
+      <div style={{ background: allChecked ? '#f0fdf4' : bgColor, padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ fontSize: '22px' }}>{emoji}</span>
+          <div>
+            <div style={{ fontSize: '14px', fontWeight: 800, color: allChecked ? '#15803d' : '#111827' }}>{title}</div>
+            <div style={{ fontSize: '12px', color: allChecked ? '#16a34a' : '#9ca3af', marginTop: '1px' }}>{allChecked ? '✓ All done — nice work!' : subtitle}</div>
+          </div>
+        </div>
+        <div style={{ fontSize: '12px', fontWeight: 700, color: allChecked ? '#16a34a' : accentColor, background: allChecked ? '#dcfce7' : 'white', border: `1px solid ${allChecked ? '#86efac' : borderColor}`, borderRadius: '100px', padding: '4px 12px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+          {checkedCount}/{items.length} done
+        </div>
+      </div>
+
+      {/* Items */}
+      <div style={{ background: 'white', padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        {items.map(f => {
+          const isChecked = checked.has(f.id);
+          const timeLabel = FINDING_TIME[f.id];
+          const plain = FINDING_PLAIN_ENGLISH[f.id];
+          return (
+            <button
+              key={f.id}
+              onClick={() => onToggle(f.id)}
+              style={{
+                display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '12px 14px',
+                background: isChecked ? '#f0fdf4' : '#fafafa',
+                border: `1px solid ${isChecked ? '#86efac' : '#f0f0f0'}`,
+                borderRadius: '12px', cursor: 'pointer', textAlign: 'left', width: '100%',
+                transition: 'all 0.2s',
+              }}
+            >
+              {/* Checkbox */}
+              <div style={{
+                width: '20px', height: '20px', borderRadius: '6px', flexShrink: 0, marginTop: '1px',
+                background: isChecked ? '#16a34a' : 'white',
+                border: `2px solid ${isChecked ? '#16a34a' : '#d1d5db'}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'all 0.2s',
+              }}>
+                {isChecked && (
+                  <svg width="11" height="9" viewBox="0 0 11 9" fill="none">
+                    <path d="M1 4L4 7L10 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                )}
+              </div>
+
+              {/* Text */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: isChecked ? '#6b7280' : '#111827', textDecoration: isChecked ? 'line-through' : 'none', lineHeight: 1.4 }}>
+                  {FINDING_QUESTIONS[f.id] ?? f.label}
+                </div>
+                {!isChecked && plain && (
+                  <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '3px', lineHeight: 1.5 }}>
+                    {plain.why.length > 100 ? plain.why.slice(0, 97) + '…' : plain.why}
+                  </div>
+                )}
+              </div>
+
+              {/* Time badge */}
+              {timeLabel && (
+                <div style={{
+                  fontSize: '11px', fontWeight: 700, color: isChecked ? '#9ca3af' : accentColor,
+                  background: isChecked ? '#f3f4f6' : bgColor,
+                  border: `1px solid ${isChecked ? '#e5e7eb' : borderColor}`,
+                  borderRadius: '100px', padding: '3px 10px', whiteSpace: 'nowrap', flexShrink: 0,
+                }}>
+                  {timeLabel}
+                </div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// --- Main component ---
 interface Props {
   result: AnalysisResult;
   onFixContent: () => void;
@@ -285,11 +381,40 @@ export const ScoreStep: React.FC<Props> = ({ result, onFixContent, onGetCode, on
     const win = window.open('', '_blank');
     if (win) { win.document.write(html); win.document.close(); }
   };
+
   const color = scoreColor(score);
   const failing = findings.filter(f => f.status !== 'pass');
   const passing = findings.filter(f => f.status === 'pass');
-  const topPriority = getTopPriority(failing);
-  const topPriorityInfo = topPriority ? FINDING_PLAIN_ENGLISH[topPriority.id] : null;
+
+  // Orchard state — persisted in localStorage keyed to URL
+  const orchardKey = `orchard_${result.url}`;
+  const [checked, setChecked] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem(orchardKey);
+      return saved ? new Set(JSON.parse(saved) as string[]) : new Set<string>();
+    } catch { return new Set<string>(); }
+  });
+
+  const toggleCheck = (id: string) => {
+    setChecked(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      try { localStorage.setItem(orchardKey, JSON.stringify([...next])); } catch {}
+      return next;
+    });
+  };
+
+  // Split failing items into tiers; uncategorized items fall into tier 2
+  const categorized = new Set([...TIER_1_IDS, ...TIER_2_IDS, ...TIER_3_IDS]);
+  const tier1Items = TIER_1_IDS.map(id => failing.find(f => f.id === id)).filter(Boolean) as typeof failing;
+  const tier2Items = [
+    ...TIER_2_IDS.map(id => failing.find(f => f.id === id)).filter(Boolean),
+    ...failing.filter(f => !categorized.has(f.id)),
+  ] as typeof failing;
+  const tier3Items = TIER_3_IDS.map(id => failing.find(f => f.id === id)).filter(Boolean) as typeof failing;
+
+  const totalFixed = failing.filter(f => checked.has(f.id)).length;
+  const allDone = failing.length > 0 && totalFixed === failing.length;
 
   return (
     <div style={{ maxWidth: '700px', margin: '0 auto', padding: '36px 24px 60px' }}>
@@ -317,21 +442,91 @@ export const ScoreStep: React.FC<Props> = ({ result, onFixContent, onGetCode, on
         </div>
       </div>
 
-      {/* #1 Priority callout */}
-      {topPriority && topPriorityInfo && (
-        <div style={{ background: 'linear-gradient(135deg, #7c3aed, #6d28d9)', borderRadius: '18px', padding: '24px', marginBottom: '20px', color: 'white' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-            <Star size={16} color="#fbbf24" fill="#fbbf24" />
-            <span style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', color: '#fbbf24' }}>Your #1 priority right now</span>
+      {/* 🌳 Orchard action plan */}
+      {failing.length > 0 && (
+        <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '20px', padding: '24px', marginBottom: '20px' }}>
+
+          {/* Header */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', marginBottom: '18px' }}>
+            <div>
+              <h2 style={{ fontSize: '17px', fontWeight: 800, color: '#111827', margin: 0 }}>🌳 Your Action Plan</h2>
+              <p style={{ fontSize: '13px', color: '#9ca3af', marginTop: '4px' }}>
+                Sorted by how easy each fix is — start at the top, check them off as you go
+              </p>
+            </div>
+            <div style={{
+              background: allDone ? '#dcfce7' : '#f5f3ff',
+              border: `1px solid ${allDone ? '#86efac' : '#ddd6fe'}`,
+              borderRadius: '100px', padding: '6px 14px',
+              fontSize: '13px', fontWeight: 700,
+              color: allDone ? '#16a34a' : '#7c3aed',
+              whiteSpace: 'nowrap', flexShrink: 0,
+            }}>
+              {allDone ? '🎉 All done!' : `${totalFixed} of ${failing.length} fixed`}
+            </div>
           </div>
-          <div style={{ fontSize: '16px', fontWeight: 800, marginBottom: '8px' }}>
-            {FINDING_QUESTIONS[topPriority.id] ?? topPriority.label}
-          </div>
-          <div style={{ fontSize: '13px', opacity: 0.9, lineHeight: 1.6, marginBottom: '10px' }}>{topPriorityInfo.why}</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, color: '#fbbf24' }}>
-            <Lightbulb size={14} />
-            {topPriorityInfo.fix}
-          </div>
+
+          {/* All-done celebration */}
+          {allDone && (
+            <div style={{ background: 'linear-gradient(135deg, #dcfce7, #f0fdf4)', border: '1.5px solid #86efac', borderRadius: '14px', padding: '20px', marginBottom: '16px', textAlign: 'center' }}>
+              <div style={{ fontSize: '32px', marginBottom: '8px' }}>🚜</div>
+              <div style={{ fontSize: '16px', fontWeight: 800, color: '#15803d', marginBottom: '4px' }}>
+                Nothing left to grab — you're farming AI traffic now!
+              </div>
+              <div style={{ fontSize: '13px', color: '#16a34a' }}>
+                Re-scan your site to see your updated score.
+              </div>
+            </div>
+          )}
+
+          {/* Tier 1 */}
+          {tier1Items.length > 0 && (
+            <OrchardTier
+              emoji="🍋"
+              title="Grab these today"
+              subtitle="No web person needed · 5–15 min each"
+              items={tier1Items}
+              checked={checked}
+              onToggle={toggleCheck}
+              accentColor="#d97706"
+              bgColor="#fffbeb"
+              borderColor="#fde68a"
+            />
+          )}
+
+          {/* Tier 2 */}
+          {tier2Items.length > 0 && (
+            <OrchardTier
+              emoji="🍊"
+              title="Worth a quick call"
+              subtitle="One session with your web person"
+              items={tier2Items}
+              checked={checked}
+              onToggle={toggleCheck}
+              accentColor="#7c3aed"
+              bgColor="#f5f3ff"
+              borderColor="#ddd6fe"
+            />
+          )}
+
+          {/* Tier 3 */}
+          {tier3Items.length > 0 && (
+            <OrchardTier
+              emoji="🍎"
+              title="The bigger wins"
+              subtitle="Higher effort, highest long-term payoff"
+              items={tier3Items}
+              checked={checked}
+              onToggle={toggleCheck}
+              accentColor="#6d28d9"
+              bgColor="#f5f3ff"
+              borderColor="#ddd6fe"
+            />
+          )}
+
+          <p style={{ fontSize: '12px', color: '#9ca3af', textAlign: 'center', marginTop: '10px', marginBottom: 0 }}>
+            ✓ Your progress saves automatically — come back any time
+          </p>
         </div>
       )}
 
@@ -364,36 +559,6 @@ export const ScoreStep: React.FC<Props> = ({ result, onFixContent, onGetCode, on
           })}
         </div>
       </div>
-
-      {/* Things to fix */}
-      {failing.length > 0 && (
-        <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '20px', padding: '26px', marginBottom: '20px' }}>
-          <h2 style={{ fontSize: '16px', fontWeight: 700, color: '#111827', marginBottom: '4px' }}>
-            🔧 What to fix ({failing.length} {failing.length === 1 ? 'item' : 'items'})
-          </h2>
-          <p style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '16px' }}>Each of these is a gap that makes it harder for AI to recommend you. Fix them one at a time — you don't have to do it all at once.</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {failing.map((f, i) => {
-              const plain = FINDING_PLAIN_ENGLISH[f.id];
-              return (
-                <div key={f.id} style={{ padding: '13px 16px', background: i === 0 ? '#fef3c7' : '#fafafa', border: `1px solid ${i === 0 ? '#fde68a' : '#f0f0f0'}`, borderRadius: '12px' }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-                    <AlertCircle size={16} style={{ color: i === 0 ? '#d97706' : '#9ca3af', flexShrink: 0, marginTop: '2px' }} />
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '13px', fontWeight: 600, color: '#111827' }}>
-                        {FINDING_QUESTIONS[f.id] ?? f.label}
-                        {i === 0 && <span style={{ marginLeft: '8px', fontSize: '11px', background: '#d97706', color: 'white', borderRadius: '6px', padding: '1px 7px', fontWeight: 700 }}>Start here</span>}
-                      </div>
-                      {plain && <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '3px', lineHeight: 1.55 }}>{plain.why}</div>}
-                      {!plain && f.suggestion && <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '3px' }}>{f.suggestion}</div>}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       {/* Send to web person */}
       {failing.length > 0 && (() => {
