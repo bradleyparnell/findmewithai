@@ -264,13 +264,18 @@ function generatePDFHtml(result: AnalysisResult, score: number, msg: ReturnType<
 </html>`;
 }
 
-// Which findings link to which in-app tool
-const FINDING_TOOL_LINK: Record<string, { label: string; dest: 'content' | 'code' }> = {
-  has_faq_schema:          { label: '✍️ Generate FAQ answers →', dest: 'content' },
-  has_llms_txt:            { label: '🏷️ Generate llms.txt →', dest: 'code' },
-  has_schema_org:          { label: '🏷️ Get schema code snippet →', dest: 'code' },
-  has_organization_schema: { label: '🏷️ Get organization schema →', dest: 'code' },
-  has_about_page:          { label: '✍️ Write your About page →', dest: 'content' },
+// "Do it for me" config — free items go straight to the tool; Pro items show the paywall
+const FINDING_DO_IT_FOR_ME: Record<string, { dest: 'content' | 'code'; isPro: boolean; label: string }> = {
+  has_llms_txt:            { dest: 'code',    isPro: false, label: '✨ Generate my llms.txt file' },
+  has_meta_description:    { dest: 'content', isPro: false, label: '✨ Write my meta description' },
+  has_title_tag:           { dest: 'content', isPro: false, label: '✨ Write my page title' },
+  has_contact_info:        { dest: 'content', isPro: false, label: '✨ Generate my contact page text' },
+  has_faq_schema:          { dest: 'content', isPro: true,  label: '✨ Generate my FAQ answers' },
+  has_schema_org:          { dest: 'code',    isPro: true,  label: '✨ Generate my schema code' },
+  has_organization_schema: { dest: 'code',    isPro: true,  label: '✨ Generate my org schema' },
+  has_about_page:          { dest: 'content', isPro: true,  label: '✨ Write my About page' },
+  has_og_tags:             { dest: 'code',    isPro: true,  label: '✨ Generate my social tags' },
+  content_length:          { dest: 'content', isPro: true,  label: '✨ Help me write more content' },
 };
 
 // --- Orchard Tier sub-component ---
@@ -282,12 +287,14 @@ interface OrchardTierProps {
   checked: Set<string>;
   onToggle: (id: string) => void;
   onNavigate: (dest: 'content' | 'code') => void;
+  onUpgrade: () => void;
+  isPro: boolean;
   accentColor: string;
   bgColor: string;
   borderColor: string;
 }
 
-const OrchardTier: React.FC<OrchardTierProps> = ({ emoji, title, subtitle, items, checked, onToggle, onNavigate, accentColor, bgColor, borderColor }) => {
+const OrchardTier: React.FC<OrchardTierProps> = ({ emoji, title, subtitle, items, checked, onToggle, onNavigate, onUpgrade, isPro, accentColor, bgColor, borderColor }) => {
   const [expanded, setExpanded] = useState<string | null>(null);
   const allChecked = items.every(f => checked.has(f.id));
   const checkedCount = items.filter(f => checked.has(f.id)).length;
@@ -316,7 +323,7 @@ const OrchardTier: React.FC<OrchardTierProps> = ({ emoji, title, subtitle, items
           const timeLabel = FINDING_TIME[f.id];
           const plain = FINDING_PLAIN_ENGLISH[f.id];
           const webInstructions = FINDING_WEB_INSTRUCTIONS[f.id];
-          const toolLink = FINDING_TOOL_LINK[f.id];
+          const doItForMe = FINDING_DO_IT_FOR_ME[f.id];
 
           return (
             <div
@@ -395,20 +402,38 @@ const OrchardTier: React.FC<OrchardTierProps> = ({ emoji, title, subtitle, items
                       <div style={{ fontSize: '13px', color: '#374151', lineHeight: 1.7 }}>{webInstructions}</div>
                     </div>
                   )}
-                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '4px' }}>
-                    {toolLink && (
-                      <button
-                        onClick={() => onNavigate(toolLink.dest)}
-                        style={{ fontSize: '12px', fontWeight: 700, color: '#7c3aed', background: '#f5f3ff', border: '1.5px solid #ddd6fe', borderRadius: '8px', padding: '6px 14px', cursor: 'pointer' }}
-                      >
-                        {toolLink.label}
-                      </button>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px' }}>
+                    {/* Do it for me button */}
+                    {doItForMe && (
+                      doItForMe.isPro && !isPro ? (
+                        <div style={{ background: 'linear-gradient(135deg, #faf5ff, #f5f3ff)', border: '1.5px solid #ddd6fe', borderRadius: '10px', padding: '12px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+                          <div>
+                            <div style={{ fontSize: '13px', fontWeight: 700, color: '#5b21b6', marginBottom: '2px' }}>🔒 {doItForMe.label}</div>
+                            <div style={{ fontSize: '12px', color: '#7c3aed' }}>We'll generate this for you — Pro feature</div>
+                          </div>
+                          <button
+                            onClick={onUpgrade}
+                            style={{ fontSize: '12px', fontWeight: 800, color: 'white', background: 'linear-gradient(135deg, #7c3aed, #6d28d9)', border: 'none', borderRadius: '8px', padding: '8px 14px', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
+                          >
+                            Unlock Pro →
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => onNavigate(doItForMe.dest)}
+                          style={{ fontSize: '13px', fontWeight: 800, color: '#92400e', background: 'linear-gradient(135deg, #fbbf24, #f59e0b)', border: 'none', borderRadius: '10px', padding: '11px 18px', cursor: 'pointer', textAlign: 'left', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+                        >
+                          <span>{doItForMe.label}</span>
+                          <span style={{ fontSize: '16px' }}>→</span>
+                        </button>
+                      )
                     )}
+                    {/* Mark as done */}
                     <button
                       onClick={() => { onToggle(f.id); setExpanded(null); }}
-                      style={{ fontSize: '12px', fontWeight: 700, color: isChecked ? '#6b7280' : '#16a34a', background: isChecked ? '#f3f4f6' : '#f0fdf4', border: `1.5px solid ${isChecked ? '#e5e7eb' : '#86efac'}`, borderRadius: '8px', padding: '6px 14px', cursor: 'pointer' }}
+                      style={{ fontSize: '12px', fontWeight: 700, color: isChecked ? '#6b7280' : '#16a34a', background: isChecked ? '#f3f4f6' : '#f0fdf4', border: `1.5px solid ${isChecked ? '#e5e7eb' : '#86efac'}`, borderRadius: '8px', padding: '7px 14px', cursor: 'pointer', width: '100%' }}
                     >
-                      {isChecked ? '↩ Mark as not done' : '✓ Mark as done'}
+                      {isChecked ? '↩ Unmark' : '✓ Mark as done'}
                     </button>
                   </div>
                 </div>
@@ -549,6 +574,8 @@ export const ScoreStep: React.FC<Props> = ({ result, onFixContent, onGetCode, on
               checked={checked}
               onToggle={toggleCheck}
               onNavigate={(dest) => dest === 'content' ? onFixContent() : onGetCode()}
+              onUpgrade={onUpgrade}
+              isPro={!!isPro}
               accentColor="#d97706"
               bgColor="#fffbeb"
               borderColor="#fde68a"
@@ -565,6 +592,8 @@ export const ScoreStep: React.FC<Props> = ({ result, onFixContent, onGetCode, on
               checked={checked}
               onToggle={toggleCheck}
               onNavigate={(dest) => dest === 'content' ? onFixContent() : onGetCode()}
+              onUpgrade={onUpgrade}
+              isPro={!!isPro}
               accentColor="#7c3aed"
               bgColor="#f5f3ff"
               borderColor="#ddd6fe"
@@ -581,6 +610,8 @@ export const ScoreStep: React.FC<Props> = ({ result, onFixContent, onGetCode, on
               checked={checked}
               onToggle={toggleCheck}
               onNavigate={(dest) => dest === 'content' ? onFixContent() : onGetCode()}
+              onUpgrade={onUpgrade}
+              isPro={!!isPro}
               accentColor="#6d28d9"
               bgColor="#f5f3ff"
               borderColor="#ddd6fe"
