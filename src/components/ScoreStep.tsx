@@ -1,5 +1,5 @@
-import React from 'react';
-import { CheckCircle, AlertCircle, ArrowRight, TrendingUp, Lightbulb, Star } from 'lucide-react';
+import React, { useState } from 'react';
+import { CheckCircle, AlertCircle, ArrowRight, TrendingUp, Lightbulb, Star, Mail, Copy, Check } from 'lucide-react';
 import type { AnalysisResult } from '../types';
 
 const CATEGORY_INFO: Record<string, { label: string; desc: string; max: number }> = {
@@ -89,6 +89,54 @@ function getTopPriority(failing: AnalysisResult['findings']) {
   return failing[0] ?? null;
 }
 
+const FINDING_WEB_INSTRUCTIONS: Record<string, string> = {
+  has_schema_org:          'Add Schema.org structured data markup to the website. This tells AI and search engines exactly what the business does, where it is, and how to contact it. Use schema type "LocalBusiness" or a more specific type (e.g. "Restaurant", "LawFirm"). A free generator is at https://technicalseo.com/tools/schema-markup-generator/',
+  has_organization_schema: 'Add Organization schema markup including business name, URL, logo, phone, address, and social profiles. This should be added to every page in a <script type="application/ld+json"> tag.',
+  has_faq_schema:          'Add FAQ schema markup to the homepage or a dedicated FAQ page. Write 5-8 questions customers commonly ask, with plain English answers. This dramatically increases AI recommendation visibility.',
+  content_length:          'Add more text content to the homepage and main service pages. Each key page should have at least 500 words describing what the business does, who it helps, and how. AI tools need enough text to understand and recommend the business.',
+  has_about_page:          'Create an About page at /about that tells the story of the business — who founded it, how long it\'s been running, the team, and what makes it different. Include the owner\'s name and a photo if possible.',
+  has_meta_description:    'Add a unique meta description to every page (especially the homepage). It should be 150-160 characters and describe what the page is about in plain English. This shows up in search results and helps AI understand each page.',
+  has_contact_info:        'Make sure the full contact details are visible on the homepage and in the footer: phone number, email address, and physical address (if applicable). These should be in plain HTML text, not just an image.',
+  has_llms_txt:            'Create a file at the root of the website called llms.txt. This is a plain text file that introduces the business to AI tools. It should include: business name, what it does, who it serves, key services, location, and contact info. Format guidance at https://llmstxt.org',
+  https_enabled:           'Enable SSL/HTTPS on the website. Contact the web host — most offer free SSL certificates via Let\'s Encrypt. The site should redirect all HTTP traffic to HTTPS automatically.',
+  has_sitemap:             'Generate and submit an XML sitemap at /sitemap.xml. Most CMS platforms (WordPress, Squarespace, Wix) can do this automatically with a plugin or setting. Submit it to Google Search Console as well.',
+  has_robots_txt:          'Create a robots.txt file at the root of the website. At minimum it should include: User-agent: * and Sitemap: [full URL to sitemap.xml]. Make sure it does not accidentally block search engine crawlers.',
+  has_title_tag:           'Add a unique, descriptive title tag to every page. The homepage title should include the business name and primary service/location (e.g. "Smith Plumbing — Plumbers in Austin, TX"). Keep it under 60 characters.',
+  has_h1:                  'Make sure every page has exactly one H1 heading tag that clearly describes what that page is about. It should be the main visible headline on the page.',
+  has_og_tags:             'Add Open Graph meta tags to every page: og:title, og:description, og:image, and og:url. This controls how the page looks when shared on social media and in AI-generated summaries.',
+};
+
+function buildWebPersonEmail(url: string, score: number, failing: AnalysisResult['findings']): { subject: string; body: string } {
+  const subject = `Website updates needed — AI search visibility report for ${url}`;
+  const fixList = failing
+    .map((f, i) => {
+      const label = FINDING_QUESTIONS[f.id] ?? f.label;
+      const instructions = FINDING_WEB_INSTRUCTIONS[f.id] ?? (f.suggestion ?? 'Please review and fix this item.');
+      return `${i + 1}. ${label}\n   What to do: ${instructions}`;
+    })
+    .join('\n\n');
+
+  const body = `Hi,
+
+I ran our website (${url}) through an AI visibility scanner called findmewith.ai. It checks whether AI tools like ChatGPT, Google AI, and Perplexity can find and recommend our business.
+
+Our score: ${score}%
+
+This matters because more and more customers are using AI assistants to find businesses like ours. If we're not showing up in those recommendations, we're losing customers to competitors who are.
+
+Here are the specific things the scan found that need to be fixed:
+
+${fixList}
+
+You don't need to fix everything at once — please start with item #1 and work through the list. Let me know if you have any questions about any of these.
+
+You can run the scan yourself at https://findmewith.ai to verify improvements after each change.
+
+Thanks!`;
+
+  return { subject, body };
+}
+
 interface Props {
   result: AnalysisResult;
   onFixContent: () => void;
@@ -100,6 +148,7 @@ interface Props {
 
 export const ScoreStep: React.FC<Props> = ({ result, onFixContent, onGetCode, onUpgrade, isPro, isAuthenticated }) => {
   const { score, categories, findings } = result;
+  const [copied, setCopied] = useState(false);
   const msg = getScoreMessage(score);
   const color = scoreColor(score);
   const failing = findings.filter(f => f.status !== 'pass');
@@ -210,6 +259,47 @@ export const ScoreStep: React.FC<Props> = ({ result, onFixContent, onGetCode, on
           </div>
         </div>
       )}
+
+      {/* Send to web person */}
+      {failing.length > 0 && (() => {
+        const { subject, body } = buildWebPersonEmail(result.url ?? '', score, failing);
+        const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        const handleCopy = () => {
+          navigator.clipboard.writeText(`Subject: ${subject}\n\n${body}`);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2500);
+        };
+        return (
+          <div style={{ background: 'linear-gradient(135deg, #f0fdf4, #ffffff)', border: '1.5px solid #86efac', borderRadius: '20px', padding: '26px', marginBottom: '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+              <Mail size={18} style={{ color: '#16a34a' }} />
+              <div style={{ fontSize: '16px', fontWeight: 800, color: '#111827' }}>Don't do it yourself — send it to your web person</div>
+            </div>
+            <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '18px', lineHeight: 1.65 }}>
+              We've written a ready-to-send email with every fix listed in plain English, exactly what needs to be done, and why it matters. Just add your web person's email address and hit send — they'll know what to do.
+            </p>
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              <a
+                href={mailtoLink}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', background: '#16a34a', color: 'white', border: 'none', borderRadius: '12px', padding: '12px 22px', fontSize: '14px', fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}
+              >
+                <Mail size={15} />
+                Open in my email app
+              </a>
+              <button
+                onClick={handleCopy}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', background: 'white', color: '#374151', border: '1.5px solid #d1d5db', borderRadius: '12px', padding: '12px 22px', fontSize: '14px', fontWeight: 700, cursor: 'pointer' }}
+              >
+                {copied ? <Check size={15} style={{ color: '#16a34a' }} /> : <Copy size={15} />}
+                {copied ? 'Copied!' : 'Copy email text'}
+              </button>
+            </div>
+            <div style={{ marginTop: '14px', fontSize: '12px', color: '#9ca3af' }}>
+              💡 The email includes all {failing.length} fixes with step-by-step instructions your web person can action immediately.
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Things working */}
       {passing.length > 0 && (
