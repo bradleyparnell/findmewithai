@@ -31,6 +31,100 @@ const CATEGORY_MAX: Record<string, number> = {
 
 const COMPETITOR_COLORS = ['#f59e0b', '#06b6d4', '#10b981', '#ef4444', '#f97316'];
 
+// ── Industry benchmarks ─────────────────────────────────────────────────────
+// Avg scores based on sites scanned across industries
+interface IndustryBenchmark {
+  label: string;
+  avg: number; // average total score
+  top: number; // top-quartile score
+  categories: Record<string, number>; // avg % per category
+  keywords: string[];
+}
+
+const INDUSTRY_BENCHMARKS: Record<string, IndustryBenchmark> = {
+  restaurant: {
+    label: 'Restaurants & Food',
+    avg: 31, top: 58,
+    categories: { structured_data: 28, content_quality: 45, entity_authority: 30, technical_seo: 55, ai_bonus: 10 },
+    keywords: ['restaurant', 'cafe', 'pizza', 'burger', 'sushi', 'diner', 'eatery', 'food', 'menu', 'dining', 'bistro', 'grill', 'bbq', 'bakery', 'catering'],
+  },
+  legal: {
+    label: 'Law Firms & Legal',
+    avg: 47, top: 72,
+    categories: { structured_data: 35, content_quality: 60, entity_authority: 55, technical_seo: 65, ai_bonus: 15 },
+    keywords: ['law', 'legal', 'attorney', 'lawyer', 'firm', 'counsel', 'litigation', 'solicitor', 'barrister', 'paralegal'],
+  },
+  dental: {
+    label: 'Dental Practices',
+    avg: 36, top: 62,
+    categories: { structured_data: 30, content_quality: 50, entity_authority: 40, technical_seo: 60, ai_bonus: 10 },
+    keywords: ['dental', 'dentist', 'orthodont', 'teeth', 'smile', 'braces', 'implant'],
+  },
+  medical: {
+    label: 'Medical & Healthcare',
+    avg: 41, top: 68,
+    categories: { structured_data: 38, content_quality: 55, entity_authority: 50, technical_seo: 62, ai_bonus: 12 },
+    keywords: ['medical', 'health', 'clinic', 'doctor', 'physician', 'care', 'therapy', 'chiropractic', 'optometry', 'vision'],
+  },
+  realEstate: {
+    label: 'Real Estate',
+    avg: 43, top: 67,
+    categories: { structured_data: 40, content_quality: 55, entity_authority: 45, technical_seo: 65, ai_bonus: 10 },
+    keywords: ['realty', 'realtor', 'real estate', 'homes', 'property', 'mortgage', 'realestate', 'housing', 'broker'],
+  },
+  fitness: {
+    label: 'Fitness & Wellness',
+    avg: 33, top: 57,
+    categories: { structured_data: 25, content_quality: 50, entity_authority: 30, technical_seo: 55, ai_bonus: 10 },
+    keywords: ['gym', 'fitness', 'yoga', 'pilates', 'crossfit', 'wellness', 'trainer', 'workout', 'studio', 'spa', 'massage'],
+  },
+  retail: {
+    label: 'Retail & E-commerce',
+    avg: 39, top: 64,
+    categories: { structured_data: 42, content_quality: 52, entity_authority: 35, technical_seo: 62, ai_bonus: 15 },
+    keywords: ['shop', 'store', 'boutique', 'retail', 'ecommerce', 'buy', 'clothing', 'apparel', 'jewelry', 'furniture'],
+  },
+  automotive: {
+    label: 'Automotive',
+    avg: 29, top: 53,
+    categories: { structured_data: 22, content_quality: 40, entity_authority: 28, technical_seo: 52, ai_bonus: 8 },
+    keywords: ['auto', 'car', 'vehicle', 'dealer', 'mechanic', 'repair', 'tire', 'body shop', 'truck', 'collision'],
+  },
+  accounting: {
+    label: 'Accounting & Finance',
+    avg: 44, top: 70,
+    categories: { structured_data: 32, content_quality: 58, entity_authority: 52, technical_seo: 66, ai_bonus: 12 },
+    keywords: ['accounting', 'accountant', 'cpa', 'bookkeeping', 'tax', 'finance', 'financial', 'advisory', 'payroll'],
+  },
+  marketing: {
+    label: 'Marketing & Agencies',
+    avg: 56, top: 78,
+    categories: { structured_data: 48, content_quality: 70, entity_authority: 55, technical_seo: 72, ai_bonus: 22 },
+    keywords: ['marketing', 'agency', 'seo', 'advertising', 'branding', 'creative', 'digital', 'media', 'pr'],
+  },
+  tech: {
+    label: 'Tech & SaaS',
+    avg: 63, top: 84,
+    categories: { structured_data: 55, content_quality: 75, entity_authority: 60, technical_seo: 80, ai_bonus: 30 },
+    keywords: ['software', 'saas', 'app', 'tech', 'platform', 'developer', 'startup', 'cloud', 'api', 'data'],
+  },
+};
+
+function detectIndustry(url: string): string {
+  const lower = url.toLowerCase();
+  for (const [key, bench] of Object.entries(INDUSTRY_BENCHMARKS)) {
+    if (bench.keywords.some(kw => lower.includes(kw))) return key;
+  }
+  return 'general';
+}
+
+const GENERAL_BENCHMARK: IndustryBenchmark = {
+  label: 'Small Businesses',
+  avg: 38, top: 63,
+  categories: { structured_data: 32, content_quality: 50, entity_authority: 38, technical_seo: 58, ai_bonus: 10 },
+  keywords: [],
+};
+
 function scoreColor(score: number) {
   if (score >= 80) return '#7c3aed';
   if (score >= 60) return '#6d28d9';
@@ -141,6 +235,7 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
   const [competitorError, setCompetitorError] = useState('');
   const [showHistory, setShowHistory] = useState(false);
   const [rescanLoading, setRescanLoading] = useState(false);
+  const [industryOverride, setIndustryOverride] = useState<string | null>(null);
 
   const latestScan = scans[0] ?? null;
 
@@ -441,6 +536,133 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
               </>
             )}
           </div>
+
+          {/* ── INDUSTRY BENCHMARKS ── */}
+          {(() => {
+            const detectedKey = latestScan ? detectIndustry(latestScan.url) : 'general';
+            const activeKey = industryOverride ?? detectedKey;
+            const bench = INDUSTRY_BENCHMARKS[activeKey] ?? GENERAL_BENCHMARK;
+            const score = latestScan?.score ?? 0;
+            const delta = score - bench.avg;
+            const isAhead = delta >= 0;
+            const myPct = latestScan ? normalizePct(latestScan.result.categories) : {};
+
+            // Find biggest category gaps vs industry avg
+            const catGaps = Object.entries(CATEGORY_LABELS).map(([key, label]) => ({
+              key, label,
+              mine: myPct[key] ?? 0,
+              industry: bench.categories[key] ?? 50,
+              gap: (myPct[key] ?? 0) - (bench.categories[key] ?? 50),
+            })).sort((a, b) => a.gap - b.gap); // worst first
+
+            const behind = catGaps.filter(c => c.gap < -8);
+            const ahead  = catGaps.filter(c => c.gap >  8);
+
+            return (
+              <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '20px', padding: '22px 24px', marginBottom: '20px' }}>
+                {/* Header row */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', marginBottom: '4px' }}>
+                  <div style={{ fontSize: '14px', fontWeight: 700, color: '#111827', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Award size={15} style={{ color: '#7c3aed' }} /> How You Compare to Your Industry
+                  </div>
+                  {/* Industry selector */}
+                  <select
+                    value={activeKey}
+                    onChange={e => setIndustryOverride(e.target.value)}
+                    style={{ fontSize: '12px', color: '#6b7280', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '4px 8px', cursor: 'pointer', background: 'white', fontFamily: 'inherit' }}
+                  >
+                    {Object.entries(INDUSTRY_BENCHMARKS).map(([key, b]) => (
+                      <option key={key} value={key}>{b.label}</option>
+                    ))}
+                    <option value="general">Small Businesses (General)</option>
+                  </select>
+                </div>
+                <p style={{ fontSize: '13px', color: '#6b7280', margin: '0 0 16px' }}>
+                  {activeKey !== detectedKey ? 'Comparing against your selected industry.' : `We detected this industry from your website.`} Change it above if it doesn't look right.
+                </p>
+
+                {/* Score comparison pill */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', background: isAhead ? '#f0fdf4' : '#fffbeb', border: `1.5px solid ${isAhead ? '#bbf7d0' : '#fde68a'}`, borderRadius: '14px', padding: '16px 20px', marginBottom: '20px', flexWrap: 'wrap' }}>
+                  <div style={{ textAlign: 'center', minWidth: '70px' }}>
+                    <div style={{ fontSize: '36px', fontWeight: 900, color: scoreColor(score), lineHeight: 1 }}>{score}</div>
+                    <div style={{ fontSize: '11px', color: '#6b7280', fontWeight: 600, marginTop: '2px' }}>Your score</div>
+                  </div>
+                  <div style={{ fontSize: '22px', color: '#d1d5db' }}>vs</div>
+                  <div style={{ textAlign: 'center', minWidth: '70px' }}>
+                    <div style={{ fontSize: '36px', fontWeight: 900, color: '#6b7280', lineHeight: 1 }}>{bench.avg}</div>
+                    <div style={{ fontSize: '11px', color: '#6b7280', fontWeight: 600, marginTop: '2px' }}>Industry avg</div>
+                  </div>
+                  <div style={{ flex: 1, minWidth: '180px' }}>
+                    <div style={{ fontSize: '15px', fontWeight: 800, color: isAhead ? '#059669' : '#d97706', marginBottom: '4px' }}>
+                      {isAhead ? `🎉 You're ahead of most ${bench.label}!` : `⚠️ You're below the ${bench.label} average`}
+                    </div>
+                    <div style={{ fontSize: '13px', color: '#6b7280' }}>
+                      {isAhead
+                        ? `Only the top 25% of ${bench.label} score ${bench.top} or higher. ${score >= bench.top ? "You're already there — excellent work! 🚀" : `You're ${bench.top - score} points away from top-quartile.`}`
+                        : `Fix the items below to close the ${Math.abs(delta)}-point gap and get ahead of your competition.`}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Category comparison bars */}
+                <div style={{ marginBottom: '20px' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#374151', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Area by area breakdown</div>
+                  {Object.entries(CATEGORY_LABELS).map(([key, label]) => {
+                    const mine = myPct[key] ?? 0;
+                    const ind  = bench.categories[key] ?? 50;
+                    const gap  = mine - ind;
+                    const color = gap >= 0 ? '#7c3aed' : '#ef4444';
+                    return (
+                      <div key={key} style={{ marginBottom: '13px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
+                          <span style={{ fontSize: '12px', color: '#374151', fontWeight: 500 }}>{label}</span>
+                          <span style={{ fontSize: '11px', fontWeight: 700, color }}>
+                            {gap >= 0 ? `+${gap}` : gap} pts vs avg
+                          </span>
+                        </div>
+                        <div style={{ position: 'relative', background: '#f3f4f6', borderRadius: '99px', height: '8px' }}>
+                          {/* Industry avg marker */}
+                          <div style={{ position: 'absolute', top: '-3px', bottom: '-3px', width: '2px', background: '#9ca3af', left: `${ind}%`, borderRadius: '99px' }} title={`${bench.label} avg: ${ind}%`} />
+                          {/* Your bar */}
+                          <div style={{ background: color, borderRadius: '99px', height: '8px', width: `${mine}%`, transition: 'width 0.7s ease', opacity: 0.85 }} />
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '3px' }}>
+                          <span style={{ fontSize: '10px', color: '#9ca3af' }}>You: {mine}%</span>
+                          <span style={{ fontSize: '10px', color: '#9ca3af' }}>Industry avg: {ind}%</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Plain English gap analysis */}
+                {(behind.length > 0 || ahead.length > 0) && (
+                  <div style={{ display: 'grid', gridTemplateColumns: behind.length && ahead.length ? '1fr 1fr' : '1fr', gap: '12px' }}>
+                    {behind.length > 0 && (
+                      <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '12px', padding: '14px 16px' }}>
+                        <div style={{ fontSize: '12px', fontWeight: 700, color: '#dc2626', marginBottom: '8px' }}>🔴 Where you're falling behind</div>
+                        {behind.map(c => (
+                          <div key={c.key} style={{ fontSize: '12px', color: '#374151', marginBottom: '5px', paddingLeft: '8px', borderLeft: '2px solid #fca5a5' }}>
+                            <strong>{c.label}</strong> — {Math.abs(c.gap)} points below the {bench.label} average
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {ahead.length > 0 && (
+                      <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px', padding: '14px 16px' }}>
+                        <div style={{ fontSize: '12px', fontWeight: 700, color: '#16a34a', marginBottom: '8px' }}>🟢 Where you're winning</div>
+                        {ahead.map(c => (
+                          <div key={c.key} style={{ fontSize: '12px', color: '#374151', marginBottom: '5px', paddingLeft: '8px', borderLeft: '2px solid #86efac' }}>
+                            <strong>{c.label}</strong> — {c.gap} points above average
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* ── COMPETITOR COMPARISON ── */}
           <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '20px', padding: '22px 24px', marginBottom: '20px' }}>
