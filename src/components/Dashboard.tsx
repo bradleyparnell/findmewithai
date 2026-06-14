@@ -6,7 +6,7 @@ import {
 import {
   Search, Plus, LogOut, TrendingUp, ExternalLink, Zap, Target,
   AlertTriangle, CheckCircle, ChevronDown, ChevronUp, Trash2,
-  RefreshCw, Award,
+  RefreshCw, Award, ArrowRight,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { AnalysisResult } from '../types';
@@ -47,6 +47,39 @@ function scoreLabel(score: number) {
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+const FINDING_PLAIN_LABELS: Record<string, string> = {
+  has_schema_org:          'Business info cards (tells AI who you are)',
+  has_organization_schema: 'Business name & details in AI format',
+  has_faq_schema:          'FAQ answers AI can cite',
+  has_person_schema:       'Who runs this business',
+  has_article_schema:      'Blog posts labeled for AI',
+  content_length:          'Enough content for AI to read',
+  has_about_page:          'About page',
+  has_meta_description:    'One-sentence page summaries',
+  has_contact_info:        'Contact info AI can find',
+  has_llms_txt:            'AI introduction file (llms.txt)',
+  https_enabled:           'Secure website (HTTPS)',
+  has_sitemap:             'Sitemap for AI to navigate',
+  has_robots_txt:          'Site navigation instructions',
+  has_title_tag:           'Clear page titles',
+  has_h1:                  'Main heading on each page',
+  has_og_tags:             'Social sharing preview',
+};
+
+function getGapAnalysis(myFindings: AnalysisResult['findings'], compFindings: AnalysisResult['findings']) {
+  // Things the competitor passes but you fail
+  const myFail = new Set(myFindings.filter(f => f.status === 'fail').map(f => f.id));
+  const compPass = new Set(compFindings.filter(f => f.status === 'pass').map(f => f.id));
+  const gaps = [...myFail].filter(id => compPass.has(id));
+
+  // Things you pass but competitor fails
+  const myPass = new Set(myFindings.filter(f => f.status === 'pass').map(f => f.id));
+  const compFail = new Set(compFindings.filter(f => f.status === 'fail').map(f => f.id));
+  const advantages = [...myPass].filter(id => compFail.has(id));
+
+  return { gaps, advantages };
 }
 
 function normalizePct(categories: AnalysisResult['categories']): Record<string, number> {
@@ -352,9 +385,9 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
 
           {/* ── COMPETITOR COMPARISON ── */}
           <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '20px', padding: '22px 24px', marginBottom: '20px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px', flexWrap: 'wrap', gap: '10px' }}>
               <div style={{ fontSize: '14px', fontWeight: 700, color: '#111827', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Target size={15} style={{ color: '#7c3aed' }} /> Competitor Comparison
+                <Target size={15} style={{ color: '#7c3aed' }} /> How Do You Compare?
               </div>
               {isPro && competitors.length < 5 && (
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flex: '1 1 280px', maxWidth: '360px' }}>
@@ -363,7 +396,7 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
                     value={competitorUrl}
                     onChange={e => { setCompetitorUrl(e.target.value); setCompetitorError(''); }}
                     onKeyDown={e => e.key === 'Enter' && handleAddCompetitor()}
-                    placeholder="competitor.com"
+                    placeholder="Paste a competitor's website URL"
                     style={{ flex: 1, padding: '7px 12px', border: '1.5px solid #e5e7eb', borderRadius: '8px', fontSize: '13px', outline: 'none', fontFamily: 'inherit' }}
                   />
                   <button
@@ -376,6 +409,7 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
                 </div>
               )}
             </div>
+            <p style={{ fontSize: '13px', color: '#6b7280', margin: '0 0 16px' }}>Add a competitor's website and we'll show you exactly what they're doing that you're not — and where you're already winning.</p>
 
             {competitorError && (
               <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '8px 12px', fontSize: '12px', color: '#dc2626', marginBottom: '12px' }}>
@@ -386,8 +420,8 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
             {!isPro ? (
               <div style={{ background: 'linear-gradient(135deg, #f5f3ff, #ede9fe)', border: '1.5px solid #ddd6fe', borderRadius: '14px', padding: '22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '14px', flexWrap: 'wrap' }}>
                 <div>
-                  <div style={{ fontSize: '15px', fontWeight: 800, color: '#111827', marginBottom: '5px' }}>🏆 See how you stack up against the competition</div>
-                  <div style={{ fontSize: '13px', color: '#6b7280' }}>Add any competitor's URL and see a full side-by-side category breakdown.</div>
+                  <div style={{ fontSize: '15px', fontWeight: 800, color: '#111827', marginBottom: '5px' }}>🏆 See exactly what your competition is doing</div>
+                  <div style={{ fontSize: '13px', color: '#6b7280' }}>Paste any competitor's URL and get a side-by-side breakdown — including what they have that you don't.</div>
                 </div>
                 <button onClick={onUpgrade} style={{ background: '#7c3aed', color: 'white', border: 'none', borderRadius: '10px', padding: '9px 18px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
                   Upgrade to Pro →
@@ -397,14 +431,12 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
               <div style={{ textAlign: 'center', padding: '32px 24px', background: '#f9fafb', borderRadius: '14px' }}>
                 <div style={{ fontSize: '32px', marginBottom: '8px' }}>🏁</div>
                 <div style={{ fontSize: '14px', fontWeight: 700, color: '#374151', marginBottom: '5px' }}>No competitors added yet</div>
-                <div style={{ fontSize: '13px', color: '#6b7280' }}>Paste a competitor URL above and we'll scan it instantly.</div>
+                <div style={{ fontSize: '13px', color: '#6b7280' }}>Paste a competitor URL above — we'll scan it in seconds and show you how you compare.</div>
               </div>
             ) : (
               <>
                 {/* Score cards */}
                 <div style={{ display: 'grid', gridTemplateColumns: `repeat(${1 + competitors.length}, 1fr)`, gap: '10px', marginBottom: '24px' }}>
-
-                  {/* Your site card */}
                   <div style={{ background: '#f5f3ff', border: '2px solid #7c3aed', borderRadius: '14px', padding: '16px', textAlign: 'center' }}>
                     <div style={{ fontSize: '10px', fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>Your Site</div>
                     <div style={{ fontSize: '11px', color: '#6b7280', marginBottom: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -412,49 +444,94 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
                     </div>
                     <div style={{ fontSize: '28px', fontWeight: 900, color: scoreColor(latestScan.score) }}>{latestScan.score}</div>
                     <div style={{ fontSize: '11px', color: '#9ca3af' }}>/ 100</div>
-                    <div style={{ fontSize: '11px', fontWeight: 600, color: scoreColor(latestScan.score), marginTop: '4px' }}>
-                      {scoreLabel(latestScan.score)}
-                    </div>
+                    <div style={{ fontSize: '11px', fontWeight: 600, color: scoreColor(latestScan.score), marginTop: '4px' }}>{scoreLabel(latestScan.score)}</div>
                   </div>
 
-                  {/* Competitor cards */}
-                  {competitors.map((comp, i) => (
-                    <div key={comp.id} style={{ background: '#fffbeb', border: `2px solid ${COMPETITOR_COLORS[i % COMPETITOR_COLORS.length]}`, borderRadius: '14px', padding: '14px', textAlign: 'center', position: 'relative' }}>
-                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '4px', position: 'absolute', top: '6px', right: '6px' }}>
-                        <button
-                          onClick={() => handleRefreshCompetitor(comp)}
-                          disabled={scanningId === comp.id}
-                          title="Re-scan competitor"
-                          style={{ background: 'none', border: 'none', cursor: scanningId === comp.id ? 'not-allowed' : 'pointer', color: '#d1d5db', padding: '2px', lineHeight: 0 }}
-                        >
-                          <RefreshCw size={11} style={scanningId === comp.id ? { animation: 'spin 1s linear infinite' } : {}} />
-                        </button>
-                        <button
-                          onClick={() => handleRemoveCompetitor(comp.id)}
-                          title="Remove competitor"
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#d1d5db', padding: '2px', lineHeight: 0 }}
-                        >
-                          <Trash2 size={11} />
-                        </button>
+                  {competitors.map((comp, i) => {
+                    const diff = latestScan.score - comp.score;
+                    return (
+                      <div key={comp.id} style={{ background: '#fffbeb', border: `2px solid ${COMPETITOR_COLORS[i % COMPETITOR_COLORS.length]}`, borderRadius: '14px', padding: '14px', textAlign: 'center', position: 'relative' }}>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '4px', position: 'absolute', top: '6px', right: '6px' }}>
+                          <button onClick={() => handleRefreshCompetitor(comp)} disabled={scanningId === comp.id} title="Re-scan" style={{ background: 'none', border: 'none', cursor: scanningId === comp.id ? 'not-allowed' : 'pointer', color: '#d1d5db', padding: '2px', lineHeight: 0 }}>
+                            <RefreshCw size={11} style={scanningId === comp.id ? { animation: 'spin 1s linear infinite' } : {}} />
+                          </button>
+                          <button onClick={() => handleRemoveCompetitor(comp.id)} title="Remove" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#d1d5db', padding: '2px', lineHeight: 0 }}>
+                            <Trash2 size={11} />
+                          </button>
+                        </div>
+                        <div style={{ fontSize: '10px', fontWeight: 700, color: COMPETITOR_COLORS[i % COMPETITOR_COLORS.length], textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>Competitor</div>
+                        <div style={{ fontSize: '11px', color: '#6b7280', marginBottom: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {comp.url.replace(/^https?:\/\//, '').replace(/\/$/, '')}
+                        </div>
+                        <div style={{ fontSize: '28px', fontWeight: 900, color: scoreColor(comp.score) }}>{comp.score}</div>
+                        <div style={{ fontSize: '11px', color: '#9ca3af' }}>/ 100</div>
+                        <div style={{ fontSize: '11px', fontWeight: 600, marginTop: '6px', color: diff > 0 ? '#16a34a' : diff < 0 ? '#dc2626' : '#6b7280' }}>
+                          {diff > 0 ? `▲ You're ahead by ${diff}` : diff < 0 ? `▼ They're ahead by ${Math.abs(diff)}` : 'Tied'}
+                        </div>
                       </div>
-                      <div style={{ fontSize: '10px', fontWeight: 700, color: COMPETITOR_COLORS[i % COMPETITOR_COLORS.length], textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>
-                        Competitor {i + 1}
-                      </div>
-                      <div style={{ fontSize: '11px', color: '#6b7280', marginBottom: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {comp.url.replace(/^https?:\/\//, '').replace(/\/$/, '')}
-                      </div>
-                      <div style={{ fontSize: '28px', fontWeight: 900, color: scoreColor(comp.score) }}>{comp.score}</div>
-                      <div style={{ fontSize: '11px', color: '#9ca3af' }}>/ 100</div>
-                      <div style={{ fontSize: '11px', fontWeight: 600, color: scoreColor(comp.score), marginTop: '4px' }}>
-                        {scoreLabel(comp.score)}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
+                {/* Gap analysis for each competitor */}
+                {competitors.map((comp, i) => {
+                  const { gaps, advantages } = getGapAnalysis(latestScan.result.findings, comp.result.findings);
+                  const compDomain = comp.url.replace(/^https?:\/\//, '').replace(/\/$/, '').split('/')[0];
+                  const compAhead = comp.score > latestScan.score;
+                  return (
+                    <div key={comp.id} style={{ border: '1px solid #e5e7eb', borderRadius: '16px', padding: '18px 20px', marginBottom: '16px' }}>
+                      <div style={{ fontSize: '14px', fontWeight: 800, color: '#111827', marginBottom: '4px' }}>
+                        {compAhead
+                          ? `⚠️ ${compDomain} is beating you in AI visibility — here's how to close the gap`
+                          : `✅ You're ahead of ${compDomain} — here's what to protect`}
+                      </div>
+                      <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: '16px' }}>
+                        They score <strong>{comp.score}</strong> vs your <strong>{latestScan.score}</strong>.
+                      </div>
+
+                      {gaps.length > 0 && (
+                        <div style={{ marginBottom: '14px' }}>
+                          <div style={{ fontSize: '12px', fontWeight: 700, color: '#dc2626', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+                            🔴 They have this — you don't ({gaps.length})
+                          </div>
+                          {gaps.map(id => (
+                            <div key={id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', marginBottom: '6px' }}>
+                              <ArrowRight size={13} style={{ color: '#dc2626', flexShrink: 0 }} />
+                              <span style={{ fontSize: '13px', color: '#111827', fontWeight: 500 }}>
+                                {FINDING_PLAIN_LABELS[id] ?? id}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {advantages.length > 0 && (
+                        <div>
+                          <div style={{ fontSize: '12px', fontWeight: 700, color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+                            🟢 You have this — they don't ({advantages.length})
+                          </div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                            {advantages.map(id => (
+                              <span key={id} style={{ fontSize: '12px', fontWeight: 600, background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#15803d', borderRadius: '99px', padding: '4px 12px' }}>
+                                ✓ {FINDING_PLAIN_LABELS[id] ?? id}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {gaps.length === 0 && advantages.length === 0 && (
+                        <div style={{ fontSize: '13px', color: '#6b7280', fontStyle: 'italic' }}>
+                          You and this competitor are doing the same things — the score difference is in content depth and authority signals.
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+
                 {/* Grouped bar chart */}
-                <div style={{ fontSize: '13px', fontWeight: 600, color: '#374151', marginBottom: '14px' }}>
-                  Category breakdown — you vs. competitors
+                <div style={{ fontSize: '13px', fontWeight: 600, color: '#374151', marginBottom: '14px', marginTop: '8px' }}>
+                  Side-by-side breakdown — each area of your site vs. theirs
                 </div>
                 <ResponsiveContainer width="100%" height={230}>
                   <BarChart data={categoryChartData} margin={{ top: 0, right: 0, left: -22, bottom: 0 }}>
@@ -466,9 +543,7 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
                     <Bar dataKey="Your Site" fill="#7c3aed" radius={[4, 4, 0, 0]} />
                     {competitors.map((comp, i) => {
                       const domain = comp.url.replace(/^https?:\/\//, '').replace(/\/$/, '').split('/')[0];
-                      return (
-                        <Bar key={comp.id} dataKey={domain} fill={COMPETITOR_COLORS[i % COMPETITOR_COLORS.length]} radius={[4, 4, 0, 0]} />
-                      );
+                      return <Bar key={comp.id} dataKey={domain} fill={COMPETITOR_COLORS[i % COMPETITOR_COLORS.length]} radius={[4, 4, 0, 0]} />;
                     })}
                   </BarChart>
                 </ResponsiveContainer>
