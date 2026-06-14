@@ -345,6 +345,20 @@ const App: React.FC = () => {
           onNewScan={handleNewCheck}
           onUpgrade={handleUpgrade}
           onSignOut={handleSignOut}
+          onNavigate={async (dest) => {
+            // Load latest scan result into state before navigating
+            const { data: scans } = await supabase
+              .from('scans')
+              .select('*')
+              .eq('user_id', user.id)
+              .order('created_at', { ascending: false })
+              .limit(1);
+            if (scans && scans.length > 0) {
+              setResult(scans[0].result as AnalysisResult);
+              setSiteUrl(scans[0].url);
+            }
+            setStep(dest);
+          }}
         />
       )}
       <footer style={{

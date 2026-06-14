@@ -209,6 +209,7 @@ interface Props {
   onNewScan: () => void;
   onUpgrade: () => void;
   onSignOut: () => void;
+  onNavigate: (step: 'content' | 'code') => void;
 }
 
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -225,7 +226,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   );
 };
 
-export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan, onUpgrade, onSignOut }) => {
+export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan, onUpgrade, onSignOut, onNavigate }) => {
   const [scans, setScans] = useState<Scan[]>([]);
   const [competitors, setCompetitors] = useState<Competitor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -443,7 +444,7 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
                 onClick={() => onViewScan(latestScan)}
                 style={{ marginTop: '12px', fontSize: '11px', fontWeight: 700, color: '#7c3aed', background: '#f5f3ff', border: 'none', borderRadius: '8px', padding: '5px 12px', cursor: 'pointer' }}
               >
-                View Full Report →
+                See Action Plan →
               </button>
               <button
                 onClick={handleRescan}
@@ -474,6 +475,56 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
                   </div>
                 );
               })}
+            </div>
+          </div>
+
+          {/* ── NEXT STEPS STRIP ── */}
+          <div style={{ background: 'linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)', borderRadius: '20px', padding: '24px', marginBottom: '20px', color: 'white' }}>
+            <div style={{ fontSize: '15px', fontWeight: 800, marginBottom: '4px' }}>Ready to improve your score?</div>
+            <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.75)', marginBottom: '20px' }}>
+              Pick where to start — each step takes less than 15 minutes.
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+
+              {/* Step 1: Action Plan */}
+              <button
+                onClick={() => onViewScan(latestScan!)}
+                style={{ background: 'rgba(255,255,255,0.15)', border: '1.5px solid rgba(255,255,255,0.3)', borderRadius: '14px', padding: '16px', textAlign: 'left', cursor: 'pointer', color: 'white', transition: 'background 0.2s' }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.25)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.15)')}
+              >
+                <div style={{ fontSize: '24px', marginBottom: '8px' }}>🌳</div>
+                <div style={{ fontSize: '13px', fontWeight: 800, marginBottom: '4px' }}>See Your Action Plan</div>
+                <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.75)', lineHeight: 1.4 }}>Low, medium & harder fixes ranked so you know exactly where to start.</div>
+                <div style={{ marginTop: '10px', fontSize: '12px', fontWeight: 700, color: '#fbbf24' }}>View plan →</div>
+              </button>
+
+              {/* Step 2: Fix Content */}
+              <button
+                onClick={() => onNavigate('content')}
+                style={{ background: 'rgba(255,255,255,0.15)', border: '1.5px solid rgba(255,255,255,0.3)', borderRadius: '14px', padding: '16px', textAlign: 'left', cursor: 'pointer', color: 'white', transition: 'background 0.2s' }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.25)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.15)')}
+              >
+                <div style={{ fontSize: '24px', marginBottom: '8px' }}>✍️</div>
+                <div style={{ fontSize: '13px', fontWeight: 800, marginBottom: '4px' }}>Fix Your Content</div>
+                <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.75)', lineHeight: 1.4 }}>Generate AI-ready content — FAQ answers, your About page, and how-to guides.</div>
+                <div style={{ marginTop: '10px', fontSize: '12px', fontWeight: 700, color: '#fbbf24' }}>Write content →</div>
+              </button>
+
+              {/* Step 3: Get Code */}
+              <button
+                onClick={() => onNavigate('code')}
+                style={{ background: 'rgba(255,255,255,0.15)', border: '1.5px solid rgba(255,255,255,0.3)', borderRadius: '14px', padding: '16px', textAlign: 'left', cursor: 'pointer', color: 'white', transition: 'background 0.2s' }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.25)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.15)')}
+              >
+                <div style={{ fontSize: '24px', marginBottom: '8px' }}>🏷️</div>
+                <div style={{ fontSize: '13px', fontWeight: 800, marginBottom: '4px' }}>Get Your Code Snippets</div>
+                <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.75)', lineHeight: 1.4 }}>Copy-paste code your web person can add in minutes. No technical skills needed.</div>
+                <div style={{ marginTop: '10px', fontSize: '12px', fontWeight: 700, color: '#fbbf24' }}>Get snippets →</div>
+              </button>
+
             </div>
           </div>
 
