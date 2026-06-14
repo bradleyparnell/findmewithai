@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { HeroStep } from './components/HeroStep';
 import { EmailGate } from './components/EmailGate';
+import { InboxStep } from './components/InboxStep';
 import { ScoreStep } from './components/ScoreStep';
 import { ContentStep } from './components/ContentStep';
 import { CodeStep } from './components/CodeStep';
@@ -10,7 +11,7 @@ import { Nav } from './components/Nav';
 import { supabase } from './lib/supabase';
 import type { AnalysisResult } from './types';
 
-type AppStep = 'home' | 'gate' | 'score' | 'content' | 'code' | 'pricing' | 'dashboard';
+type AppStep = 'home' | 'gate' | 'inbox' | 'score' | 'content' | 'code' | 'pricing' | 'dashboard';
 
 const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://findmewithai-production.up.railway.app';
 
@@ -21,7 +22,6 @@ const App: React.FC = () => {
   const [isPro, setIsPro] = useState(() => localStorage.getItem('fmw_pro') === 'true');
   const [userEmail, setUserEmail] = useState(() => localStorage.getItem('fmw_email') || '');
   const [user, setUser] = useState<any>(null);
-  const [emailSent, setEmailSent] = useState(false);
 
   // Scroll to top on every step change
   useEffect(() => {
@@ -32,7 +32,10 @@ const App: React.FC = () => {
   useEffect(() => {
     // Get current session on load
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) setUser(session.user);
+      if (session?.user) {
+        setUser(session.user);
+        setUserEmail(session.user.email || '');
+      }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
@@ -41,7 +44,7 @@ const App: React.FC = () => {
         setUserEmail(session.user.email || '');
         localStorage.setItem('fmw_email', session.user.email || '');
 
-        // Save any pending scan that was waiting for auth
+        // Save any pending scan
         const pendingRaw = localStorage.getItem('fmw_pending_scan');
         if (pendingRaw) {
           try {
@@ -53,13 +56,26 @@ const App: React.FC = () => {
               score: pending.score,
               result: pending.result,
             });
-            localStorage.removeItem('fmw_pending_scan');
           } catch (_e) { /* silently ignore */ }
         }
 
-        // If we landed here via magic link click (hash in URL), go to dashboard
+        // If we landed here via magic link click, restore result and show score page
         if (window.location.hash.includes('access_token')) {
           window.history.replaceState({}, '', '/');
+
+          // Try to restore the pending scan result
+          if (pendingRaw) {
+            try {
+              const pending = JSON.parse(pendingRaw);
+              setResult(pending.result as AnalysisResult);
+              setSiteUrl(pending.url);
+              localStorage.removeItem('fmw_pending_scan');
+              setStep('score');
+              return;
+            } catch (_e) { /* fall through to dashboard */ }
+          }
+
+          // No pending scan — go straight to dashboard
           setStep('dashboard');
         }
       } else {
@@ -70,7 +86,7 @@ const App: React.FC = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  // On load: handle Stripe redirect OR verify existing subscription
+  // On load: handle Stripe redirect
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
 
@@ -109,7 +125,7 @@ const App: React.FC = () => {
     }
   }, []);
 
-  // On load: re-verify subscription with server (catches cancellations)
+  // On load: re-verify subscription with server
   useEffect(() => {
     const email = localStorage.getItem('fmw_email');
     if (!email) return;
@@ -140,7 +156,7 @@ const App: React.FC = () => {
     setUserEmail(email);
     localStorage.setItem('fmw_email', email);
 
-    // Store scan so it can be saved once they click the magic link
+    // Store scan so it can be shown and saved after they click the magic link
     if (result) {
       localStorage.setItem('fmw_pending_scan', JSON.stringify({
         url: siteUrl,
@@ -149,13 +165,11 @@ const App: React.FC = () => {
       }));
     }
 
-    // Send magic link (fire and forget — don't block showing results)
+    // Send magic link
     supabase.auth.signInWithOtp({
       email,
       options: { emailRedirectTo: window.location.origin },
     }).catch(() => {});
-
-    setEmailSent(true);
 
     // Persist lead server-side
     fetch(`${BACKEND}/api/leads`, {
@@ -164,7 +178,8 @@ const App: React.FC = () => {
       body: JSON.stringify({ email, url: siteUrl, score: result?.score ?? 0 }),
     }).catch(() => {});
 
-    setStep('score');
+    // Show the "check your inbox" screen — results wait until login
+    setStep('inbox');
   };
 
   const handleUpgrade = () => setStep('pricing');
@@ -209,7 +224,7 @@ const App: React.FC = () => {
     setStep('home');
   };
 
-  const showNav = step !== 'home' && step !== 'gate' && step !== 'pricing';
+  const showNav = !['home', 'gate', 'inbox', 'pricing'].includes(step);
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--color-bg-white)' }}>
@@ -230,6 +245,9 @@ const App: React.FC = () => {
       {step === 'gate' && result && (
         <EmailGate score={result.score} siteUrl={siteUrl} onSubmit={handleEmailSubmit} />
       )}
+      {step === 'inbox' && (
+        <InboxStep email={userEmail} siteUrl={siteUrl} score={result?.score ?? 0} />
+      )}
       {step === 'score' && result && (
         <ScoreStep
           result={result}
@@ -237,8 +255,6 @@ const App: React.FC = () => {
           onGetCode={() => setStep('code')}
           onUpgrade={handleUpgrade}
           isPro={isPro}
-          emailSent={emailSent}
-          userEmail={userEmail}
           isAuthenticated={!!user}
         />
       )}

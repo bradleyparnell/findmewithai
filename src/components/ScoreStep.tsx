@@ -49,12 +49,10 @@ interface Props {
   onGetCode: () => void;
   onUpgrade: () => void;
   isPro?: boolean;
-  emailSent?: boolean;
-  userEmail?: string;
   isAuthenticated?: boolean;
 }
 
-export const ScoreStep: React.FC<Props> = ({ result, onFixContent, onGetCode, onUpgrade, isPro, emailSent, userEmail, isAuthenticated }) => {
+export const ScoreStep: React.FC<Props> = ({ result, onFixContent, onGetCode, onUpgrade, isPro, isAuthenticated }) => {
   const { score, categories, findings } = result;
   const msg = getScoreMessage(score);
   const color = scoreColor(score);
@@ -64,16 +62,6 @@ export const ScoreStep: React.FC<Props> = ({ result, onFixContent, onGetCode, on
   return (
     <div style={{ maxWidth: '700px', margin: '0 auto', padding: '36px 24px 60px' }}>
 
-      {/* Inbox banner — shown after email submitted, until they verify */}
-      {emailSent && !isAuthenticated && (
-        <div style={{ background: '#fffbeb', border: '1.5px solid #f59e0b', borderRadius: '14px', padding: '12px 16px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ fontSize: '18px' }}>✉️</span>
-          <div>
-            <span style={{ fontSize: '13px', fontWeight: 700, color: '#92400e' }}>Check your inbox to activate your dashboard. </span>
-            <span style={{ fontSize: '13px', color: '#78350f' }}>We sent a login link to <strong>{userEmail}</strong> — click it to save and revisit your results anytime.</span>
-          </div>
-        </div>
-      )}
 
       <div style={{ background: 'linear-gradient(135deg, #f5f3ff, #ffffff)', border: '1px solid #ddd6fe', borderRadius: '24px', padding: '36px', textAlign: 'center', marginBottom: '24px' }}>
         <div style={{ fontSize: '18px', marginBottom: '4px' }}>{msg.emoji}</div>
@@ -163,22 +151,7 @@ export const ScoreStep: React.FC<Props> = ({ result, onFixContent, onGetCode, on
         </button>
       </div>
 
-      {!isPro && (
-        <div style={{ marginTop: '16px', background: 'linear-gradient(135deg, #f5f3ff, #ede9fe)', border: '1.5px solid #ddd6fe', borderRadius: '18px', padding: '22px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
-          <div>
-            <div style={{ fontSize: '15px', fontWeight: 800, color: '#111827', marginBottom: '4px' }}>⚡ Want to fix everything at once?</div>
-            <div style={{ fontSize: '13px', color: '#6b7280', lineHeight: 1.55 }}>
-              Pro unlocks all content generators and code snippets — everything you need to go from invisible to unforgettable.
-            </div>
-          </div>
-          <button
-            onClick={onUpgrade}
-            style={{ background: '#7c3aed', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '14px', padding: '10px 20px', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
-          >
-            See Pro — $29/mo →
-          </button>
-        </div>
-      )}
+
     </div>
   );
 };
