@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CheckCircle, AlertCircle, ArrowRight, TrendingUp, Lightbulb, Star, Mail, Copy, Check } from 'lucide-react';
+import { CheckCircle, AlertCircle, ArrowRight, TrendingUp, Lightbulb, Star, Mail, Copy, Check, FileText } from 'lucide-react';
 import type { AnalysisResult } from '../types';
 
 const CATEGORY_INFO: Record<string, { label: string; desc: string; max: number }> = {
@@ -137,6 +137,135 @@ Thanks!`;
   return { subject, body };
 }
 
+function generatePDFHtml(result: AnalysisResult, score: number, msg: ReturnType<typeof getScoreMessage>): string {
+  const failing = result.findings.filter(f => f.status !== 'pass');
+  const passing = result.findings.filter(f => f.status === 'pass');
+  const date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  const color = scoreColor(score);
+
+  const categoryRows = Object.entries(CATEGORY_INFO).map(([key, info]) => {
+    const raw = (result.categories as Record<string, number>)[key] ?? 0;
+    const pct = Math.min(100, Math.round((raw / info.max) * 100));
+    const good = pct >= 60;
+    return `
+      <div style="margin-bottom:14px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
+          <span style="font-size:13px;font-weight:600;color:#111827;">${info.label}</span>
+          <span style="font-size:13px;font-weight:700;color:${good ? '#7c3aed' : '#d97706'};">${pct}%</span>
+        </div>
+        <div style="height:8px;background:#f3f0ff;border-radius:99px;overflow:hidden;">
+          <div style="height:100%;width:${pct}%;background:${good ? '#7c3aed' : '#f59e0b'};border-radius:99px;"></div>
+        </div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:3px;">${info.desc}</div>
+      </div>`;
+  }).join('');
+
+  const fixRows = failing.map((f, i) => {
+    const label = FINDING_QUESTIONS[f.id] ?? f.label;
+    const plain = FINDING_PLAIN_ENGLISH[f.id];
+    const instructions = FINDING_WEB_INSTRUCTIONS[f.id] ?? f.suggestion ?? '';
+    return `
+      <div style="margin-bottom:16px;padding:14px 16px;background:${i === 0 ? '#fffbeb' : '#fafafa'};border:1px solid ${i === 0 ? '#fde68a' : '#e5e7eb'};border-radius:12px;page-break-inside:avoid;">
+        <div style="font-size:13px;font-weight:700;color:#111827;margin-bottom:6px;">
+          ${i + 1}. ${label}${i === 0 ? ' <span style="font-size:11px;background:#d97706;color:white;border-radius:6px;padding:1px 7px;margin-left:6px;">Start here</span>' : ''}
+        </div>
+        ${plain ? `<div style="font-size:12px;color:#6b7280;margin-bottom:6px;line-height:1.6;">${plain.why}</div>` : ''}
+        ${instructions ? `<div style="font-size:12px;color:#374151;background:white;border:1px solid #e5e7eb;border-radius:8px;padding:10px 12px;line-height:1.6;"><strong>What to do:</strong> ${instructions}</div>` : ''}
+      </div>`;
+  }).join('');
+
+  const passingChips = passing.map(f => `
+    <span style="display:inline-flex;align-items:center;gap:5px;background:#f5f3ff;border:1px solid #ddd6fe;border-radius:100px;padding:4px 12px;font-size:12px;color:#7c3aed;font-weight:500;margin:3px;">
+      ✓ ${(FINDING_QUESTIONS[f.id] ?? f.label).replace(/\?$/, '')}
+    </span>`).join('');
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>AI Visibility Report — ${result.url}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #111827; background: white; }
+    @media print {
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .no-print { display: none !important; }
+      .page-break { page-break-before: always; }
+    }
+    .page { max-width: 800px; margin: 0 auto; padding: 48px 40px; }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:36px;padding-bottom:20px;border-bottom:2px solid #f3f0ff;">
+    <div>
+      <div style="font-size:22px;font-weight:900;color:#7c3aed;letter-spacing:-0.5px;">findmewith.ai</div>
+      <div style="font-size:13px;color:#9ca3af;margin-top:2px;">AI Search Visibility Report</div>
+    </div>
+    <div style="text-align:right;">
+      <div style="font-size:12px;color:#9ca3af;">Generated ${date}</div>
+      <div style="font-size:13px;font-weight:600;color:#374151;margin-top:2px;">${result.url}</div>
+    </div>
+  </div>
+
+  <!-- Score hero -->
+  <div style="background:linear-gradient(135deg,#f5f3ff,#ffffff);border:1px solid #ddd6fe;border-radius:20px;padding:32px;text-align:center;margin-bottom:24px;">
+    <div style="font-size:72px;font-weight:900;color:${color};line-height:1;">${score}<span style="font-size:30px;font-weight:600;">%</span></div>
+    <div style="font-size:14px;color:#6b7280;margin:8px 0 12px;">AI search engines can identify <strong>${score}%</strong> of what makes your business worth recommending</div>
+    <div style="font-size:20px;font-weight:800;color:#111827;margin-bottom:6px;">${msg.emoji} ${msg.headline}</div>
+    <div style="font-size:14px;color:#6b7280;max-width:480px;margin:0 auto;line-height:1.65;">${msg.sub}</div>
+  </div>
+
+  <!-- Plain English -->
+  <div style="background:#fffbeb;border:1.5px solid #fde68a;border-radius:14px;padding:20px 24px;margin-bottom:24px;">
+    <div style="font-weight:700;font-size:14px;color:#92400e;margin-bottom:8px;">🗣️ What this means in plain English</div>
+    <div style="font-size:14px;color:#78350f;line-height:1.7;margin-bottom:8px;">${msg.realWorld}</div>
+    <div style="font-size:13px;color:#d97706;font-weight:600;">${msg.urgency}</div>
+  </div>
+
+  <!-- Category breakdown -->
+  <div style="background:white;border:1px solid #e5e7eb;border-radius:16px;padding:24px;margin-bottom:24px;">
+    <div style="font-size:16px;font-weight:700;color:#111827;margin-bottom:4px;">📊 How you score in each area</div>
+    <div style="font-size:13px;color:#9ca3af;margin-bottom:18px;">Each area shows how much of the picture AI has about your business.</div>
+    ${categoryRows}
+  </div>
+
+  <!-- Fix list -->
+  ${failing.length > 0 ? `
+  <div class="page-break" style="background:white;border:1px solid #e5e7eb;border-radius:16px;padding:24px;margin-bottom:24px;">
+    <div style="font-size:16px;font-weight:700;color:#111827;margin-bottom:4px;">🔧 What to fix (${failing.length} ${failing.length === 1 ? 'item' : 'items'})</div>
+    <div style="font-size:13px;color:#9ca3af;margin-bottom:16px;">Fix these one at a time — start with #1 for the biggest impact.</div>
+    ${fixRows}
+  </div>` : ''}
+
+  <!-- Passing -->
+  ${passing.length > 0 ? `
+  <div style="background:white;border:1px solid #e5e7eb;border-radius:16px;padding:24px;margin-bottom:24px;">
+    <div style="font-size:16px;font-weight:700;color:#111827;margin-bottom:4px;">✅ Already working (${passing.length})</div>
+    <div style="font-size:13px;color:#9ca3af;margin-bottom:12px;">These are things AI can already see about your business.</div>
+    <div>${passingChips}</div>
+  </div>` : ''}
+
+  <!-- Footer -->
+  <div style="text-align:center;padding:24px;background:#f9fafb;border-radius:12px;border:1px solid #f0f0f0;">
+    <div style="font-size:16px;font-weight:800;color:#7c3aed;margin-bottom:6px;">findmewith.ai</div>
+    <div style="font-size:13px;color:#6b7280;line-height:1.65;">
+      Questions about this report? Email us at <strong>hello@findmewithai.com</strong><br/>
+      Re-scan your site anytime at <strong>findmewith.ai</strong> to track your progress.
+    </div>
+  </div>
+
+</div>
+
+<script>
+  window.onload = function() { window.print(); };
+</script>
+</body>
+</html>`;
+}
+
 interface Props {
   result: AnalysisResult;
   onFixContent: () => void;
@@ -150,6 +279,12 @@ export const ScoreStep: React.FC<Props> = ({ result, onFixContent, onGetCode, on
   const { score, categories, findings } = result;
   const [copied, setCopied] = useState(false);
   const msg = getScoreMessage(score);
+
+  const handleDownloadPDF = () => {
+    const html = generatePDFHtml(result, score, msg);
+    const win = window.open('', '_blank');
+    if (win) { win.document.write(html); win.document.close(); }
+  };
   const color = scoreColor(score);
   const failing = findings.filter(f => f.status !== 'pass');
   const passing = findings.filter(f => f.status === 'pass');
@@ -300,6 +435,26 @@ export const ScoreStep: React.FC<Props> = ({ result, onFixContent, onGetCode, on
           </div>
         );
       })()}
+
+      {/* Download PDF */}
+      <div style={{ background: 'white', border: '1.5px solid #ddd6fe', borderRadius: '20px', padding: '22px 26px', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ width: '44px', height: '44px', background: '#f5f3ff', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <FileText size={20} style={{ color: '#7c3aed' }} />
+          </div>
+          <div>
+            <div style={{ fontSize: '15px', fontWeight: 800, color: '#111827' }}>Download your full report</div>
+            <div style={{ fontSize: '13px', color: '#6b7280', marginTop: '2px' }}>Save or print a PDF with your score, every fix, and step-by-step instructions.</div>
+          </div>
+        </div>
+        <button
+          onClick={handleDownloadPDF}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#7c3aed', color: 'white', border: 'none', borderRadius: '12px', padding: '12px 22px', fontSize: '14px', fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
+        >
+          <FileText size={15} />
+          Download PDF
+        </button>
+      </div>
 
       {/* Things working */}
       {passing.length > 0 && (
