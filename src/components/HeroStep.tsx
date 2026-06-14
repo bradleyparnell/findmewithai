@@ -11,11 +11,11 @@ interface Props {
 }
 
 const LOADING_MESSAGES = [
-  'Connecting to your website…',
-  'Reading your content through AI eyes…',
-  'Checking what ChatGPT & Google AI can see…',
-  'Calculating your visibility score…',
-  'Almost there — putting it all together…',
+  { text: 'Checking if ChatGPT knows your business exists…', fear: '68% of businesses are completely invisible to AI search.' },
+  { text: 'Looking at what your competitors tell AI about themselves…', fear: 'Your competitors may already be showing up where you aren\'t.' },
+  { text: 'Finding the gaps that are quietly costing you customers…', fear: 'Most business owners don\'t know they have a visibility problem.' },
+  { text: 'Counting how many AI questions you can\'t answer yet…', fear: 'Each unanswered question is a customer going elsewhere.' },
+  { text: 'Building your personalized action plan…', fear: 'The good news: most fixes take less than 15 minutes.' },
 ];
 
 export const HeroStep: React.FC<Props> = ({ onAnalyzed, user, onSignIn, onGoToDashboard }) => {
@@ -145,9 +145,19 @@ export const HeroStep: React.FC<Props> = ({ onAnalyzed, user, onSignIn, onGoToDa
         </div>
 
         {loading && (
-          <p style={{ color: '#7c3aed', fontSize: '14px', fontWeight: 500, marginTop: '10px' }}>
-            {LOADING_MESSAGES[loadingMsg]}
-          </p>
+          <div style={{ marginTop: '20px', background: 'white', border: '1.5px solid #ddd6fe', borderRadius: '16px', padding: '20px 24px', maxWidth: '480px', margin: '20px auto 0', textAlign: 'left' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+              <div style={{ width: '10px', height: '10px', background: '#7c3aed', borderRadius: '50%', animation: 'spin 1s linear infinite', flexShrink: 0 }} />
+              <span style={{ fontSize: '14px', fontWeight: 600, color: '#7c3aed' }}>{LOADING_MESSAGES[loadingMsg].text}</span>
+            </div>
+            {/* Progress bar */}
+            <div style={{ height: '4px', background: '#ede9fe', borderRadius: '99px', marginBottom: '12px' }}>
+              <div style={{ height: '100%', background: 'linear-gradient(90deg, #7c3aed, #d97706)', borderRadius: '99px', width: `${((loadingMsg + 1) / LOADING_MESSAGES.length) * 100}%`, transition: 'width 0.5s ease' }} />
+            </div>
+            <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px', padding: '10px 14px', fontSize: '13px', color: '#92400e', fontWeight: 500 }}>
+              💡 {LOADING_MESSAGES[loadingMsg].fear}
+            </div>
+          </div>
         )}
         {error && <p style={{ color: '#ef4444', fontSize: '14px', marginTop: '8px' }}>{error}</p>}
 

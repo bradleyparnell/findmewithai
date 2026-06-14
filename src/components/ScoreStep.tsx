@@ -564,6 +564,63 @@ export const ScoreStep: React.FC<Props> = ({ result, onFixContent, onGetCode, on
             </div>
           )}
 
+          {/* ★ START HERE — #1 Priority Card */}
+          {!allDone && (() => {
+            const topItem =
+              tier1Items.find(f => !checked.has(f.id)) ||
+              tier2Items.find(f => !checked.has(f.id)) ||
+              tier3Items.find(f => !checked.has(f.id));
+            if (!topItem) return null;
+            const plain = FINDING_PLAIN_ENGLISH[topItem.id];
+            const doItForMe = FINDING_DO_IT_FOR_ME[topItem.id];
+            const timeLabel = FINDING_TIME[topItem.id];
+            return (
+              <div style={{ background: 'linear-gradient(135deg, #fffbeb, #fff7ed)', border: '2px solid #f59e0b', borderRadius: '16px', padding: '20px', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                  <span style={{ background: '#d97706', color: 'white', fontSize: '11px', fontWeight: 800, borderRadius: '6px', padding: '3px 10px', letterSpacing: '0.4px', textTransform: 'uppercase' }}>⭐ Start Here</span>
+                  {timeLabel && <span style={{ fontSize: '12px', color: '#92400e', fontWeight: 600 }}>~{timeLabel}</span>}
+                </div>
+                <div style={{ fontSize: '15px', fontWeight: 800, color: '#111827', marginBottom: '8px', lineHeight: 1.4 }}>
+                  {FINDING_QUESTIONS[topItem.id] ?? topItem.label}
+                </div>
+                {plain && (
+                  <div style={{ fontSize: '13px', color: '#78350f', lineHeight: 1.65, marginBottom: '14px' }}>
+                    {plain.why}
+                  </div>
+                )}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {doItForMe && (
+                    doItForMe.isPro && !isPro ? (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'white', border: '1.5px solid #ddd6fe', borderRadius: '12px', padding: '12px 16px' }}>
+                        <div>
+                          <div style={{ fontSize: '13px', fontWeight: 700, color: '#5b21b6' }}>🔒 We'll do this for you — Pro feature</div>
+                          <div style={{ fontSize: '12px', color: '#7c3aed', marginTop: '2px' }}>Unlock Pro to generate this instantly</div>
+                        </div>
+                        <button onClick={onUpgrade} style={{ background: 'linear-gradient(135deg, #7c3aed, #6d28d9)', color: 'white', border: 'none', borderRadius: '8px', padding: '9px 16px', fontSize: '13px', fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                          Unlock Pro →
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => doItForMe.dest === 'content' ? onFixContent() : onGetCode()}
+                        style={{ background: 'linear-gradient(135deg, #fbbf24, #f59e0b)', color: '#92400e', border: 'none', borderRadius: '12px', padding: '13px 20px', fontSize: '14px', fontWeight: 800, cursor: 'pointer', textAlign: 'left', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 4px 12px rgba(245,158,11,0.3)' }}
+                      >
+                        <span>{doItForMe.label}</span>
+                        <span style={{ fontSize: '18px' }}>→</span>
+                      </button>
+                    )
+                  )}
+                  <button
+                    onClick={() => toggleCheck(topItem.id)}
+                    style={{ background: 'white', border: '1.5px solid #fde68a', borderRadius: '10px', padding: '9px 16px', fontSize: '13px', fontWeight: 600, color: '#92400e', cursor: 'pointer', width: '100%' }}
+                  >
+                    ✓ I already fixed this — mark as done
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
+
           {/* Tier 1 */}
           {tier1Items.length > 0 && (
             <OrchardTier

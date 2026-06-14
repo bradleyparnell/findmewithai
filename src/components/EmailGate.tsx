@@ -8,10 +8,10 @@ interface Props {
 }
 
 const PREVIEW_ROWS = [
-  { label: 'Business Info Cards', pct: 40 },
-  { label: 'Your Content', pct: 65 },
-  { label: 'Your Online Identity', pct: 28 },
-  { label: 'Website Health', pct: 75 },
+  { label: 'What ChatGPT actually sees about you', pct: 40 },
+  { label: 'Why competitors rank above you in AI results', pct: 65 },
+  { label: 'Your quickest win — less than 15 mins', pct: 28 },
+  { label: 'The one thing holding your score back', pct: 75 },
 ];
 
 function getScoreColor(score: number) {
@@ -92,9 +92,9 @@ export const EmailGate: React.FC<Props> = ({ score, siteUrl, onSubmit }) => {
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#f5f3ff', color: '#7c3aed', borderRadius: '100px', padding: '5px 14px', fontSize: '12px', fontWeight: 600, marginBottom: '14px', border: '1px solid #ddd6fe' }}>
             🔒 Joined by 1,200+ business owners · Free forever
           </div>
-          <h2 style={{ fontSize: '19px', fontWeight: 800, color: '#111827', marginBottom: '6px' }}>Your results are ready — where should we send them?</h2>
+          <h2 style={{ fontSize: '19px', fontWeight: 800, color: '#111827', marginBottom: '6px' }}>Your results are ready — let's show you what to fix</h2>
           <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '20px', lineHeight: 1.55 }}>
-            We'll show you exactly what to fix and give you free tools to start fixing it — no credit card, ever.
+            Enter your email and we'll unlock your full breakdown — including your #1 priority fix and free tools to start making progress today.
           </p>
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <input
@@ -111,7 +111,7 @@ export const EmailGate: React.FC<Props> = ({ score, siteUrl, onSubmit }) => {
               disabled={loading}
               style={{ background: '#7c3aed', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '15px', height: '48px', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }}
             >
-              {loading ? 'Loading…' : 'Create My Free Account →'}
+              {loading ? 'Loading…' : 'Show Me What to Fix →'}
             </button>
           </form>
           <p style={{ fontSize: '12px', color: '#9ca3af', marginTop: '12px', lineHeight: 1.5, textAlign: 'center' }}>
