@@ -190,11 +190,17 @@ const App: React.FC = () => {
       }));
     }
 
-    // Send magic link
-    supabase.auth.signInWithOtp({
+    // Send magic link — await and surface any error
+    const { error: otpError } = await supabase.auth.signInWithOtp({
       email,
       options: { emailRedirectTo: window.location.origin },
-    }).catch(() => {});
+    });
+
+    if (otpError) {
+      console.error('signInWithOtp error:', otpError);
+      alert(`Couldn't send the magic link: ${otpError.message}\n\nPlease try again or email hello@genierocket.com for help.`);
+      return;
+    }
 
     // Persist lead server-side
     fetch(`${BACKEND}/api/leads`, {
