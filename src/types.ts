@@ -5,6 +5,21 @@ export interface Finding {
   suggestion?: string;
 }
 
+export interface AiMarketKeyword {
+  keyword: string;
+  volume: number;
+  monthly: { month: string; volume: number }[];
+}
+
+export interface AiMarketData {
+  keywords: AiMarketKeyword[];
+  total_volume: number;
+  top_keyword: string;
+  top_volume: number;
+  trend_direction: 'growing' | 'stable' | 'declining';
+  trend_pct: number;
+}
+
 export interface AnalysisResult {
   url: string;
   score: number;
@@ -16,4 +31,6 @@ export interface AnalysisResult {
     ai_bonus: number;
   };
   findings: Finding[];
+  suggestions?: { category: string; title: string; description: string; impact: string }[];
+  ai_market_data?: AiMarketData | null;
 }

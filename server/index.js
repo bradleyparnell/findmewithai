@@ -109,7 +109,7 @@ function buildWeeklyEmailHtml({ email, url, score, previousScore, topFix }) {
         <tr><td style="background:#f3f4f6;border-radius:0 0 16px 16px;border:1px solid #e5e7eb;border-top:none;padding:24px 40px;text-align:center;">
           <div style="font-size:12px;color:#6b7280;line-height:1.7;">
             You're receiving this because you scanned your site on findmewith.ai.<br>
-            Questions? <a href="mailto:hello@genierocket.com" style="color:#7c3aed;">hello@genierocket.com</a><br>
+            Questions? <a href="mailto:hello@findmewithai.com" style="color:#7c3aed;">hello@findmewithai.com</a><br>
             <a href="${APP_URL}?unsubscribe=${encodeURIComponent(email)}" style="color:#9ca3af;">Unsubscribe from weekly reports</a>
           </div>
         </td></tr>
@@ -355,6 +355,76 @@ const SUGGESTIONS = {
   has_social_links:        ['nice-to-have', 'Link your social profiles',        'Linking to your social accounts helps AI confirm your online identity.',                                         'low'],
 };
 
+// ── DataForSEO AI Keyword Volume ──────────────────────────────────────────────
+const DATAFORSEO_AUTH = 'Basic ' + Buffer.from(
+  (process.env.DATAFORSEO_LOGIN || 'brad@genierocket.com') + ':' +
+  (process.env.DATAFORSEO_PASSWORD || '4af0536485267057')
+).toString('base64');
+
+async function fetchAiKeywordVolume(keywords) {
+  try {
+    const res = await fetch(
+      'https://api.dataforseo.com/v3/ai_optimization/ai_keyword_data/keywords_search_volume/live',
+      {
+        method: 'POST',
+        headers: { 'Authorization': DATAFORSEO_AUTH, 'Content-Type': 'application/json' },
+        body: JSON.stringify([{ keywords: keywords.slice(0, 8), location_code: 2840, language_code: 'en' }]),
+        signal: AbortSignal.timeout(12000),
+      }
+    );
+    const data = await res.json();
+    if (!res.ok || data.status_code !== 20000) {
+      console.warn('[dataforseo] API error:', data?.status_message);
+      return null;
+    }
+    return data?.tasks?.[0]?.result?.[0]?.items || null;
+  } catch (err) {
+    console.warn('[dataforseo] fetch error:', err.message);
+    return null;
+  }
+}
+
+function generateKeywordsFromSite({ title, metaDesc, h1Texts, url }) {
+  const keywords = new Set();
+  const stopWords = new Set(['the','a','an','and','or','but','in','on','at','to','for','of','with','by','from','is','are','we','our','your','this','that','all','any','get','find','how','best','top','near','local']);
+
+  // Core phrase from title (text before first dash/pipe)
+  const cleanTitle = title
+    ? title.split(/[\-\|–—]/)[0].trim().toLowerCase().replace(/[^a-z0-9\s]/g, '').trim()
+    : '';
+  if (cleanTitle.length > 3 && cleanTitle.length < 55) {
+    keywords.add(cleanTitle);
+    keywords.add(`best ${cleanTitle}`);
+    keywords.add(`${cleanTitle} near me`);
+  }
+
+  // From H1
+  const cleanH1 = h1Texts[0]
+    ? h1Texts[0].split(/[\-\|–—]/)[0].trim().toLowerCase().replace(/[^a-z0-9\s]/g, '').trim()
+    : '';
+  if (cleanH1 && cleanH1 !== cleanTitle && cleanH1.length > 3 && cleanH1.length < 55) {
+    keywords.add(cleanH1);
+  }
+
+  // From meta description — first 4 meaningful words
+  if (metaDesc) {
+    const metaWords = metaDesc.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/)
+      .filter(w => w.length > 3 && !stopWords.has(w));
+    if (metaWords.length >= 2) keywords.add(metaWords.slice(0, 4).join(' '));
+  }
+
+  // Domain slug as fallback
+  try {
+    const domainWords = new URL(url).hostname.replace('www.', '').split('.')[0]
+      .replace(/[^a-z]/gi, ' ').trim().toLowerCase();
+    if (domainWords.length > 3 && ![...keywords].some(k => k.includes(domainWords))) {
+      keywords.add(domainWords);
+    }
+  } catch {}
+
+  return [...keywords].filter(k => k.length > 3 && k.split(' ').length <= 6).slice(0, 8);
+}
+
 function fetchUrl(urlStr, redirectCount = 0) {
   return new Promise((resolve, reject) => {
     if (redirectCount > 5) return reject(new Error('Too many redirects'));
@@ -514,7 +584,53 @@ async function analyzeUrl(url) {
       (impactOrder[a.impact] ?? 3) - (impactOrder[b.impact] ?? 3)
     );
 
-  return { url: finalUrl, score: overall, categories: categoryScores, findings, suggestions };
+  // ── DataForSEO AI Market Data ────────────────────────────────────────────
+  let ai_market_data = null;
+  try {
+    const kwList = generateKeywordsFromSite({ title, metaDesc, h1Texts, url: finalUrl });
+    if (kwList.length > 0) {
+      const rawItems = await fetchAiKeywordVolume(kwList);
+      if (rawItems && rawItems.length > 0) {
+        const processed = rawItems
+          .filter(item => (item.ai_search_volume || 0) > 0)
+          .map(item => ({
+            keyword: item.keyword,
+            volume: item.ai_search_volume || 0,
+            monthly: (item.monthly_searches || []).slice(-6).map(m => ({
+              month: new Date(m.year, m.month - 1).toLocaleDateString('en-US', { month: 'short' }),
+              volume: m.search_volume || 0,
+            })),
+          }))
+          .sort((a, b) => b.volume - a.volume);
+
+        if (processed.length > 0) {
+          const totalVolume = processed.reduce((sum, k) => sum + k.volume, 0);
+          const topKw = processed[0];
+          let trendDirection = 'stable', trendPct = 0;
+          if (topKw.monthly.length >= 4) {
+            const recent = topKw.monthly.slice(-3).reduce((s, m) => s + m.volume, 0);
+            const older  = topKw.monthly.slice(0, 3).reduce((s, m) => s + m.volume, 0);
+            if (older > 0) {
+              trendPct = Math.round(((recent - older) / older) * 100);
+              trendDirection = trendPct > 5 ? 'growing' : trendPct < -5 ? 'declining' : 'stable';
+            }
+          }
+          ai_market_data = {
+            keywords: processed.slice(0, 5),
+            total_volume: totalVolume,
+            top_keyword: topKw.keyword,
+            top_volume: topKw.volume,
+            trend_direction: trendDirection,
+            trend_pct: Math.abs(trendPct),
+          };
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[dataforseo] ai_market_data skipped:', err.message);
+  }
+
+  return { url: finalUrl, score: overall, categories: categoryScores, findings, suggestions, ai_market_data };
 }
 
 // ── POST /api/analyze ─────────────────────────────────────────────────────────
