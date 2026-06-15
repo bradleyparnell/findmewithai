@@ -89,9 +89,27 @@ export const EmailGate: React.FC<Props> = ({ score, siteUrl, onSubmit }) => {
         </div>
 
         <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '20px', padding: '28px', boxShadow: '0 2px 16px rgba(0,0,0,0.04)' }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#f5f3ff', color: '#7c3aed', borderRadius: '100px', padding: '5px 14px', fontSize: '12px', fontWeight: 600, marginBottom: '14px', border: '1px solid #ddd6fe' }}>
-            🔒 Joined by 1,200+ business owners · Free forever
+
+          {/* Social proof bar */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '18px', flexWrap: 'wrap' }}>
+            {/* Avatars */}
+            <div style={{ display: 'flex' }}>
+              {['#f59e0b','#7c3aed','#059669','#3b82f6'].map((color, i) => (
+                <div key={i} style={{ width: '28px', height: '28px', borderRadius: '50%', background: color, border: '2px solid white', marginLeft: i > 0 ? '-8px' : '0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', color: 'white', fontWeight: 700 }}>
+                  {['J','M','S','A'][i]}
+                </div>
+              ))}
+            </div>
+            <div style={{ fontSize: '12px', color: '#374151', fontWeight: 600 }}>
+              <strong style={{ color: '#7c3aed' }}>1,200+</strong> business owners already scanned their site
+            </div>
+            <div style={{ display: 'flex', gap: '1px' }}>
+              {[1,2,3,4,5].map(s => (
+                <span key={s} style={{ color: '#f59e0b', fontSize: '13px' }}>★</span>
+              ))}
+            </div>
           </div>
+
           <h2 style={{ fontSize: '19px', fontWeight: 800, color: '#111827', marginBottom: '6px' }}>Your results are ready — let's show you what to fix</h2>
           <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '20px', lineHeight: 1.55 }}>
             Enter your email and we'll unlock your full breakdown — including your #1 priority fix and free tools to start making progress today.
@@ -114,8 +132,17 @@ export const EmailGate: React.FC<Props> = ({ score, siteUrl, onSubmit }) => {
               {loading ? 'Loading…' : 'Show Me What to Fix →'}
             </button>
           </form>
-          <p style={{ fontSize: '12px', color: '#9ca3af', marginTop: '12px', lineHeight: 1.5, textAlign: 'center' }}>
-            🔒 This creates your free findmewith.ai account. No spam, no credit card. Upgrade to Pro anytime.
+
+          {/* Testimonial */}
+          <div style={{ marginTop: '18px', background: '#f5f3ff', borderRadius: '12px', padding: '14px 16px', borderLeft: '3px solid #7c3aed' }}>
+            <p style={{ fontSize: '13px', color: '#374151', lineHeight: 1.6, margin: 0, fontStyle: 'italic' }}>
+              "I had no idea ChatGPT couldn't find my business. Fixed the top 3 things on the list and my phone started ringing differently within a week."
+            </p>
+            <div style={{ marginTop: '8px', fontSize: '12px', color: '#7c3aed', fontWeight: 700 }}>— Sarah M., interior designer</div>
+          </div>
+
+          <p style={{ fontSize: '12px', color: '#9ca3af', marginTop: '14px', lineHeight: 1.5, textAlign: 'center' }}>
+            🔒 Free account. No credit card. No spam. Upgrade to Pro anytime.
           </p>
         </div>
       </div>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CheckCircle, ArrowRight, TrendingUp, Mail, Copy, Check, FileText } from 'lucide-react';
+import { CheckCircle, ArrowRight, TrendingUp, Mail, Copy, Check, FileText, Share2 } from 'lucide-react';
 import type { AnalysisResult } from '../types';
 
 const CATEGORY_INFO: Record<string, { label: string; desc: string; max: number }> = {
@@ -456,10 +456,29 @@ interface Props {
   isAuthenticated?: boolean;
 }
 
+function getBenchmarkLine(score: number): string {
+  if (score >= 70) return `You're above average — most businesses score between 28–55.`;
+  if (score >= 45) return `You're near the middle of the pack. Most businesses score between 28–55.`;
+  return `Most businesses start here. The average score is 38 — you have real room to grow fast.`;
+}
+
 export const ScoreStep: React.FC<Props> = ({ result, onFixContent, onGetCode, onUpgrade, isPro, isAuthenticated }) => {
   const { score, categories, findings } = result;
   const [copied, setCopied] = useState(false);
+  const [shared, setShared] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const msg = getScoreMessage(score);
+
+  const handleShare = async () => {
+    const domain = (result.url ?? '').replace(/^https?:\/\//, '').replace(/\/$/, '');
+    const text = `I just checked my website on findmewith.ai — it scored ${score}% for AI search visibility. When someone asks ChatGPT for a business like mine, am I showing up? Now I know. 👇\nhttps://findmewith.ai`;
+    if (navigator.share) {
+      try { await navigator.share({ text, url: 'https://findmewith.ai' }); return; } catch (_) { /* fallthrough */ }
+    }
+    navigator.clipboard.writeText(text).catch(() => {});
+    setShared(true);
+    setTimeout(() => setShared(false), 3000);
+  };
 
   const handleDownloadPDF = () => {
     const html = generatePDFHtml(result, score, msg);
@@ -510,11 +529,23 @@ export const ScoreStep: React.FC<Props> = ({ result, onFixContent, onGetCode, on
         <div style={{ fontSize: '68px', fontWeight: 900, color, lineHeight: 1, marginBottom: '4px' }}>
           {score}<span style={{ fontSize: '28px', fontWeight: 600 }}>%</span>
         </div>
-        <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '12px' }}>
+        <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '6px' }}>
           AI search engines can identify <strong style={{ color: '#111827' }}>{score}%</strong> of what makes your business worth recommending
         </div>
+        {/* Benchmark context */}
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#f5f3ff', border: '1px solid #ddd6fe', borderRadius: '100px', padding: '4px 14px', fontSize: '12px', color: '#5b21b6', fontWeight: 600, marginBottom: '12px' }}>
+          📊 {getBenchmarkLine(score)}
+        </div>
         <div style={{ fontSize: '20px', fontWeight: 800, color: '#111827', marginBottom: '6px' }}>{msg.headline}</div>
-        <div style={{ fontSize: '14px', color: '#6b7280', maxWidth: '440px', margin: '0 auto', lineHeight: 1.6 }}>{msg.sub}</div>
+        <div style={{ fontSize: '14px', color: '#6b7280', maxWidth: '440px', margin: '0 auto', lineHeight: 1.6, marginBottom: '16px' }}>{msg.sub}</div>
+        {/* Share button */}
+        <button
+          onClick={handleShare}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', background: shared ? '#059669' : 'white', color: shared ? 'white' : '#7c3aed', border: '1.5px solid', borderColor: shared ? '#059669' : '#ddd6fe', borderRadius: '100px', padding: '8px 20px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s' }}
+        >
+          {shared ? <Check size={14} /> : <Share2 size={14} />}
+          {shared ? 'Copied to clipboard!' : 'Share my score'}
+        </button>
       </div>
 
       {/* Plain English "what this means" box */}
@@ -596,7 +627,7 @@ export const ScoreStep: React.FC<Props> = ({ result, onFixContent, onGetCode, on
                           <div style={{ fontSize: '13px', fontWeight: 700, color: '#5b21b6' }}>🔒 We'll do this for you — Pro feature</div>
                           <div style={{ fontSize: '12px', color: '#7c3aed', marginTop: '2px' }}>Unlock Pro to generate this instantly</div>
                         </div>
-                        <button onClick={onUpgrade} style={{ background: 'linear-gradient(135deg, #7c3aed, #6d28d9)', color: 'white', border: 'none', borderRadius: '8px', padding: '9px 16px', fontSize: '13px', fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                        <button onClick={() => setShowUpgradeModal(true)} style={{ background: 'linear-gradient(135deg, #7c3aed, #6d28d9)', color: 'white', border: 'none', borderRadius: '8px', padding: '9px 16px', fontSize: '13px', fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
                           Unlock Pro →
                         </button>
                       </div>
@@ -625,13 +656,13 @@ export const ScoreStep: React.FC<Props> = ({ result, onFixContent, onGetCode, on
           {tier1Items.length > 0 && (
             <OrchardTier
               emoji="🍋"
-              title="Grab these today"
+              title="Quick Wins"
               subtitle="No web person needed · 5–15 min each"
               items={tier1Items}
               checked={checked}
               onToggle={toggleCheck}
               onNavigate={(dest) => dest === 'content' ? onFixContent() : onGetCode()}
-              onUpgrade={onUpgrade}
+              onUpgrade={() => setShowUpgradeModal(true)}
               isPro={!!isPro}
               accentColor="#d97706"
               bgColor="#fffbeb"
@@ -643,13 +674,13 @@ export const ScoreStep: React.FC<Props> = ({ result, onFixContent, onGetCode, on
           {tier2Items.length > 0 && (
             <OrchardTier
               emoji="🍊"
-              title="Worth a quick call"
+              title="Bigger Fixes"
               subtitle="One session with your web person"
               items={tier2Items}
               checked={checked}
               onToggle={toggleCheck}
               onNavigate={(dest) => dest === 'content' ? onFixContent() : onGetCode()}
-              onUpgrade={onUpgrade}
+              onUpgrade={() => setShowUpgradeModal(true)}
               isPro={!!isPro}
               accentColor="#7c3aed"
               bgColor="#f5f3ff"
@@ -661,13 +692,13 @@ export const ScoreStep: React.FC<Props> = ({ result, onFixContent, onGetCode, on
           {tier3Items.length > 0 && (
             <OrchardTier
               emoji="🍎"
-              title="The bigger wins"
+              title="Advanced"
               subtitle="Higher effort, highest long-term payoff"
               items={tier3Items}
               checked={checked}
               onToggle={toggleCheck}
               onNavigate={(dest) => dest === 'content' ? onFixContent() : onGetCode()}
-              onUpgrade={onUpgrade}
+              onUpgrade={() => setShowUpgradeModal(true)}
               isPro={!!isPro}
               accentColor="#6d28d9"
               bgColor="#f5f3ff"
@@ -839,6 +870,53 @@ export const ScoreStep: React.FC<Props> = ({ result, onFixContent, onGetCode, on
           💡 <strong style={{ color: '#111827' }}>You don't have to do this alone.</strong> Every suggestion above comes with step-by-step guidance written in plain English. Questions? Email us at <a href="mailto:hello@findmewithai.com" style={{ color: '#7c3aed', textDecoration: 'none', fontWeight: 600 }}>hello@findmewithai.com</a>
         </div>
       </div>
+
+      {/* ── Upgrade explainer modal ── */}
+      {showUpgradeModal && (
+        <div
+          onClick={() => setShowUpgradeModal(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', zIndex: 1000 }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ background: 'white', borderRadius: '24px', padding: '32px', maxWidth: '440px', width: '100%', boxShadow: '0 24px 80px rgba(0,0,0,0.2)' }}
+          >
+            <div style={{ fontSize: '28px', marginBottom: '8px', textAlign: 'center' }}>✨</div>
+            <h2 style={{ fontSize: '20px', fontWeight: 900, color: '#111827', textAlign: 'center', marginBottom: '6px' }}>Here's what Pro does for you</h2>
+            <p style={{ fontSize: '14px', color: '#6b7280', textAlign: 'center', marginBottom: '22px', lineHeight: 1.6 }}>
+              Instead of figuring it out yourself, we generate everything you need — ready to copy and paste.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '24px' }}>
+              {[
+                { icon: '🏷️', title: 'Schema code, written for your site', desc: 'The technical code that tells AI exactly who you are — generated from your URL, no tech skills needed.' },
+                { icon: '✍️', title: 'Your FAQ, About page, and meta text', desc: 'AI-friendly content written in your voice, ready to add to your site in minutes.' },
+                { icon: '📄', title: 'Your llms.txt file', desc: 'A direct introduction to AI tools — like handing ChatGPT your business card.' },
+                { icon: '📈', title: 'Weekly score tracking', desc: 'Watch your number grow as you make improvements over time.' },
+              ].map(item => (
+                <div key={item.title} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', background: '#f9fafb', borderRadius: '12px', padding: '12px 14px' }}>
+                  <span style={{ fontSize: '20px', flexShrink: 0 }}>{item.icon}</span>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#111827' }}>{item.title}</div>
+                    <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px', lineHeight: 1.5 }}>{item.desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={() => { setShowUpgradeModal(false); onUpgrade(); }}
+              style={{ width: '100%', background: 'linear-gradient(135deg, #7c3aed, #6d28d9)', color: 'white', border: 'none', borderRadius: '12px', padding: '14px', fontSize: '15px', fontWeight: 800, cursor: 'pointer', marginBottom: '10px' }}
+            >
+              Unlock Pro — $29/mo →
+            </button>
+            <button
+              onClick={() => setShowUpgradeModal(false)}
+              style={{ width: '100%', background: 'transparent', border: 'none', color: '#9ca3af', fontSize: '13px', cursor: 'pointer', padding: '6px' }}
+            >
+              Not right now
+            </button>
+          </div>
+        </div>
+      )}
 
     </div>
   );
