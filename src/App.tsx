@@ -153,10 +153,25 @@ const App: React.FC = () => {
   useEffect(() => { localStorage.setItem('fmw_pro', String(isPro)); }, [isPro]);
   useEffect(() => { localStorage.setItem('fmw_email', userEmail); }, [userEmail]);
 
-  const handleAnalyzed = (r: AnalysisResult, url: string) => {
+  const handleAnalyzed = async (r: AnalysisResult, url: string) => {
     setResult(r);
     setSiteUrl(url);
-    setStep('gate');
+
+    // If already logged in, save the scan and go straight to score — no email gate
+    if (user) {
+      try {
+        await supabase.from('scans').insert({
+          user_id: user.id,
+          email: user.email,
+          url,
+          score: r.score,
+          result: r,
+        });
+      } catch { /* non-fatal */ }
+      setStep('score');
+    } else {
+      setStep('gate');
+    }
   };
 
   const handleSignUp = async (email: string, password: string) => {
