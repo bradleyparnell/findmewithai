@@ -553,6 +553,27 @@ export const ScoreStep: React.FC<Props> = ({ result, onFixContent, onGetCode, on
       {/* Score card */}
       <div style={{ background: 'linear-gradient(135deg, #f5f3ff, #ffffff)', border: '1px solid #ddd6fe', borderRadius: '24px', padding: '36px', textAlign: 'center', marginBottom: '20px', overflow: 'hidden' }}>
 
+        {/* ── MISSED OPPORTUNITY — shown first ── */}
+        {(() => {
+          const missedPct = 100 - score;
+          const missedCount = failing.length;
+          if (missedPct <= 0) return null;
+          return (
+            <div style={{ marginBottom: '20px', background: 'white', border: '1.5px solid #fde68a', borderRadius: '16px', padding: '20px 24px' }}>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>
+                ⚠️ Missed opportunity
+              </div>
+              <div style={{ fontSize: '36px', fontWeight: 900, color: '#d97706', letterSpacing: '-1px', lineHeight: 1, marginBottom: '8px' }}>
+                {missedPct}% of your story
+              </div>
+              <div style={{ fontSize: '14px', color: '#78350f', lineHeight: 1.6 }}>
+                AI search engines are missing <strong>{missedPct}%</strong> of what makes your business worth recommending.
+                {missedCount > 0 && <> That's <strong>{missedCount} signal{missedCount !== 1 ? 's' : ''}</strong> blocking customers from finding you.</>}
+              </div>
+            </div>
+          );
+        })()}
+
         {/* ── FOUND / NOT FOUND state banner ── */}
         {(() => {
           const fs = getFoundState(score);

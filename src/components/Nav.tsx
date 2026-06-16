@@ -15,9 +15,9 @@ interface Props {
 
 export const Nav: React.FC<Props> = ({ step, isPro, siteUrl, user, onNavigate, onNewCheck, onUpgrade, onManageSubscription, onDashboard }) => {
   const steps = [
-    { id: 'score', label: '① Your Score' },
-    { id: 'content', label: '② Fix Content' },
-    { id: 'code', label: '③ Get Code' },
+    { id: 'score', label: 'Score' },
+    { id: 'content', label: 'Content' },
+    { id: 'code', label: 'Code' },
   ];
 
   const domain = siteUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
