@@ -245,6 +245,9 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
   const [showHistory, setShowHistory] = useState(false);
   const [rescanLoading, setRescanLoading] = useState(false);
   const [expandedFix, setExpandedFix] = useState<Set<string>>(new Set());
+  const [customTerm, setCustomTerm] = useState('');
+  const [customKeywords, setCustomKeywords] = useState<{keyword: string; volume: number; custom?: boolean}[]>([]);
+  const [checkingVolume, setCheckingVolume] = useState(false);
 
   // Map each check ID → which fix tool it routes to
   const FIX_CTA: Record<string, { label: string; type: 'code' | 'content' }> = {
@@ -638,14 +641,10 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
 
                   {/* Top keywords */}
                   {(() => {
-                    const [customTerm, setCustomTerm] = React.useState('');
-                    const [customKeywords, setCustomKeywords] = React.useState<{keyword: string; volume: number; custom?: boolean}[]>([]);
-                    const [checking, setChecking] = React.useState(false);
-
                     const checkVolume = async () => {
                       const term = customTerm.trim();
                       if (!term) return;
-                      setChecking(true);
+                      setCheckingVolume(true);
                       try {
                         const res = await fetch(`${BACKEND}/api/keyword-volume`, {
                           method: 'POST',
@@ -658,7 +657,7 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
                         setCustomKeywords(prev => [entry, ...prev.filter(k => k.keyword !== entry.keyword)]);
                         setCustomTerm('');
                       } catch { /* silent */ } finally {
-                        setChecking(false);
+                        setCheckingVolume(false);
                       }
                     };
 
@@ -696,14 +695,14 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
                               onKeyDown={e => e.key === 'Enter' && checkVolume()}
                               placeholder='e.g. "trail races Texas" or "obstacle course near me"'
                               style={{ flex: 1, padding: '11px 16px', borderRadius: '10px', border: '1.5px solid #e5e7eb', fontSize: '14px', color: '#111827', outline: 'none', background: 'white' }}
-                              disabled={checking}
+                              disabled={checkingVolume}
                             />
                             <button
                               onClick={checkVolume}
-                              disabled={checking || !customTerm.trim()}
-                              style={{ padding: '11px 22px', background: checking ? '#e5e7eb' : '#7c3aed', color: 'white', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: 700, cursor: checking ? 'default' : 'pointer', whiteSpace: 'nowrap' }}
+                              disabled={checkingVolume || !customTerm.trim()}
+                              style={{ padding: '11px 22px', background: checkingVolume ? '#e5e7eb' : '#7c3aed', color: 'white', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: 700, cursor: checkingVolume ? 'default' : 'pointer', whiteSpace: 'nowrap' }}
                             >
-                              {checking ? 'Checking…' : 'Check volume →'}
+                              {checkingVolume ? 'Checking…' : 'Check volume →'}
                             </button>
                           </div>
                           <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '8px' }}>
