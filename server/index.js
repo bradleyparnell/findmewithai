@@ -183,6 +183,341 @@ cron.schedule('0 9 * * 1', () => {
   runWeeklyReports().catch(err => console.error('[weekly cron]', err.message));
 }, { timezone: 'UTC' });
 
+// ── Nurture email HTML builders ───────────────────────────────────────────────
+function emailWrapper({ preheader = '', headerTitle = 'findmewith.ai', headerSub = '', body = '', email = '', unsubLabel = 'Unsubscribe from nurture emails' }) {
+  return `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${headerTitle}</title>
+</head>
+<body style="margin:0;padding:0;background:#f9fafb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+${preheader ? `<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">${preheader}&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;</div>` : ''}
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;padding:40px 20px;">
+  <tr><td align="center">
+    <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
+      <tr><td style="background:linear-gradient(135deg,#3b0764,#7c3aed);border-radius:16px 16px 0 0;padding:28px 40px;text-align:center;">
+        <div style="font-size:22px;font-weight:800;color:white;letter-spacing:-0.5px;">findmewith.ai</div>
+        ${headerSub ? `<div style="font-size:13px;color:rgba(255,255,255,0.75);margin-top:4px;">${headerSub}</div>` : ''}
+      </td></tr>
+      <tr><td style="background:white;padding:36px 40px;border-left:1px solid #e5e7eb;border-right:1px solid #e5e7eb;">
+        ${body}
+      </td></tr>
+      <tr><td style="background:#f3f4f6;border-radius:0 0 16px 16px;border:1px solid #e5e7eb;border-top:none;padding:24px 40px;text-align:center;">
+        <div style="font-size:12px;color:#6b7280;line-height:1.8;">
+          You're receiving this because you scanned your site on findmewith.ai.<br>
+          Questions? <a href="mailto:hello@findmewithai.com" style="color:#7c3aed;">hello@findmewithai.com</a><br>
+          <a href="${APP_URL}?unsubscribe=${encodeURIComponent(email)}" style="color:#9ca3af;">${unsubLabel}</a>
+        </div>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body>
+</html>`;
+}
+
+function buildWelcomeEmailHtml({ email, url, score }) {
+  const domain = url.replace(/^https?:\/\//, '').replace(/\/$/, '');
+  const scoreColor = score >= 70 ? '#16a34a' : score >= 41 ? '#d97706' : '#dc2626';
+  const scoreEmoji = score >= 70 ? '🟢' : score >= 41 ? '🟡' : '🔴';
+  const scoreLabel = score >= 70 ? 'Great start — you\'re already visible to AI' : score >= 41 ? 'On the radar — room to grow' : 'Not found yet — lots of quick wins ahead';
+  const tip = score >= 70
+    ? 'Add an FAQ section to your site. AI loves structured Q&A content — it pulls from it constantly.'
+    : score >= 41
+    ? 'Make sure your business name, address, and phone number are on every page of your website. This is the #1 signal AI uses to identify local businesses.'
+    : 'Add a clear, plain-English description of what you do and who you serve to your homepage. Right now, AI tools can\'t confidently describe your business — a short paragraph fixes that.';
+
+  const body = `
+    <h1 style="font-size:24px;font-weight:800;color:#111827;margin:0 0 8px;">Welcome to findmewith.ai 🎯</h1>
+    <p style="font-size:15px;color:#6b7280;line-height:1.6;margin:0 0 28px;">You just scanned <strong style="color:#111827;">${domain}</strong> and got your AI visibility score. Here's what it means.</p>
+
+    <!-- Score card -->
+    <div style="background:linear-gradient(135deg,#f5f3ff,#fdf4ff);border:1.5px solid #ddd6fe;border-radius:16px;padding:28px;text-align:center;margin-bottom:28px;">
+      <div style="font-size:13px;color:#6b7280;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Your AI Visibility Score</div>
+      <div style="font-size:80px;font-weight:900;color:${scoreColor};line-height:1;">${score}</div>
+      <div style="font-size:16px;font-weight:700;color:${scoreColor};margin-top:6px;">${scoreEmoji} ${scoreLabel}</div>
+      <div style="font-size:13px;color:#6b7280;margin-top:8px;">out of 100 — based on what AI tools like ChatGPT, Perplexity, and Google AI can find about your business</div>
+    </div>
+
+    <!-- Plain English what this means -->
+    <div style="margin-bottom:24px;">
+      <h2 style="font-size:17px;font-weight:800;color:#111827;margin:0 0 10px;">What does this actually mean?</h2>
+      <p style="font-size:14px;color:#374151;line-height:1.75;margin:0;">
+        When someone types <em>"best [your service] near me"</em> into ChatGPT or Google's AI, it searches everything it knows about local businesses. Your score tells you how much useful information about <strong>${domain}</strong> it can actually find. A lower score means it's probably recommending your competitors instead.
+      </p>
+    </div>
+
+    <!-- #1 quick win -->
+    <div style="background:#fffbeb;border-left:4px solid #f59e0b;border-radius:0 12px 12px 0;padding:20px 24px;margin-bottom:32px;">
+      <div style="font-size:11px;font-weight:800;color:#92400e;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">⚡ One thing to do today</div>
+      <p style="font-size:14px;color:#374151;line-height:1.65;margin:0;">${tip}</p>
+    </div>
+
+    <!-- CTA -->
+    <div style="text-align:center;">
+      <a href="${APP_URL}" style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#9333ea);color:white;text-decoration:none;font-weight:700;font-size:15px;padding:16px 40px;border-radius:12px;box-shadow:0 4px 16px rgba(124,58,237,0.3);">
+        Open My Dashboard →
+      </a>
+      <p style="font-size:12px;color:#9ca3af;margin-top:12px;">Your full report is waiting — see every fix ranked by impact.</p>
+    </div>`;
+
+  return emailWrapper({
+    preheader: `Your AI visibility score for ${domain}: ${score}/100. Here's what it means and what to do first.`,
+    headerSub: 'Welcome — your results are ready',
+    body,
+    email,
+    unsubLabel: 'Unsubscribe from findmewith.ai emails',
+  });
+}
+
+function buildNurtureDay2Html({ email, url, score }) {
+  const domain = url.replace(/^https?:\/\//, '').replace(/\/$/, '');
+  const scoreColor = score >= 70 ? '#16a34a' : score >= 41 ? '#d97706' : '#dc2626';
+
+  const body = `
+    <h1 style="font-size:22px;font-weight:800;color:#111827;margin:0 0 8px;">What your ${score}/100 actually means for your business</h1>
+    <p style="font-size:15px;color:#6b7280;line-height:1.6;margin:0 0 28px;">AI search is different from Google — and it's already sending customers somewhere.</p>
+
+    <p style="font-size:14px;color:#374151;line-height:1.75;margin:0 0 20px;">
+      You know how you'd ask a friend, <em>"know a good accountant near me?"</em> — and they'd give you one name? That's exactly how AI works now. When someone types a question into ChatGPT or Google's AI, it recommends <strong>one or two businesses</strong>, not a list of 20.
+    </p>
+    <p style="font-size:14px;color:#374151;line-height:1.75;margin:0 0 28px;">
+      Your score of <strong style="color:${scoreColor};">${score}/100</strong> tells you how likely you are to be that recommendation. Businesses in the 70+ range are getting named regularly. Below 40, AI tools either can't find them or don't have enough information to confidently recommend them.
+    </p>
+
+    <!-- The three states -->
+    <div style="border:1.5px solid #e5e7eb;border-radius:16px;overflow:hidden;margin-bottom:28px;">
+      <div style="background:#fef2f2;padding:16px 20px;display:flex;align-items:center;">
+        <div style="font-size:22px;margin-right:14px;">🔴</div>
+        <div>
+          <div style="font-size:14px;font-weight:800;color:#991b1b;">Score 0–40: Not Found</div>
+          <div style="font-size:13px;color:#6b7280;margin-top:2px;">AI tools can't confidently describe or recommend your business</div>
+        </div>
+      </div>
+      <div style="background:#fffbeb;padding:16px 20px;border-top:1px solid #e5e7eb;display:flex;align-items:center;">
+        <div style="font-size:22px;margin-right:14px;">🟡</div>
+        <div>
+          <div style="font-size:14px;font-weight:800;color:#92400e;">Score 41–70: Getting Found</div>
+          <div style="font-size:13px;color:#6b7280;margin-top:2px;">On the radar — shows up in some queries but loses to competitors in others</div>
+        </div>
+      </div>
+      <div style="background:#f0fdf4;padding:16px 20px;border-top:1px solid #e5e7eb;display:flex;align-items:center;">
+        <div style="font-size:22px;margin-right:14px;">🟢</div>
+        <div>
+          <div style="font-size:14px;font-weight:800;color:#15803d;">Score 71–100: Found</div>
+          <div style="font-size:13px;color:#6b7280;margin-top:2px;">Regularly cited and recommended by AI tools — the goal</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="background:#f5f3ff;border-radius:12px;padding:20px 24px;margin-bottom:32px;">
+      <p style="font-size:14px;color:#374151;line-height:1.75;margin:0;">
+        The businesses winning in AI search right now aren't necessarily the biggest — they're the ones whose websites speak clearly to AI. A well-structured, information-rich site with consistent details beats a fancy site every time.
+      </p>
+    </div>
+
+    <div style="text-align:center;">
+      <a href="${APP_URL}" style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#9333ea);color:white;text-decoration:none;font-weight:700;font-size:15px;padding:16px 40px;border-radius:12px;box-shadow:0 4px 16px rgba(124,58,237,0.3);">
+        See My Fix List →
+      </a>
+      <p style="font-size:12px;color:#9ca3af;margin-top:12px;">Each fix in your dashboard is ranked by how much it'll move your score.</p>
+    </div>`;
+
+  return emailWrapper({
+    preheader: `AI recommends one or two businesses — here's where ${domain} stands.`,
+    headerSub: 'Understanding your AI visibility',
+    body,
+    email,
+    unsubLabel: 'Unsubscribe from findmewith.ai emails',
+  });
+}
+
+function buildNurtureDay5Html({ email, url, score }) {
+  const domain = url.replace(/^https?:\/\//, '').replace(/\/$/, '');
+
+  const body = `
+    <h1 style="font-size:22px;font-weight:800;color:#111827;margin:0 0 8px;">3 quick wins to improve your AI score this week</h1>
+    <p style="font-size:15px;color:#6b7280;line-height:1.6;margin:0 0 28px;">None of these require a developer. Most take under 15 minutes.</p>
+
+    <!-- Win 1 -->
+    <div style="display:flex;gap:16px;margin-bottom:24px;padding:20px;background:#f5f3ff;border-radius:14px;border-left:4px solid #7c3aed;">
+      <div style="font-size:28px;flex-shrink:0;margin-top:2px;">1️⃣</div>
+      <div>
+        <div style="font-size:15px;font-weight:800;color:#111827;margin-bottom:6px;">Add your NAP to every page</div>
+        <p style="font-size:14px;color:#374151;line-height:1.65;margin:0;">NAP = Name, Address, Phone number. These three things need to be <strong>identical</strong> across your website, Google Business, and social profiles. Even small differences ("St." vs "Street") confuse AI tools and lower trust.</p>
+      </div>
+    </div>
+
+    <!-- Win 2 -->
+    <div style="display:flex;gap:16px;margin-bottom:24px;padding:20px;background:#fffbeb;border-radius:14px;border-left:4px solid #f59e0b;">
+      <div style="font-size:28px;flex-shrink:0;margin-top:2px;">2️⃣</div>
+      <div>
+        <div style="font-size:15px;font-weight:800;color:#111827;margin-bottom:6px;">Write a plain-English "About" section</div>
+        <p style="font-size:14px;color:#374151;line-height:1.65;margin:0;">AI reads your website like a person would. A clear sentence like <em>"We're a family-owned plumbing company serving Denver, CO since 2008"</em> gives it everything it needs to recommend you with confidence. Vague taglines don't cut it.</p>
+      </div>
+    </div>
+
+    <!-- Win 3 -->
+    <div style="display:flex;gap:16px;margin-bottom:32px;padding:20px;background:#f0fdf4;border-radius:14px;border-left:4px solid #16a34a;">
+      <div style="font-size:28px;flex-shrink:0;margin-top:2px;">3️⃣</div>
+      <div>
+        <div style="font-size:15px;font-weight:800;color:#111827;margin-bottom:6px;">Add a simple FAQ section</div>
+        <p style="font-size:14px;color:#374151;line-height:1.65;margin:0;">AI loves questions and answers. Add 5–8 real questions your customers ask, with short direct answers. <em>"Do you offer free estimates?" "What areas do you serve?" "How long does a typical job take?"</em> This directly feeds AI recommendation engines.</p>
+      </div>
+    </div>
+
+    <!-- Bonus: code snippets -->
+    <div style="background:#f5f3ff;border:1.5px solid #c4b5fd;border-radius:14px;padding:20px 24px;margin-bottom:32px;">
+      <div style="font-size:11px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">💡 Bonus: the fast track</div>
+      <p style="font-size:14px;color:#374151;line-height:1.65;margin:0 0 12px;">
+        Your dashboard includes ready-made code snippets — tiny pieces of structured data that tell AI tools exactly who you are, what you do, and where you're located. You paste them into your site once and they run forever.
+      </p>
+      <a href="${APP_URL}" style="font-size:13px;font-weight:700;color:#7c3aed;text-decoration:none;">See my code snippets →</a>
+    </div>
+
+    <div style="text-align:center;">
+      <a href="${APP_URL}" style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#9333ea);color:white;text-decoration:none;font-weight:700;font-size:15px;padding:16px 40px;border-radius:12px;box-shadow:0 4px 16px rgba(124,58,237,0.3);">
+        Open My Dashboard →
+      </a>
+    </div>`;
+
+  return emailWrapper({
+    preheader: `3 things you can do this week to improve how AI finds ${domain} — no developer needed.`,
+    headerSub: 'Quick wins for your AI visibility',
+    body,
+    email,
+    unsubLabel: 'Unsubscribe from findmewith.ai emails',
+  });
+}
+
+function buildNurtureDay10Html({ email, url, score }) {
+  const domain = url.replace(/^https?:\/\//, '').replace(/\/$/, '');
+
+  const body = `
+    <h1 style="font-size:22px;font-weight:800;color:#111827;margin:0 0 8px;">AI is sending customers somewhere right now. Is it you?</h1>
+    <p style="font-size:15px;color:#6b7280;line-height:1.6;margin:0 0 24px;">Every week you're not optimized, someone in your area is getting those referrals instead.</p>
+
+    <p style="font-size:14px;color:#374151;line-height:1.75;margin:0 0 28px;">
+      Your current score for <strong>${domain}</strong> is a starting point — and you've already taken the first step by scanning. Here's the truth about what separates the businesses that get found from those that don't:
+    </p>
+
+    <!-- Comparison -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;border-radius:14px;overflow:hidden;border:1.5px solid #e5e7eb;">
+      <tr style="background:#f9fafb;">
+        <td style="padding:12px 20px;font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.8px;border-bottom:1px solid #e5e7eb;">Free Account</td>
+        <td style="padding:12px 20px;font-size:12px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:0.8px;border-bottom:1px solid #e5e7eb;border-left:1.5px solid #ddd6fe;background:#f5f3ff;">Pro Account</td>
+      </tr>
+      <tr style="background:white;">
+        <td style="padding:14px 20px;font-size:13px;color:#374151;border-bottom:1px solid #f3f4f6;vertical-align:top;">
+          ✅ One-time scan & score<br>✅ Top fix recommendations<br>✅ Basic code snippets<br>❌ No monitoring<br>❌ Manual re-scans only<br>❌ No competitor tracking
+        </td>
+        <td style="padding:14px 20px;font-size:13px;color:#374151;border-bottom:1px solid #f3f4f6;vertical-align:top;border-left:1.5px solid #ddd6fe;background:#fdfcff;">
+          ✅ Everything in Free<br>✅ Weekly auto re-scan<br>✅ Score change alerts<br>✅ Competitor AI comparison<br>✅ Full snippet library<br>✅ Site Monitoring badge
+        </td>
+      </tr>
+    </table>
+
+    <div style="background:#fffbeb;border-left:4px solid #f59e0b;border-radius:0 12px 12px 0;padding:18px 22px;margin-bottom:32px;">
+      <p style="font-size:14px;color:#374151;line-height:1.65;margin:0;">
+        <strong>Pro is $29/month.</strong> If it sends you even one extra customer a month — a single haircut, a service call, a consultation — it pays for itself. And it runs quietly in the background so you don't have to think about it.
+      </p>
+    </div>
+
+    <div style="text-align:center;margin-bottom:16px;">
+      <a href="${APP_URL}" style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#9333ea);color:white;text-decoration:none;font-weight:700;font-size:15px;padding:16px 40px;border-radius:12px;box-shadow:0 4px 16px rgba(124,58,237,0.3);">
+        Try Pro Free for 7 Days →
+      </a>
+    </div>
+    <div style="text-align:center;">
+      <a href="${APP_URL}" style="font-size:13px;color:#9ca3af;text-decoration:none;">Or keep using your free account — no pressure.</a>
+    </div>`;
+
+  return emailWrapper({
+    preheader: `AI is recommending businesses in your area every day. Here's how to make sure it's recommending ${domain}.`,
+    headerSub: 'A note from findmewith.ai',
+    body,
+    email,
+    unsubLabel: 'Unsubscribe from findmewith.ai emails',
+  });
+}
+
+// ── Nurture email drip ────────────────────────────────────────────────────────
+async function runNurtureEmails() {
+  if (!supabaseAdmin) { console.warn('[nurture] Supabase not configured'); return; }
+  console.log('[nurture] Starting drip check...');
+
+  // Get all unique emails + their earliest scan (signup date) + score
+  const { data: scans, error } = await supabaseAdmin
+    .from('scans')
+    .select('email, url, score, created_at')
+    .order('created_at', { ascending: true });
+
+  if (error) { console.error('[nurture] Could not fetch scans:', error.message); return; }
+
+  // Deduplicate — first scan per email
+  const firstByEmail = new Map();
+  for (const s of (scans || [])) {
+    if (s.email && !firstByEmail.has(s.email)) firstByEmail.set(s.email, s);
+  }
+
+  const now = Date.now();
+
+  for (const [email, scan] of firstByEmail) {
+    if (!email) continue;
+    const signupMs = new Date(scan.created_at).getTime();
+    const daysSince = (now - signupMs) / (1000 * 60 * 60 * 24);
+
+    // Check which steps are due
+    const steps = [
+      { step: 2, minDays: 2,  maxDays: 4 },
+      { step: 5, minDays: 5,  maxDays: 8 },
+      { step: 10, minDays: 10, maxDays: 16 },
+    ];
+
+    for (const { step, minDays, maxDays } of steps) {
+      if (daysSince < minDays || daysSince > maxDays) continue;
+
+      // Check if already sent
+      const { data: existing } = await supabaseAdmin
+        .from('nurture_log')
+        .select('id')
+        .eq('email', email)
+        .eq('step', step)
+        .maybeSingle();
+
+      if (existing) continue; // already sent
+
+      // Build and send
+      let html, subject;
+      if (step === 2) {
+        html = buildNurtureDay2Html({ email, url: scan.url, score: scan.score });
+        subject = `What your ${scan.score}/100 AI score means for your business`;
+      } else if (step === 5) {
+        html = buildNurtureDay5Html({ email, url: scan.url, score: scan.score });
+        subject = `3 quick wins to improve your AI visibility this week`;
+      } else {
+        html = buildNurtureDay10Html({ email, url: scan.url, score: scan.score });
+        subject = `AI is sending customers somewhere — is it you?`;
+      }
+
+      const sent = await sendEmail({ to: email, subject, html });
+      if (sent) {
+        // Log it
+        await supabaseAdmin.from('nurture_log').insert({ email, step, url: scan.url });
+        console.log(`[nurture] sent step ${step} to ${email}`);
+      }
+
+      await new Promise(r => setTimeout(r, 800)); // rate-limit
+    }
+  }
+  console.log('[nurture] Done.');
+}
+
+// ── Schedule: daily at 10:00 AM UTC ──────────────────────────────────────────
+cron.schedule('0 10 * * *', () => {
+  runNurtureEmails().catch(err => console.error('[nurture cron]', err.message));
+}, { timezone: 'UTC' });
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
 
@@ -706,6 +1041,40 @@ app.post('/api/leads', (req, res) => {
   if (!email) return res.status(400).json({ error: 'Email required' });
   leads.push({ email, url, score, createdAt: new Date().toISOString() });
   console.log(`[lead] ${email} | ${url} | score: ${score}`);
+  res.json({ ok: true });
+});
+
+// ── POST /api/welcome-email ───────────────────────────────────────────────────
+app.post('/api/welcome-email', async (req, res) => {
+  const { email, url, score } = req.body;
+  if (!email) return res.status(400).json({ error: 'Email required' });
+
+  // Idempotent: skip if already sent (logged in nurture_log as step 1)
+  if (supabaseAdmin) {
+    const { data: existing } = await supabaseAdmin
+      .from('nurture_log')
+      .select('id')
+      .eq('email', email)
+      .eq('step', 1)
+      .maybeSingle();
+    if (existing) {
+      console.log(`[welcome] already sent to ${email}, skipping`);
+      return res.json({ ok: true, skipped: true });
+    }
+  }
+
+  const html = buildWelcomeEmailHtml({ email, url: url || 'your site', score: score || 0 });
+  const sent = await sendEmail({
+    to: email,
+    subject: `Welcome to findmewith.ai — your score is ${score || 0}/100`,
+    html,
+  });
+
+  if (sent && supabaseAdmin) {
+    await supabaseAdmin.from('nurture_log').insert({ email, step: 1, url: url || null });
+  }
+
+  console.log(`[welcome] email sent to ${email} — score ${score}`);
   res.json({ ok: true });
 });
 

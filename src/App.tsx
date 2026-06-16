@@ -202,6 +202,13 @@ const App: React.FC = () => {
       throw signUpError;
     }
 
+    // Send branded welcome email (fire-and-forget, non-blocking)
+    fetch(`${BACKEND}/api/welcome-email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, url: siteUrl, score: result?.score ?? 0 }),
+    }).catch(() => {});
+
     if (data.session) {
       // Email confirmation disabled — user is logged in immediately.
       // onAuthStateChange SIGNED_IN fires and handles navigation to dashboard.
