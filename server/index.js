@@ -599,6 +599,20 @@ app.post('/api/webhook',
         });
         saveSubs();
         console.log(`[webhook] activated: ${email}`);
+        // Also persist to Supabase for cross-process visibility
+        if (supabaseAdmin) {
+          supabaseAdmin.from('pro_upgrades').upsert({
+            email,
+            customer_id: session.customer,
+            subscription_id: session.subscription || null,
+            plan: session.metadata?.plan || 'pro',
+            status: 'active',
+            upgraded_at: new Date().toISOString(),
+          }, { onConflict: 'email' }).then(({ error: sbErr }) => {
+            if (sbErr) console.warn('[webhook] supabase pro_upgrades write failed:', sbErr.message);
+            else console.log(`[webhook] supabase pro_upgrades saved for ${email}`);
+          });
+        }
       }
     }
 
@@ -631,6 +645,22 @@ app.post('/api/webhook',
 
 // ── JSON body parser (after webhook route) ────────────────────────────────────
 app.use(express.json());
+
+// ── GET /api/admin/recent-upgrades ───────────────────────────────────────────
+// Used by Tasklet trigger to check for new Pro upgrades every 15 minutes
+app.get('/api/admin/recent-upgrades', (req, res) => {
+  const secret = req.query.secret;
+  const adminSecret = process.env.ADMIN_SECRET || 'fmw-admin-2024';
+  if (secret !== adminSecret) return res.status(401).json({ error: 'unauthorized' });
+  const since = req.query.since ? new Date(req.query.since) : new Date(Date.now() - 60 * 60 * 1000);
+  const recent = [];
+  for (const [email, data] of subscriptions.entries()) {
+    if (data.status === 'active' && data.createdAt && new Date(data.createdAt) > since) {
+      recent.push({ email, plan: data.plan, createdAt: data.createdAt });
+    }
+  }
+  res.json(recent);
+});
 
 // ── In-memory lead store ──────────────────────────────────────────────────────
 const leads = [];
