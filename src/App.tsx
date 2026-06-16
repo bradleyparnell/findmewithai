@@ -254,6 +254,20 @@ const App: React.FC = () => {
 
   const showNav = !['home', 'gate', 'inbox', 'pricing', 'dashboard'].includes(step);
 
+  // Dashboard gets its own full-screen layout — render it outside the App shell
+  if (step === 'dashboard' && user) {
+    return (
+      <Dashboard
+        user={user}
+        isPro={isPro}
+        onViewScan={handleViewScan}
+        onNewScan={handleNewCheck}
+        onUpgrade={handleUpgrade}
+        onSignOut={handleSignOut}
+      />
+    );
+  }
+
   return (
     <div style={{ minHeight: '100vh', background: 'var(--color-bg-white)' }}>
       {showNav && (
@@ -328,17 +342,7 @@ const App: React.FC = () => {
           onManageSubscription={handleManageSubscription}
         />
       )}
-      {step === 'dashboard' && user && (
-        <Dashboard
-          user={user}
-          isPro={isPro}
-          onViewScan={handleViewScan}
-          onNewScan={handleNewCheck}
-          onUpgrade={handleUpgrade}
-          onSignOut={handleSignOut}
-
-        />
-      )}
+      {/* Dashboard is rendered outside this shell (see early return above) */}
       <footer style={{
         textAlign: 'center',
         padding: '24px 16px',
