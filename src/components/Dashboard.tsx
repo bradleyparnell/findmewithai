@@ -602,42 +602,38 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
             const isVisible = score >= 70;
 
             return (
-              <div ref={signalRef} style={{ background: '#0D0D1A', borderRadius: '24px', padding: '48px 52px', marginBottom: '24px', border: '1.5px solid rgba(124,58,237,0.4)', position: 'relative', overflow: 'hidden' }}>
-                {/* Subtle radar ring */}
-                <div style={{ position: 'absolute', top: '50%', right: '-60px', width: '220px', height: '220px', borderRadius: '50%', border: '1px solid rgba(124,58,237,0.12)', transform: 'translateY(-50%)' }} />
-                <div style={{ position: 'absolute', top: '50%', right: '-110px', width: '340px', height: '340px', borderRadius: '50%', border: '1px solid rgba(124,58,237,0.06)', transform: 'translateY(-50%)' }} />
-
+              <div ref={signalRef} style={{ background: 'white', borderRadius: '24px', padding: '48px 52px', marginBottom: '24px', border: '1px solid #e5e7eb', borderLeft: '6px solid #7c3aed', position: 'relative', overflow: 'hidden' }}>
                 <div style={{ position: 'relative', zIndex: 1 }}>
-                  {/* Header */}
-                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '16px' }}>
+                  {/* Header row */}
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '32px', flexWrap: 'wrap', gap: '24px' }}>
                     <div>
-                      <div style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(124,58,237,0.9)', marginBottom: '10px' }}>
-                        ⚡ Your Signal in AI Search
+                      <div style={{ fontSize: '13px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#7c3aed', marginBottom: '10px' }}>
+                        ⚡ AI Market Activity
                       </div>
-                      <div style={{ fontSize: '34px', fontWeight: 900, color: 'white', marginBottom: '8px', lineHeight: 1.15 }}>
-                        People ask AI about businesses like yours
+                      <div style={{ fontSize: '32px', fontWeight: 900, color: '#111827', marginBottom: '8px', lineHeight: 1.15 }}>
+                        People are asking AI about businesses like yours
                       </div>
-                      <div style={{ fontSize: '17px', color: 'rgba(255,255,255,0.5)' }}>
+                      <div style={{ fontSize: '17px', color: '#6b7280' }}>
                         Every month, in your market
                       </div>
                     </div>
-                    <div style={{ background: 'rgba(124,58,237,0.2)', border: '1.5px solid rgba(124,58,237,0.4)', borderRadius: '20px', padding: '24px 32px', textAlign: 'center', minWidth: '160px' }}>
+                    <div style={{ background: '#fdf4ff', border: '2px solid #e9d5ff', borderRadius: '20px', padding: '24px 36px', textAlign: 'center', minWidth: '180px' }}>
                       <div style={{ fontSize: '72px', fontWeight: 900, color: '#f59e0b', lineHeight: 1 }}>
                         {amd.total_volume.toLocaleString()}
                       </div>
-                      <div style={{ fontSize: '14px', color: 'rgba(255,255,255,0.5)', fontWeight: 600, marginTop: '8px' }}>AI searches / mo</div>
+                      <div style={{ fontSize: '15px', color: '#7c3aed', fontWeight: 700, marginTop: '8px' }}>AI searches / mo</div>
                     </div>
                   </div>
 
                   {/* Top keywords */}
-                  <div style={{ marginBottom: '16px' }}>
-                    <div style={{ fontSize: '13px', fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '14px' }}>
+                  <div style={{ marginBottom: '20px' }}>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '16px' }}>
                       What people are searching
                     </div>
                     {amd.keywords.slice(0, 4).map((kw, i) => (
-                      <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 0', borderBottom: i < Math.min(amd.keywords.length, 4) - 1 ? '1px solid rgba(255,255,255,0.07)' : 'none' }}>
-                        <span style={{ fontSize: '17px', color: 'rgba(255,255,255,0.85)' }}>"{kw.keyword}"</span>
-                        <span style={{ fontSize: '15px', fontWeight: 700, color: '#f59e0b', background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: '10px', padding: '6px 16px' }}>
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 0', borderBottom: i < Math.min(amd.keywords.length, 4) - 1 ? '1px solid #f3f4f6' : 'none' }}>
+                        <span style={{ fontSize: '18px', fontWeight: 600, color: '#111827' }}>"{kw.keyword}"</span>
+                        <span style={{ fontSize: '16px', fontWeight: 800, color: '#d97706', background: '#fffbeb', border: '1.5px solid #fde68a', borderRadius: '10px', padding: '7px 18px' }}>
                           {kw.volume.toLocaleString()}/mo
                         </span>
                       </div>
@@ -645,28 +641,28 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
                   </div>
 
                   {/* Trend */}
-                  <div style={{ background: trendBg, borderRadius: '10px', padding: '10px 14px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '18px' }}>{trendIcon}</span>
-                    <span style={{ fontSize: '13px', fontWeight: 600, color: trendColor }}>{trendText}</span>
+                  <div style={{ background: trendBg, borderRadius: '12px', padding: '14px 18px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ fontSize: '20px' }}>{trendIcon}</span>
+                    <span style={{ fontSize: '15px', fontWeight: 600, color: trendColor }}>{trendText}</span>
                   </div>
 
                   {/* Visibility hook */}
                   {isVisible ? (
-                    <div style={{ background: 'rgba(5,150,105,0.15)', border: '1.5px solid rgba(5,150,105,0.4)', borderRadius: '12px', padding: '14px 18px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <span style={{ fontSize: '22px' }}>✅</span>
+                    <div style={{ background: '#f0fdf4', border: '1.5px solid #86efac', borderRadius: '14px', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '14px' }}>
+                      <span style={{ fontSize: '24px' }}>✅</span>
                       <div>
-                        <div style={{ fontSize: '14px', fontWeight: 800, color: '#34d399' }}>You're positioned to appear in these searches</div>
-                        <div style={{ fontSize: '13px', color: 'rgba(52,211,153,0.7)', marginTop: '3px' }}>Keep your score above 70 and re-scan monthly to stay visible.</div>
+                        <div style={{ fontSize: '16px', fontWeight: 800, color: '#15803d' }}>You're positioned to appear in these searches</div>
+                        <div style={{ fontSize: '14px', color: '#16a34a', marginTop: '4px' }}>Keep your score above 70 and re-scan monthly to stay visible.</div>
                       </div>
                     </div>
                   ) : (
-                    <div style={{ background: 'rgba(220,38,38,0.12)', border: '1.5px solid rgba(220,38,38,0.35)', borderRadius: '12px', padding: '14px 18px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <span style={{ fontSize: '22px' }}>⚡</span>
+                    <div style={{ background: '#fef2f2', border: '1.5px solid #fca5a5', borderRadius: '14px', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '14px' }}>
+                      <span style={{ fontSize: '24px' }}>⚡</span>
                       <div>
-                        <div style={{ fontSize: '14px', fontWeight: 800, color: '#f87171' }}>
+                        <div style={{ fontSize: '16px', fontWeight: 800, color: '#dc2626' }}>
                           You're currently missing these {amd.total_volume.toLocaleString()} searches
                         </div>
-                        <div style={{ fontSize: '13px', color: 'rgba(248,113,113,0.7)', marginTop: '3px' }}>
+                        <div style={{ fontSize: '14px', color: '#ef4444', marginTop: '4px' }}>
                           Your competitors are getting found instead. Fix the items below to change that.
                         </div>
                       </div>
@@ -918,14 +914,14 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
               <>
                 {/* Score cards */}
                 <div style={{ display: 'grid', gridTemplateColumns: `repeat(${1 + competitors.length}, 1fr)`, gap: '10px', marginBottom: '24px' }}>
-                  <div style={{ background: '#f5f3ff', border: '2px solid #7c3aed', borderRadius: '14px', padding: '16px', textAlign: 'center' }}>
-                    <div style={{ fontSize: '10px', fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>Your Site</div>
-                    <div style={{ fontSize: '11px', color: '#6b7280', marginBottom: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div style={{ background: '#f5f3ff', border: '2px solid #7c3aed', borderRadius: '16px', padding: '20px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>Your Site</div>
+                    <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: '10px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {latestScan.url.replace(/^https?:\/\//, '').replace(/\/$/, '')}
                     </div>
-                    <div style={{ fontSize: '28px', fontWeight: 900, color: scoreColor(latestScan.score) }}>{latestScan.score}</div>
-                    <div style={{ fontSize: '11px', color: '#9ca3af' }}>/ 100</div>
-                    <div style={{ fontSize: '11px', fontWeight: 600, color: scoreColor(latestScan.score), marginTop: '4px' }}>{scoreLabel(latestScan.score)}</div>
+                    <div style={{ fontSize: '44px', fontWeight: 900, color: scoreColor(latestScan.score), lineHeight: 1 }}>{latestScan.score}</div>
+                    <div style={{ fontSize: '14px', color: '#9ca3af', marginTop: '4px' }}>/ 100</div>
+                    <div style={{ fontSize: '14px', fontWeight: 700, color: scoreColor(latestScan.score), marginTop: '6px' }}>{scoreLabel(latestScan.score)}</div>
                   </div>
 
                   {competitors.map((comp, i) => {
@@ -940,13 +936,13 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
                             <Trash2 size={11} />
                           </button>
                         </div>
-                        <div style={{ fontSize: '10px', fontWeight: 700, color: COMPETITOR_COLORS[i % COMPETITOR_COLORS.length], textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>Competitor</div>
-                        <div style={{ fontSize: '11px', color: '#6b7280', marginBottom: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <div style={{ fontSize: '13px', fontWeight: 700, color: COMPETITOR_COLORS[i % COMPETITOR_COLORS.length], textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>Competitor</div>
+                        <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: '10px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {comp.url.replace(/^https?:\/\//, '').replace(/\/$/, '')}
                         </div>
-                        <div style={{ fontSize: '28px', fontWeight: 900, color: scoreColor(comp.score) }}>{comp.score}</div>
-                        <div style={{ fontSize: '11px', color: '#9ca3af' }}>/ 100</div>
-                        <div style={{ fontSize: '11px', fontWeight: 600, marginTop: '6px', color: diff > 0 ? '#16a34a' : diff < 0 ? '#dc2626' : '#6b7280' }}>
+                        <div style={{ fontSize: '44px', fontWeight: 900, color: scoreColor(comp.score), lineHeight: 1 }}>{comp.score}</div>
+                        <div style={{ fontSize: '14px', color: '#9ca3af', marginTop: '4px' }}>/ 100</div>
+                        <div style={{ fontSize: '14px', fontWeight: 700, marginTop: '6px', color: diff > 0 ? '#16a34a' : diff < 0 ? '#dc2626' : '#6b7280' }}>
                           {diff > 0 ? `▲ You're ahead by ${diff}` : diff < 0 ? `▼ They're ahead by ${Math.abs(diff)}` : 'Tied'}
                         </div>
                       </div>
@@ -972,13 +968,13 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
 
                       {gaps.length > 0 && (
                         <div style={{ marginBottom: '14px' }}>
-                          <div style={{ fontSize: '12px', fontWeight: 700, color: '#dc2626', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+                          <div style={{ fontSize: '14px', fontWeight: 700, color: '#dc2626', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px' }}>
                             🔴 They have this — you don't ({gaps.length})
                           </div>
                           {gaps.map(id => (
-                            <div key={id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', marginBottom: '6px' }}>
-                              <ArrowRight size={13} style={{ color: '#dc2626', flexShrink: 0 }} />
-                              <span style={{ fontSize: '13px', color: '#111827', fontWeight: 500 }}>
+                            <div key={id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', marginBottom: '8px' }}>
+                              <ArrowRight size={15} style={{ color: '#dc2626', flexShrink: 0 }} />
+                              <span style={{ fontSize: '15px', color: '#111827', fontWeight: 500 }}>
                                 {FINDING_PLAIN_LABELS[id] ?? id}
                               </span>
                             </div>
@@ -988,12 +984,12 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
 
                       {advantages.length > 0 && (
                         <div>
-                          <div style={{ fontSize: '12px', fontWeight: 700, color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+                          <div style={{ fontSize: '14px', fontWeight: 700, color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px' }}>
                             🟢 You have this — they don't ({advantages.length})
                           </div>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                             {advantages.map(id => (
-                              <span key={id} style={{ fontSize: '12px', fontWeight: 600, background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#15803d', borderRadius: '99px', padding: '4px 12px' }}>
+                              <span key={id} style={{ fontSize: '14px', fontWeight: 600, background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#15803d', borderRadius: '99px', padding: '6px 16px' }}>
                                 ✓ {FINDING_PLAIN_LABELS[id] ?? id}
                               </span>
                             ))}
@@ -1011,7 +1007,7 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
                 })}
 
                 {/* Grouped bar chart */}
-                <div style={{ fontSize: '13px', fontWeight: 600, color: '#374151', marginBottom: '14px', marginTop: '8px' }}>
+                <div style={{ fontSize: '17px', fontWeight: 700, color: '#374151', marginBottom: '16px', marginTop: '8px' }}>
                   Side-by-side breakdown — each area of your site vs. theirs
                 </div>
                 <ResponsiveContainer width="100%" height={230}>
