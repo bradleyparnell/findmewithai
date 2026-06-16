@@ -263,6 +263,7 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
   const [checkingVolume, setCheckingVolume] = useState(false);
   const [activeSection, setActiveSection] = useState('score');
   const [widgetStatus, setWidgetStatus] = useState<'loading' | 'installed' | 'not_installed'>('loading');
+  const [showMonitoringModal, setShowMonitoringModal] = useState(false);
 
   // Map each check ID → which fix tool it routes to
   const FIX_CTA: Record<string, { label: string; type: 'code' | 'content' }> = {
@@ -665,8 +666,8 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
           </div>
         )}
 
-        {/* Pro monitoring banner */}
-        {isPro && (
+        {/* Site Monitoring banner — active for Pro, locked for free */}
+        {isPro ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%)', border: '1.5px solid #c4b5fd', borderRadius: '14px', padding: '13px 18px', marginBottom: '28px' }}>
             <div style={{ width: '9px', height: '9px', borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 0 3px rgba(34,197,94,0.2)', flexShrink: 0, animation: 'pulse 2s infinite' }} />
             <div>
@@ -674,6 +675,59 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
               <span style={{ fontSize: '13px', color: '#7c3aed', marginLeft: '10px' }}>Your site is re-scanned weekly — we'll email you if your score changes.</span>
             </div>
           </div>
+        ) : (
+          <>
+            <div
+              onClick={() => setShowMonitoringModal(true)}
+              style={{ display: 'flex', alignItems: 'center', gap: '12px', background: '#f9fafb', border: '1.5px solid #e5e7eb', borderRadius: '14px', padding: '13px 18px', marginBottom: '28px', cursor: 'pointer', transition: 'border-color 0.15s' }}
+              onMouseEnter={e => (e.currentTarget.style.borderColor = '#c4b5fd')}
+              onMouseLeave={e => (e.currentTarget.style.borderColor = '#e5e7eb')}
+            >
+              {/* Toggle off */}
+              <div style={{ width: '34px', height: '20px', borderRadius: '10px', background: '#d1d5db', flexShrink: 0, position: 'relative' }}>
+                <div style={{ width: '14px', height: '14px', borderRadius: '50%', background: 'white', position: 'absolute', top: '3px', left: '3px', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+              </div>
+              <div>
+                <span style={{ fontWeight: 700, fontSize: '14px', color: '#9ca3af' }}>🛰️ Site Monitoring</span>
+                <span style={{ fontSize: '13px', color: '#9ca3af', marginLeft: '10px' }}>Weekly re-scan — turn on to get notified when your score changes.</span>
+              </div>
+              <div style={{ marginLeft: 'auto', fontSize: '12px', fontWeight: 700, color: '#7c3aed', background: '#ede9fe', borderRadius: '6px', padding: '3px 8px', flexShrink: 0 }}>PRO</div>
+            </div>
+
+            {/* Monitoring upsell modal */}
+            {showMonitoringModal && (
+              <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}
+                onClick={() => setShowMonitoringModal(false)}>
+                <div style={{ background: 'white', borderRadius: '20px', padding: '36px 32px', maxWidth: '420px', width: '100%', boxShadow: '0 25px 60px rgba(0,0,0,0.18)' }}
+                  onClick={e => e.stopPropagation()}>
+                  <div style={{ fontSize: '36px', marginBottom: '12px' }}>🛰️</div>
+                  <h2 style={{ margin: '0 0 10px', fontSize: '22px', fontWeight: 900, color: '#111827' }}>Stay on the radar</h2>
+                  <p style={{ margin: '0 0 20px', fontSize: '15px', color: '#6b7280', lineHeight: '1.6' }}>
+                    With <strong>Pro</strong>, we re-scan your site every week and email you if your AI visibility score changes — so you always know where you stand.
+                  </p>
+                  <ul style={{ margin: '0 0 24px', padding: '0', listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {['Weekly automated re-scans', 'Score change alerts by email', 'Trend history so you can see progress', 'All Pro features unlocked'].map(item => (
+                      <li key={item} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', color: '#374151' }}>
+                        <span style={{ color: '#7c3aed', fontWeight: 700 }}>✓</span> {item}
+                      </li>
+                    ))}
+                  </ul>
+                  <button
+                    onClick={() => { setShowMonitoringModal(false); onUpgrade(); }}
+                    style={{ width: '100%', background: 'linear-gradient(135deg, #7c3aed, #6d28d9)', color: 'white', border: 'none', borderRadius: '12px', padding: '14px', fontSize: '15px', fontWeight: 800, cursor: 'pointer', marginBottom: '10px' }}
+                  >
+                    Upgrade to Pro — $29/mo →
+                  </button>
+                  <button
+                    onClick={() => setShowMonitoringModal(false)}
+                    style={{ width: '100%', background: 'transparent', color: '#9ca3af', border: 'none', fontSize: '13px', cursor: 'pointer', padding: '6px' }}
+                  >
+                    Maybe later
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
         )}
 
       {loading ? (
