@@ -30,16 +30,16 @@ const supabaseAdmin = (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_
 // ── Resend email sender ───────────────────────────────────────────────────────
 async function sendEmail({ to, subject, html }) {
   const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) { console.warn('[email] RESEND_API_KEY not set'); return false; }
+  if (!apiKey) { console.warn('[email] RESEND_API_KEY not set'); return { ok: false, error: 'RESEND_API_KEY not set' }; }
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ from: 'findmewith.ai <hello@findmewithai.com>', to, subject, html }),
   });
   const data = await res.json();
-  if (!res.ok) { console.error('[email] Resend error:', data); return false; }
+  if (!res.ok) { console.error('[email] Resend error:', data); return { ok: false, error: data }; }
   console.log(`[email] sent to ${to} — id: ${data.id}`);
-  return true;
+  return { ok: true, id: data.id };
 }
 
 // ── Weekly report email builder ───────────────────────────────────────────────
@@ -501,10 +501,12 @@ async function runNurtureEmails() {
       }
 
       const sent = await sendEmail({ to: email, subject, html });
-      if (sent) {
+      if (sent.ok) {
         // Log it
         await supabaseAdmin.from('nurture_log').insert({ email, step, url: scan.url });
         console.log(`[nurture] sent step ${step} to ${email}`);
+      } else {
+        console.error(`[nurture] failed step ${step} to ${email}:`, sent.error);
       }
 
       await new Promise(r => setTimeout(r, 800)); // rate-limit
@@ -1088,12 +1090,14 @@ app.post('/api/welcome-email', async (req, res) => {
     html,
   });
 
-  if (sent && supabaseAdmin) {
+  if (sent.ok && supabaseAdmin) {
     await supabaseAdmin.from('nurture_log').insert({ email, step: 1, url: url || null });
+    console.log(`[welcome] email sent to ${email} — id: ${sent.id}`);
+    return res.json({ ok: true, id: sent.id });
   }
 
-  console.log(`[welcome] email sent to ${email} — score ${score}`);
-  res.json({ ok: true });
+  console.error(`[welcome] failed to send to ${email}:`, sent.error);
+  res.json({ ok: false, error: sent.error });
 });
 
 // ── POST /api/create-checkout-session ─────────────────────────────────────────
