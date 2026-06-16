@@ -501,25 +501,50 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
 
             {/* Score circle */}
             <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '24px', padding: '32px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-              <div style={{ fontSize: '12px', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '16px' }}>AI Visibility Score</div>
-              <div style={{ position: 'relative', width: '160px', height: '160px', marginBottom: '16px' }}>
-                <svg width="160" height="160" viewBox="0 0 160 160">
-                  <circle cx="80" cy="80" r="68" fill="none" stroke="#f3f4f6" strokeWidth="12" />
-                  <circle
-                    cx="80" cy="80" r="68"
-                    fill="none"
-                    stroke={scoreColor(latestScan.score)}
-                    strokeWidth="12"
-                    strokeDasharray={`${(latestScan.score / 100) * 427.26} 427.26`}
-                    strokeLinecap="round"
-                    transform="rotate(-90 80 80)"
-                  />
-                </svg>
-                <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ fontSize: '60px', fontWeight: 900, color: scoreColor(latestScan.score), lineHeight: 1 }}>{latestScan.score}</span>
-                  <span style={{ fontSize: '13px', color: '#9ca3af', fontWeight: 600 }}>/ 100</span>
-                </div>
-              </div>
+              <div style={{ fontSize: '12px', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>AI Visibility Score</div>
+
+              {/* ── Semicircle gauge ── */}
+              {(() => {
+                const score = latestScan.score;
+                const cx = 110, cy = 115, r = 85;
+                // Angle: score 0 → 180°, score 100 → 360° (SVG: 0=right,90=down,180=left,270=up)
+                const endAngle = 180 + (score / 100) * 180;
+                const endRad   = endAngle * Math.PI / 180;
+                const ex = (cx + r * Math.cos(endRad)).toFixed(1);
+                const ey = (cy + r * Math.sin(endRad)).toFixed(1);
+                // Needle
+                const nRad = endRad;
+                const nx = (cx + 68 * Math.cos(nRad)).toFixed(1);
+                const ny = (cy + 68 * Math.sin(nRad)).toFixed(1);
+                const color = scoreColor(score);
+                // Zone arc end-points (pre-computed)
+                // Red end 252°: cos=-0.309 sin=-0.951
+                const rx2 = (cx + r * -0.309).toFixed(1), ry2 = (cy + r * -0.951).toFixed(1);
+                // Yellow end 306°: cos=0.588 sin=-0.809
+                const yx2 = (cx + r *  0.588).toFixed(1), yy2 = (cy + r * -0.809).toFixed(1);
+                return (
+                  <svg width="220" height="120" viewBox="0 0 220 120" style={{ overflow: 'visible', marginBottom: '4px' }}>
+                    {/* Zone backgrounds */}
+                    <path d={`M 25 115 A ${r} ${r} 0 0 1 ${rx2} ${ry2}`} fill="none" stroke="#fecaca" strokeWidth="14" strokeLinecap="butt" />
+                    <path d={`M ${rx2} ${ry2} A ${r} ${r} 0 0 1 ${yx2} ${yy2}`} fill="none" stroke="#fde68a" strokeWidth="14" strokeLinecap="butt" />
+                    <path d={`M ${yx2} ${yy2} A ${r} ${r} 0 0 1 195 115`} fill="none" stroke="#bbf7d0" strokeWidth="14" strokeLinecap="butt" />
+                    {/* Progress arc */}
+                    {score > 0 && (
+                      <path d={`M 25 115 A ${r} ${r} 0 0 1 ${ex} ${ey}`} fill="none" stroke={color} strokeWidth="14" strokeLinecap="round" />
+                    )}
+                    {/* Needle */}
+                    <line x1={cx} y1={cy} x2={nx} y2={ny} stroke="white" strokeWidth="3" strokeLinecap="round" />
+                    <circle cx={cx} cy={cy} r="7" fill={color} />
+                    {/* Score inside arc */}
+                    <text x={cx} y="82" textAnchor="middle" fontSize="44" fontWeight="900" fill={color}>{score}</text>
+                    <text x={cx} y="100" textAnchor="middle" fontSize="13" fontWeight="600" fill="#9ca3af">/ 100</text>
+                    {/* Corner labels */}
+                    <text x="16" y="128" textAnchor="middle" fontSize="11" fill="#d1d5db">0</text>
+                    <text x="204" y="128" textAnchor="middle" fontSize="11" fill="#d1d5db">100</text>
+                  </svg>
+                );
+              })()}
+
               <span style={{ fontSize: '18px', fontWeight: 800, color: scoreColor(latestScan.score) }}>{scoreLabel(latestScan.score)}</span>
               <span style={{ fontSize: '13px', color: '#9ca3af', marginTop: '6px' }}>{formatDate(latestScan.created_at)}</span>
               <button
@@ -1021,38 +1046,23 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
                     <span style={{ fontSize: '14px', fontWeight: 700, color: '#ef4444', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Fix These First</span>
                   </div>
                   {failItems.map(item => {
-                    const isOpen = expandedFix.has(item.id);
                     const cta = FIX_CTA[item.id];
                     return (
-                      <div key={item.id} style={{ background: '#fef2f2', border: `1px solid ${isOpen ? '#ef4444' : '#fecaca'}`, borderRadius: '14px', marginBottom: '10px', overflow: 'hidden', transition: 'border-color 0.2s' }}>
-                        {/* Row — always visible */}
-                        <button
-                          onClick={() => toggleFix(item.id)}
-                          style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '14px', padding: '18px 20px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
-                        >
-                          <div style={{ width: '10px', height: '10px', background: '#ef4444', borderRadius: '50%', flexShrink: 0 }} />
-                          <div style={{ flex: 1, fontSize: '17px', fontWeight: 700, color: '#111827' }}>{item.label}</div>
-                          <div style={{ color: '#9ca3af', flexShrink: 0 }}>
-                            {isOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-                          </div>
-                        </button>
-                        {/* Expanded detail */}
-                        {isOpen && (
-                          <div style={{ padding: '0 20px 20px 44px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
-                            <p style={{ fontSize: '15px', color: '#6b7280', lineHeight: 1.7, margin: 0, flex: 1 }}>
-                              {item.suggestion || 'Click the button to get started.'}
-                            </p>
-                            {cta && (
-                              <button
-                                onClick={() => scrollToFix(cta.type)}
-                                style={{ flexShrink: 0, background: '#7c3aed', color: 'white', border: 'none', borderRadius: '10px', padding: '10px 20px', fontSize: '14px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
-                                onMouseEnter={e => (e.currentTarget.style.background = '#6d28d9')}
-                                onMouseLeave={e => (e.currentTarget.style.background = '#7c3aed')}
-                              >
-                                {cta.label}
-                              </button>
-                            )}
-                          </div>
+                      <div key={item.id} style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '14px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '18px', padding: '20px 24px' }}>
+                        <div style={{ width: '11px', height: '11px', background: '#ef4444', borderRadius: '50%', flexShrink: 0 }} />
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: '17px', fontWeight: 700, color: '#111827' }}>{item.label}</div>
+                          {item.suggestion && <div style={{ fontSize: '14px', color: '#6b7280', marginTop: '5px', lineHeight: 1.55 }}>{item.suggestion}</div>}
+                        </div>
+                        {cta && (
+                          <button
+                            onClick={() => scrollToFix(cta.type)}
+                            style={{ flexShrink: 0, background: cta.type === 'content' ? '#f59e0b' : '#7c3aed', color: 'white', border: 'none', borderRadius: '10px', padding: '11px 22px', fontSize: '14px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                            onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
+                            onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+                          >
+                            {cta.label}
+                          </button>
                         )}
                       </div>
                     );
@@ -1067,36 +1077,23 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
                     <span style={{ fontSize: '14px', fontWeight: 700, color: '#d97706', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Worth Improving</span>
                   </div>
                   {warnItems.map(item => {
-                    const isOpen = expandedFix.has(item.id);
                     const cta = FIX_CTA[item.id];
                     return (
-                      <div key={item.id} style={{ background: '#fffbeb', border: `1px solid ${isOpen ? '#d97706' : '#fde68a'}`, borderRadius: '14px', marginBottom: '10px', overflow: 'hidden', transition: 'border-color 0.2s' }}>
-                        <button
-                          onClick={() => toggleFix(item.id)}
-                          style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '14px', padding: '18px 20px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
-                        >
-                          <div style={{ width: '10px', height: '10px', background: '#d97706', borderRadius: '50%', flexShrink: 0 }} />
-                          <div style={{ flex: 1, fontSize: '17px', fontWeight: 700, color: '#111827' }}>{item.label}</div>
-                          <div style={{ color: '#9ca3af', flexShrink: 0 }}>
-                            {isOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-                          </div>
-                        </button>
-                        {isOpen && (
-                          <div style={{ padding: '0 20px 20px 44px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
-                            <p style={{ fontSize: '15px', color: '#6b7280', lineHeight: 1.7, margin: 0, flex: 1 }}>
-                              {item.suggestion || 'Click the button to get started.'}
-                            </p>
-                            {cta && (
-                              <button
-                                onClick={() => scrollToFix(cta.type)}
-                                style={{ flexShrink: 0, background: '#d97706', color: 'white', border: 'none', borderRadius: '10px', padding: '10px 20px', fontSize: '14px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
-                                onMouseEnter={e => (e.currentTarget.style.background = '#b45309')}
-                                onMouseLeave={e => (e.currentTarget.style.background = '#d97706')}
-                              >
-                                {cta.label}
-                              </button>
-                            )}
-                          </div>
+                      <div key={item.id} style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '14px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '18px', padding: '20px 24px' }}>
+                        <div style={{ width: '11px', height: '11px', background: '#d97706', borderRadius: '50%', flexShrink: 0 }} />
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: '17px', fontWeight: 700, color: '#111827' }}>{item.label}</div>
+                          {item.suggestion && <div style={{ fontSize: '14px', color: '#6b7280', marginTop: '5px', lineHeight: 1.55 }}>{item.suggestion}</div>}
+                        </div>
+                        {cta && (
+                          <button
+                            onClick={() => scrollToFix(cta.type)}
+                            style={{ flexShrink: 0, background: cta.type === 'content' ? '#f59e0b' : '#7c3aed', color: 'white', border: 'none', borderRadius: '10px', padding: '11px 22px', fontSize: '14px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                            onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
+                            onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+                          >
+                            {cta.label}
+                          </button>
                         )}
                       </div>
                     );

@@ -70,10 +70,10 @@ export const CodeStep: React.FC<Props> = ({ siteUrl, result, isPro, onUpgrade, o
   const snippets = buildSnippets(siteUrl, result);
 
   return (
-    <div style={{ maxWidth: '700px', margin: '0 auto', padding: '36px 24px 60px' }}>
+    <div style={{ maxWidth: '100%', padding: '40px 0 60px' }}>
       <div style={{ marginBottom: '26px' }}>
-        <h1 style={{ fontSize: '26px', fontWeight: 900, color: '#111827', marginBottom: '8px' }}>🏷️ Your code snippets</h1>
-        <p style={{ color: '#6b7280', fontSize: '15px', lineHeight: 1.6 }}>
+        <h1 style={{ fontSize: '34px', fontWeight: 900, color: '#111827', marginBottom: '10px' }}>🏷️ Your code snippets</h1>
+        <p style={{ color: '#6b7280', fontSize: '18px', lineHeight: 1.6 }}>
           Each snippet tells AI something important about your business. Not a developer? <strong>Forward this page to your web developer</strong> — every snippet is a 2-minute job.
         </p>
       </div>

@@ -79,15 +79,15 @@ export const ContentStep: React.FC<Props> = ({ siteUrl, isPro, onUpgrade, onNext
   };
 
   return (
-    <div style={{ maxWidth: '700px', margin: '0 auto', padding: '36px 24px 60px' }}>
+    <div style={{ maxWidth: '100%', padding: '40px 0 60px' }}>
       <div style={{ marginBottom: '26px' }}>
-        <h1 style={{ fontSize: '26px', fontWeight: 900, color: '#111827', marginBottom: '8px' }}>✍️ Let's write content AI can understand</h1>
-        <p style={{ color: '#6b7280', fontSize: '15px', lineHeight: 1.6 }}>Fill in a few details and we'll generate content that helps AI search engines understand and recommend your business.</p>
+        <h1 style={{ fontSize: '34px', fontWeight: 900, color: '#111827', marginBottom: '10px' }}>✍️ Let's write content AI can understand</h1>
+        <p style={{ color: '#6b7280', fontSize: '18px', lineHeight: 1.6 }}>Fill in a few details and we'll generate content that helps AI search engines understand and recommend your business.</p>
       </div>
 
       {!isPro && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '12px', padding: '12px 16px', marginBottom: '20px' }}>
-          <div style={{ fontSize: '13px', color: '#374151' }}>✨ <strong>Free:</strong> FAQ Section · Upgrade for About + How-To Guide</div>
+          <div style={{ fontSize: '15px', color: '#374151' }}>✨ <strong>Free:</strong> FAQ Section · Upgrade for About + How-To Guide</div>
           <button onClick={onUpgrade} style={{ fontSize: '12px', fontWeight: 700, color: '#7c3aed', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Upgrade →</button>
         </div>
       )}
