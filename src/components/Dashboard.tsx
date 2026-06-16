@@ -249,6 +249,7 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
   const [customKeywords, setCustomKeywords] = useState<{keyword: string; volume: number; custom?: boolean}[]>([]);
   const [checkingVolume, setCheckingVolume] = useState(false);
   const [activeSection, setActiveSection] = useState('score');
+  const [widgetStatus, setWidgetStatus] = useState<'loading' | 'installed' | 'not_installed'>('loading');
 
   // Map each check ID → which fix tool it routes to
   const FIX_CTA: Record<string, { label: string; type: 'code' | 'content' }> = {
@@ -341,6 +342,18 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  // Check widget installation status whenever the latest scan URL changes
+  useEffect(() => {
+    const url = scans[0]?.url;
+    if (!url) { setWidgetStatus('not_installed'); return; }
+    setWidgetStatus('loading');
+    fetch(`${BACKEND}/api/check-widget?url=${encodeURIComponent(url)}`)
+      .then(r => r.json())
+      .then(d => setWidgetStatus(d.installed ? 'installed' : 'not_installed'))
+      .catch(() => setWidgetStatus('not_installed'));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scans[0]?.url]);
 
   const handleRescan = async () => {
     if (!latestScan || rescanLoading) return;
@@ -493,6 +506,22 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
                 Score: <span style={{ color: '#f59e0b', fontWeight: 800 }}>{latestScan.score}/100</span>
                 {isPro && <span style={{ marginLeft: '8px', fontSize: '10px', color: '#22c55e', fontWeight: 700 }}>● MONITORING</span>}
               </div>
+              {widgetStatus !== 'loading' && (
+                <button
+                  onClick={() => codeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                  style={{ marginTop: '7px', display: 'flex', alignItems: 'center', gap: '5px', background: 'none', border: 'none', padding: 0, cursor: 'pointer', width: '100%' }}
+                >
+                  <div style={{
+                    width: '7px', height: '7px', borderRadius: '50%', flexShrink: 0,
+                    background: widgetStatus === 'installed' ? '#22c55e' : '#475569',
+                    boxShadow: widgetStatus === 'installed' ? '0 0 0 2px rgba(34,197,94,0.25)' : 'none',
+                    animation: widgetStatus === 'installed' ? 'pulse 2s infinite' : 'none',
+                  }} />
+                  <span style={{ fontSize: '10px', fontWeight: 700, color: widgetStatus === 'installed' ? '#22c55e' : '#64748b' }}>
+                    {widgetStatus === 'installed' ? 'Widget broadcasting' : 'Widget not detected'}
+                  </span>
+                </button>
+              )}
             </div>
           ) : (
             <div style={{ fontSize: '13px', color: '#64748b' }}>No scan yet</div>
@@ -711,6 +740,19 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
                       <div style={{ fontSize: '17px', color: '#6b7280' }}>
                         Every month, in your market
                       </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '12px', flexWrap: 'wrap' }}>
+                        {[
+                          { name: 'ChatGPT',    color: '#059669', bg: '#ecfdf5', border: '#6ee7b7' },
+                          { name: 'Perplexity', color: '#0891b2', bg: '#ecfeff', border: '#67e8f9' },
+                          { name: 'Gemini',     color: '#2563eb', bg: '#eff6ff', border: '#93c5fd' },
+                          { name: 'Claude',     color: '#d97706', bg: '#fffbeb', border: '#fcd34d' },
+                        ].map(({ name, color, bg, border }) => (
+                          <span key={name} style={{ fontSize: '11px', fontWeight: 700, color, background: bg, border: `1px solid ${border}`, borderRadius: '6px', padding: '3px 9px', letterSpacing: '0.01em' }}>
+                            {name}
+                          </span>
+                        ))}
+                        <span style={{ fontSize: '11px', color: '#9ca3af' }}>+ more</span>
+                      </div>
                     </div>
                     <div style={{ background: '#fdf4ff', border: '2px solid #e9d5ff', borderRadius: '20px', padding: '24px 36px', textAlign: 'center', minWidth: '180px' }}>
                       <div style={{ fontSize: (amd || customKeywords.length > 0) ? '72px' : '22px', fontWeight: 900, color: '#f59e0b', lineHeight: 1 }}>
@@ -813,6 +855,11 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
                     </div>
                   )}
 
+                  {/* Platform data attribution */}
+                  <div style={{ fontSize: '11px', color: '#d1d5db', textAlign: 'right', marginBottom: '12px' }}>
+                    Search volume data powered by <strong style={{ color: '#9ca3af' }}>DataForSEO</strong>
+                  </div>
+
                   {/* Visibility hook */}
                   {isVisible ? (
                     <div style={{ background: '#f0fdf4', border: '1.5px solid #86efac', borderRadius: '14px', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '14px' }}>
@@ -878,7 +925,7 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
             })()}
             {trendData.length < 2 ? (
               <div style={{ textAlign: 'center', padding: '32px', background: '#f9fafb', borderRadius: '16px', fontSize: '16px', color: '#6b7280' }}>
-                📈 Hit <strong>Re-scan now</strong> above (or check back Monday!) to start tracking your progress here.
+                📈 Hit <strong>Re-scan now</strong> above to start tracking your progress here — your score history will appear in this chart.
               </div>
             ) : (
               <>

@@ -847,6 +847,26 @@ app.get('/api/leads', (req, res) => {
   res.json(leads);
 });
 
+// ── GET /api/check-widget — detect if widget script is installed on a site ────
+app.get('/api/check-widget', async (req, res) => {
+  const { url } = req.query;
+  if (!url) return res.json({ installed: false });
+  try {
+    const response = await fetch(url, {
+      headers: { 'User-Agent': 'findmewith.ai/1.0 (compatibility check)' },
+      signal: AbortSignal.timeout(8000),
+    });
+    const html = await response.text();
+    const installed =
+      html.includes('findmewithai-production.up.railway.app/api/widget') ||
+      html.includes('findmewith.ai/api/widget') ||
+      html.includes('__fmwai');
+    res.json({ installed });
+  } catch (err) {
+    res.json({ installed: false, error: 'Could not reach site' });
+  }
+});
+
 // ── GET /api/widget/:scanId.js — hosted AEO widget ───────────────────────────
 app.get('/api/widget/:scanId.js', async (req, res) => {
   const { scanId } = req.params;

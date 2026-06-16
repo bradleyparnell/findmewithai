@@ -230,10 +230,17 @@ export const PricingPage: React.FC<Props> = ({ onBack, onProActivated, userEmail
         </div>
 
         <div style={{ textAlign: 'center', marginTop: '32px' }}>
-          <p style={{ fontSize: '13px', color: '#6b7280' }}>Try Pro free for 7 days · <strong>Your free account stays free forever</strong> · Cancel Pro any time</p>
+          <p style={{ fontSize: '13px', color: '#6b7280' }}>7-day money-back guarantee · <strong>Your free account stays free forever</strong> · Cancel Pro any time</p>
           <p style={{ fontSize: '13px', color: '#6b7280', marginTop: '6px' }}>
             Questions? Email <a href="mailto:hello@findmewithai.com" style={{ color: '#7c3aed', fontWeight: 600 }}>hello@findmewithai.com</a>
           </p>
+          {/* Stripe trust badge */}
+          <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginTop: '20px', padding: '12px 24px', background: '#f9fafb', borderRadius: '12px', border: '1px solid #e5e7eb' }}>
+            <svg width="44" height="18" viewBox="0 0 44 18" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Stripe">
+              <path d="M4.9 6.8c0-.6.5-1 1.4-1 1.2 0 2.5.4 3.5 1l.6-3.6C9.3 2.7 7.9 2.3 6.3 2.3 3 2.3 .8 4 .8 6.9c0 4.5 5.4 3.8 5.4 5.8 0 .7-.6 1.1-1.6 1.1-1.3 0-2.9-.5-4-1.2l-.6 3.6c1.1.6 3 1 4.6 1 3.4 0 5.7-1.7 5.7-4.7C10.3 7.8 4.9 8.7 4.9 6.8zm13.8-4.3l-3.3.7-.4 1.9c-.6-.7-1.5-1-2.6-1-2.9 0-5.4 2.3-5.4 6.1 0 2.6 1.4 4 3.3 4 1.1 0 2-.5 2.7-1.3l-.2 1.1h3.5l2.4-11.5zm-3.5 7.8c-.3 1.4-1 2.1-1.9 2.1-.8 0-1.3-.6-1.3-1.7 0-1.8.8-3 2-3 .8 0 1.3.5 1.5 1.3l-.3 1.3zm5.1-7.8l-2.5 11.5h3.7l2.5-11.5h-3.7zm4.6 0l-2.5 11.5H26l.4-1.8c.7.8 1.6 1.2 2.7 1.2 2.9 0 5.1-2.5 5.1-6.3 0-2.3-1.3-3.8-3.2-3.8-1.1 0-2 .4-2.7 1.1l.3-1.9h-3.7zm3 8.2c-.8 0-1.4-.5-1.6-1.4l.3-1.4c.3-1.3 1-2 1.9-2 .9 0 1.4.6 1.4 1.7 0 1.7-.9 3.1-2 3.1zm12.1-8.5c-1.1 0-2 .5-2.7 1.4l.3-1.1h-3.5l-2.4 11.5h3.7l1.4-6.6c.3-1.3 1-2 2-2 .5 0 .9.1 1.2.3l.7-3.3c-.3-.2-.5-.2-.7-.2z" fill="#635BFF"/>
+            </svg>
+            <span style={{ fontSize: '12px', color: '#6b7280' }}>Payments secured by Stripe · 256-bit SSL encryption</span>
+          </div>
         </div>
       </div>
     </div>
