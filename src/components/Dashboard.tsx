@@ -434,7 +434,9 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
             </div>
             <span style={{ fontWeight: 800, fontSize: '19px', color: '#7c3aed' }}>findmewith.ai</span>
           </div>
-          <h1 style={{ fontSize: '36px', fontWeight: 900, color: '#111827', margin: 0, lineHeight: 1.1 }}>Your Dashboard</h1>
+          <h1 style={{ fontSize: '36px', fontWeight: 900, color: '#111827', margin: 0, lineHeight: 1.1 }}>
+            {latestScan ? latestScan.url.replace(/^https?:\/\//, '').replace(/\/$/, '') : 'Your Dashboard'}
+          </h1>
           <p style={{ fontSize: '15px', color: '#6b7280', margin: '6px 0 0' }}>{user.email}</p>
         </div>
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
@@ -677,7 +679,7 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
                               )}
                             </div>
                             <span style={{ fontSize: '16px', fontWeight: 800, color: kw.volume > 0 ? '#d97706' : '#9ca3af', background: kw.volume > 0 ? '#fffbeb' : '#f9fafb', border: `1.5px solid ${kw.volume > 0 ? '#fde68a' : '#e5e7eb'}`, borderRadius: '10px', padding: '7px 18px', flexShrink: 0 }}>
-                              {kw.volume > 0 ? `${kw.volume.toLocaleString()}/mo` : 'no data'}
+                              {kw.volume > 0 ? `${kw.volume.toLocaleString()}/mo` : '⏳ thinking…'}
                             </span>
                           </div>
                         ))}
