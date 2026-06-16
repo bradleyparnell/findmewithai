@@ -472,8 +472,16 @@ function QuickStartCard({ siteUrl, result, scanId, isPro, isMobile }: {
 
       {/* Rows */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
-        {row(1, checkedLlms, 'Upload your llms.txt file', 'Introduces your business to ChatGPT, Perplexity & Claude. The single most impactful thing you can do.', handleCopyLlms, copiedLlms, '#7c3aed')}
-        {row(2, checkedWidget, 'Add the auto-sync script to your website', 'Paste once in your header — keeps all your AI signals updated automatically.', handleCopyWidget, copiedWidget, '#d97706')}
+        {row(1, checkedLlms, 'Upload your llms.txt file',
+          checkedLlms
+            ? '→ Save the text as a file named llms.txt → upload it to your website so it lives at yoursite.com/llms.txt. Ask your web person — takes 2 minutes.'
+            : 'Introduces your business to ChatGPT, Perplexity & Claude. The single most impactful thing you can do.',
+          handleCopyLlms, copiedLlms, '#7c3aed')}
+        {row(2, checkedWidget, 'Add the auto-sync script to your website',
+          checkedWidget
+            ? '→ Paste it just before </head> on every page. WordPress? Use the free "Insert Headers and Footers" plugin — no coding needed.'
+            : 'Paste once in your header — keeps all your AI signals updated automatically.',
+          handleCopyWidget, copiedWidget, '#d97706')}
       </div>
 
       {/* Done state */}
