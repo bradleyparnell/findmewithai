@@ -136,8 +136,8 @@ export const HeroStep: React.FC<Props> = ({ onAnalyzed, user, onSignIn, onGoToDa
 
         {/* Main headline — big and clean */}
         <h1 style={{ fontSize: '60px', fontWeight: 900, lineHeight: 1.08, color: '#111827', marginBottom: '22px', letterSpacing: '-2px' }}>
-          Is your business showing up<br />
-          <span style={{ color: '#7c3aed' }}>in AI search?</span>
+          Does AI recommend<br />
+          <span style={{ color: '#7c3aed' }}>your business?</span>
         </h1>
 
         {/* One-line subtext only */}
