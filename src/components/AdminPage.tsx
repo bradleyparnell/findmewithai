@@ -70,7 +70,7 @@ export const AdminPage: React.FC = () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { setAuthError('Not logged in.'); return; }
-      if (session.user.email !== 'brad@genierocket.com') {
+      if (session.user.email !== 'hello@genierocket.com') {
         setAuthError('Admin access only.');
         return;
       }

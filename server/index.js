@@ -773,6 +773,9 @@ app.get('/api/check-subscription', async (req, res) => {
   const email = (req.query.email || '').toLowerCase().trim();
   if (!email) return res.status(400).json({ error: 'Email required' });
 
+  // Admin account always gets free Pro
+  if (email === 'hello@genierocket.com') return res.json({ active: true, plan: 'pro' });
+
   // Check in-memory store first
   const cached = subscriptions.get(email);
   if (cached && cached.status === 'active') {
@@ -961,7 +964,7 @@ app.get('/api/admin/stats', async (req, res) => {
   try {
     const { data: { user }, error: authErr } = await supabaseAdmin.auth.getUser(token);
     if (authErr || !user) return res.status(401).json({ error: 'Invalid token' });
-    if (user.email !== 'brad@genierocket.com') return res.status(403).json({ error: 'Forbidden' });
+    if (user.email !== 'hello@genierocket.com') return res.status(403).json({ error: 'Forbidden' });
 
     // Fetch all auth users
     const { data: { users }, error: usersErr } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });

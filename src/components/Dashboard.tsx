@@ -561,6 +561,19 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
           })}
         </nav>
 
+        {/* Admin link — only for hello@genierocket.com */}
+        {user.email === 'hello@genierocket.com' && (
+          <div style={{ padding: '0 10px 8px' }}>
+            <button
+              onClick={() => window.location.href = '/admin'}
+              style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '9px 12px', background: 'rgba(124,58,237,0.18)', border: '1px solid rgba(124,58,237,0.4)', borderRadius: '9px', color: '#a78bfa', fontSize: '14px', fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}
+            >
+              <span style={{ fontSize: '15px', lineHeight: 1 }}>🛡️</span>
+              Admin
+            </button>
+          </div>
+        )}
+
         {/* New Scan */}
         <div style={{ padding: '12px 10px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
           <button
