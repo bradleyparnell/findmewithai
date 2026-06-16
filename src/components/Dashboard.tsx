@@ -637,19 +637,82 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
                   </div>
 
                   {/* Top keywords */}
-                  <div style={{ marginBottom: '20px' }}>
-                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '16px' }}>
-                      What people are searching
-                    </div>
-                    {amd.keywords.slice(0, 4).map((kw, i) => (
-                      <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 0', borderBottom: i < Math.min(amd.keywords.length, 4) - 1 ? '1px solid #f3f4f6' : 'none' }}>
-                        <span style={{ fontSize: '18px', fontWeight: 600, color: '#111827' }}>"{kw.keyword}"</span>
-                        <span style={{ fontSize: '16px', fontWeight: 800, color: '#d97706', background: '#fffbeb', border: '1.5px solid #fde68a', borderRadius: '10px', padding: '7px 18px' }}>
-                          {kw.volume.toLocaleString()}/mo
-                        </span>
+                  {(() => {
+                    const [customTerm, setCustomTerm] = React.useState('');
+                    const [customKeywords, setCustomKeywords] = React.useState<{keyword: string; volume: number; custom?: boolean}[]>([]);
+                    const [checking, setChecking] = React.useState(false);
+
+                    const checkVolume = async () => {
+                      const term = customTerm.trim();
+                      if (!term) return;
+                      setChecking(true);
+                      try {
+                        const res = await fetch(`${BACKEND}/api/keyword-volume`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ keywords: [term] }),
+                        });
+                        const data = await res.json();
+                        const found = data.keywords?.[0];
+                        const entry = { keyword: found?.keyword || term, volume: found?.volume || 0, custom: true };
+                        setCustomKeywords(prev => [entry, ...prev.filter(k => k.keyword !== entry.keyword)]);
+                        setCustomTerm('');
+                      } catch { /* silent */ } finally {
+                        setChecking(false);
+                      }
+                    };
+
+                    const allKeywords = [...amd.keywords, ...customKeywords];
+
+                    return (
+                      <div style={{ marginBottom: '20px' }}>
+                        <div style={{ fontSize: '13px', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '16px' }}>
+                          What people are searching
+                        </div>
+                        {allKeywords.map((kw, i) => (
+                          <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 0', borderBottom: i < allKeywords.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <span style={{ fontSize: '17px', fontWeight: 600, color: '#111827' }}>"{kw.keyword}"</span>
+                              {(kw as any).custom && (
+                                <span style={{ fontSize: '11px', fontWeight: 700, color: '#7c3aed', background: '#f5f3ff', border: '1px solid #ddd6fe', borderRadius: '6px', padding: '2px 8px' }}>YOUR TERM</span>
+                              )}
+                            </div>
+                            <span style={{ fontSize: '16px', fontWeight: 800, color: kw.volume > 0 ? '#d97706' : '#9ca3af', background: kw.volume > 0 ? '#fffbeb' : '#f9fafb', border: `1.5px solid ${kw.volume > 0 ? '#fde68a' : '#e5e7eb'}`, borderRadius: '10px', padding: '7px 18px', flexShrink: 0 }}>
+                              {kw.volume > 0 ? `${kw.volume.toLocaleString()}/mo` : 'no data'}
+                            </span>
+                          </div>
+                        ))}
+
+                        {/* Custom keyword input */}
+                        <div style={{ marginTop: '20px', padding: '18px 20px', background: '#f9fafb', border: '1.5px dashed #d1d5db', borderRadius: '14px' }}>
+                          <div style={{ fontSize: '13px', fontWeight: 700, color: '#374151', marginBottom: '10px' }}>
+                            🔍 Track your own search terms
+                          </div>
+                          <div style={{ display: 'flex', gap: '10px' }}>
+                            <input
+                              type="text"
+                              value={customTerm}
+                              onChange={e => setCustomTerm(e.target.value)}
+                              onKeyDown={e => e.key === 'Enter' && checkVolume()}
+                              placeholder='e.g. "trail races Texas" or "obstacle course near me"'
+                              style={{ flex: 1, padding: '11px 16px', borderRadius: '10px', border: '1.5px solid #e5e7eb', fontSize: '14px', color: '#111827', outline: 'none', background: 'white' }}
+                              disabled={checking}
+                            />
+                            <button
+                              onClick={checkVolume}
+                              disabled={checking || !customTerm.trim()}
+                              style={{ padding: '11px 22px', background: checking ? '#e5e7eb' : '#7c3aed', color: 'white', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: 700, cursor: checking ? 'default' : 'pointer', whiteSpace: 'nowrap' }}
+                            >
+                              {checking ? 'Checking…' : 'Check volume →'}
+                            </button>
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '8px' }}>
+                            Type a phrase your customers might ask an AI assistant, then hit "Check volume" to see monthly search data.
+                          </div>
+                        </div>
                       </div>
-                    ))}
-                  </div>
+                    );
+                  })()}
 
                   {/* Trend */}
                   <div style={{ background: trendBg, borderRadius: '12px', padding: '14px 18px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>

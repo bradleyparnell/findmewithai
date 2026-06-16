@@ -368,7 +368,7 @@ async function fetchAiKeywordVolume(keywords) {
       {
         method: 'POST',
         headers: { 'Authorization': DATAFORSEO_AUTH, 'Content-Type': 'application/json' },
-        body: JSON.stringify([{ keywords: keywords.slice(0, 8), location_code: 2840, language_code: 'en' }]),
+        body: JSON.stringify([{ keywords: keywords.slice(0, 12), location_code: 2840, language_code: 'en' }]),
         signal: AbortSignal.timeout(12000),
       }
     );
@@ -385,63 +385,78 @@ async function fetchAiKeywordVolume(keywords) {
 }
 
 function generateKeywordsFromSite({ title, metaDesc, h1Texts, url }) {
-  const keywords = new Set();
-
-  // Extended stop words — include generic site words that produce bad keywords
   const stopWords = new Set([
     'the','a','an','and','or','but','in','on','at','to','for','of','with','by','from',
     'is','are','we','our','your','this','that','all','any','get','find','how',
     'best','top','near','local','home','homes','welcome','page','click','here',
     'read','more','learn','about','us','contact','services','service','team',
     'website','site','online','free','new','now','today','great','good',
-    'world','life','love','time','work','place','make','take',
+    'world','life','love','time','work','place','make','take','also','just',
+    'can','will','you','have','has','been','was','were','they','them',
   ]);
 
-  // Helper: strip a raw string to meaningful content words only
-  function cleanPhrase(raw) {
+  function cleanPhrase(raw, maxWords = 5) {
     if (!raw) return '';
     return raw
-      .split(/[\-\|–—:]/)[0]   // take only the part before separators
+      .split(/[\-\|–—:,\.!?]/)[0]
       .trim()
       .toLowerCase()
       .replace(/[^a-z0-9\s]/g, '')
       .split(/\s+/)
       .filter(w => w.length > 2 && !stopWords.has(w))
-      .slice(0, 5)
+      .slice(0, maxWords)
       .join(' ')
       .trim();
   }
 
+  // Extract multiple distinct phrases from meta description by splitting on connectors
+  function metaPhrases(meta) {
+    if (!meta) return [];
+    const segments = meta.split(/[,\.\-–—\|!]/).map(s => s.trim()).filter(s => s.length > 8);
+    return segments.map(s => cleanPhrase(s, 4)).filter(s => s.length > 3);
+  }
+
   const coreTitle = cleanPhrase(title);
-  const coreH1   = cleanPhrase(h1Texts[0]);
-  const coreMeta = cleanPhrase(metaDesc);
+  const allH1s    = h1Texts.map(h => cleanPhrase(h, 4)).filter(h => h.length > 3);
+  const coreMeta  = cleanPhrase(metaDesc);
+  const extraMeta = metaPhrases(metaDesc);
 
-  // Use the longest / most descriptive as primary
-  const primary = [coreTitle, coreH1, coreMeta].sort((a, b) => b.split(' ').length - a.split(' ').length)[0];
+  // Collect all candidate core phrases, deduped
+  const candidates = [...new Set([coreTitle, ...allH1s, coreMeta, ...extraMeta])].filter(c => c.length > 3);
 
-  if (primary && primary.length > 3) {
-    keywords.add(primary);
+  // Use the longest as the primary anchor
+  const primary = candidates.sort((a, b) => b.split(' ').length - a.split(' ').length)[0] || '';
+
+  const keywords = new Set();
+
+  // From each unique candidate, add base + variations
+  candidates.slice(0, 4).forEach(phrase => {
+    keywords.add(phrase);
+  });
+
+  // AI-style question formats off the primary
+  if (primary) {
     keywords.add(`best ${primary}`);
     keywords.add(`${primary} near me`);
-    keywords.add(`find ${primary}`);
+    keywords.add(`top ${primary}`);
+    keywords.add(`where to find ${primary}`);
+    keywords.add(`${primary} recommendations`);
+    keywords.add(`who has the best ${primary}`);
+    keywords.add(`affordable ${primary}`);
   }
 
-  // Add H1 if different from primary
-  if (coreH1 && coreH1 !== primary && coreH1.length > 3) {
-    keywords.add(coreH1);
-  }
-
-  // Add meta phrase if different
-  if (coreMeta && coreMeta !== primary && coreMeta.length > 3) {
-    keywords.add(`${coreMeta}`);
+  // Secondary phrase variations
+  if (allH1s[0] && allH1s[0] !== primary) {
+    keywords.add(`best ${allH1s[0]}`);
+    keywords.add(`${allH1s[0]} near me`);
   }
 
   return [...keywords]
     .filter(k => {
       const words = k.split(' ');
-      return words.length >= 1 && words.length <= 6 && k.length > 3;
+      return words.length >= 1 && words.length <= 7 && k.length > 3;
     })
-    .slice(0, 8);
+    .slice(0, 12);
 }
 
 function fetchUrl(urlStr, redirectCount = 0) {
@@ -635,7 +650,7 @@ async function analyzeUrl(url) {
             }
           }
           ai_market_data = {
-            keywords: processed.slice(0, 5),
+            keywords: processed.slice(0, 10),
             total_volume: totalVolume,
             top_keyword: topKw.keyword,
             top_volume: topKw.volume,
@@ -662,6 +677,26 @@ app.post('/api/analyze', async (req, res) => {
   } catch (err) {
     console.error('[analyze error]', err.message);
     res.status(500).json({ error: err.message || 'Analysis failed' });
+  }
+});
+
+// ── POST /api/keyword-volume ──────────────────────────────────────────────────
+app.post('/api/keyword-volume', async (req, res) => {
+  const { keywords } = req.body;
+  if (!keywords || !Array.isArray(keywords) || keywords.length === 0) {
+    return res.status(400).json({ error: 'keywords array required' });
+  }
+  try {
+    const rawItems = await fetchAiKeywordVolume(keywords.slice(0, 12));
+    if (!rawItems) return res.json({ keywords: [] });
+    const processed = rawItems.map(item => ({
+      keyword: item.keyword,
+      volume: item.ai_search_volume || 0,
+    }));
+    res.json({ keywords: processed });
+  } catch (err) {
+    console.warn('[keyword-volume] error:', err.message);
+    res.status(500).json({ error: 'Failed to fetch keyword volume' });
   }
 });
 
