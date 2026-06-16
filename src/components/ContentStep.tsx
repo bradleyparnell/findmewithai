@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Copy, Check, HelpCircle, User, BookOpen, ArrowRight } from 'lucide-react';
 import { LockOverlay } from './LockOverlay';
 import type { AnalysisResult } from '../types';
@@ -51,9 +51,34 @@ function makeHowTo(title: string, stepsText: string): string {
   return `<!-- How-To Guide -->\n<section>\n  <h2>${title}</h2>\n  <ol>\n${steps.map(s => `    <li>${s.trim()}</li>`).join('\n')}\n  </ol>\n</section>\n\n<!-- Paste just before </body> -->\n<script type="application/ld+json">\n${schema}\n</script>`;
 }
 
-export const ContentStep: React.FC<Props> = ({ siteUrl, isPro, onUpgrade, onNext }) => {
+function guessBusinessType(title: string, h1: string): string {
+  const raw = (h1 || title || '').replace(/\s*[\|\-–—:].*/g, '').trim();
+  return raw.length > 3 ? raw : title.trim();
+}
+
+function suggestFaqQuestions(businessType: string): string {
+  if (!businessType) return '';
+  const bt = businessType.toLowerCase();
+  if (bt.includes('trail') || bt.includes('running') || bt.includes('race'))
+    return 'What races and distances do you offer?\nHow do I register for an event?\nWhat gear do I need for trail running?\nAre there beginner-friendly routes?\nDo you offer group training programs?';
+  if (bt.includes('restaurant') || bt.includes('food') || bt.includes('cafe') || bt.includes('bar'))
+    return 'What are your hours and location?\nDo you take reservations?\nDo you offer delivery or takeout?\nDo you cater to dietary restrictions?\nIs there parking available?';
+  if (bt.includes('gym') || bt.includes('fitness') || bt.includes('yoga') || bt.includes('studio'))
+    return 'What classes do you offer?\nHow much does a membership cost?\nIs there a free trial available?\nDo you offer personal training?\nWhat are your hours?';
+  if (bt.includes('consult') || bt.includes('agency') || bt.includes('marketing') || bt.includes('seo'))
+    return 'What services do you offer?\nHow long does it take to see results?\nHow much do your services cost?\nDo you work with small businesses?\nHow do I get started?';
+  if (bt.includes('law') || bt.includes('attorney') || bt.includes('legal'))
+    return 'What areas of law do you practice?\nDo you offer free consultations?\nHow much do you charge?\nHow long will my case take?\nAre you licensed in my state?';
+  if (bt.includes('dental') || bt.includes('medical') || bt.includes('clinic') || bt.includes('health'))
+    return 'Are you accepting new patients?\nWhat insurance do you accept?\nHow do I schedule an appointment?\nDo you offer emergency services?\nWhat are your hours?';
+  // Generic fallback
+  return `What services does ${businessType} offer?\nHow much does it cost?\nHow do I get started?\nDo you offer a free consultation?\nWhat areas do you serve?`;
+}
+
+export const ContentStep: React.FC<Props> = ({ siteUrl, result, isPro, onUpgrade, onNext }) => {
   const [tab, setTab] = useState<Tab>('faq');
   const [output, setOutput] = useState('');
+  const [prefilled, setPrefilled] = useState(false);
   const [faqBusiness, setFaqBusiness] = useState('');
   const [faqQuestions, setFaqQuestions] = useState('');
   const [aboutName, setAboutName] = useState('');
@@ -62,6 +87,17 @@ export const ContentStep: React.FC<Props> = ({ siteUrl, isPro, onUpgrade, onNext
   const [aboutPhone, setAboutPhone] = useState('');
   const [howToTitle, setHowToTitle] = useState('');
   const [howToSteps, setHowToSteps] = useState('');
+
+  useEffect(() => {
+    if (!result?.site_info || prefilled) return;
+    const { title, metaDesc, h1 } = result.site_info;
+    const businessType = guessBusinessType(title, h1);
+    setFaqBusiness(businessType);
+    setFaqQuestions(suggestFaqQuestions(businessType));
+    setAboutName(businessType);
+    setAboutDesc(metaDesc || '');
+    setPrefilled(true);
+  }, [result]);
 
   const tabs = [
     { id: 'faq' as Tab,   icon: <HelpCircle size={15} />, label: 'FAQ Section',        proOnly: false },
@@ -106,19 +142,31 @@ export const ContentStep: React.FC<Props> = ({ siteUrl, isPro, onUpgrade, onNext
       <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '18px', padding: '26px', marginBottom: '20px', position: 'relative', minHeight: '260px', overflow: 'hidden' }}>
         {tab === 'faq' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+            {prefilled && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#f5f3ff', border: '1px solid #ddd6fe', borderRadius: '10px', padding: '10px 14px' }}>
+                <span style={{ fontSize: '16px' }}>✨</span>
+                <span style={{ fontSize: '14px', color: '#6d28d9', fontWeight: 600 }}>Pre-filled from your site — edit anything and hit Generate</span>
+              </div>
+            )}
             <div>
-              <label style={labelStyle}>What type of business are you? <span style={{ color: '#9ca3af', fontWeight: 400 }}>(e.g. "a plumbing company")</span></label>
+              <label style={labelStyle}>What type of business are you?</label>
               <input type="text" style={inputStyle} placeholder="a local bakery" value={faqBusiness} onChange={e => setFaqBusiness(e.target.value)} />
             </div>
             <div>
               <label style={labelStyle}>What questions do customers always ask? <span style={{ color: '#9ca3af', fontWeight: 400 }}>(one per line)</span></label>
-              <textarea style={{ ...inputStyle, resize: 'vertical' }} rows={5} placeholder={"Do you offer delivery?\nWhat are your hours?\nHow much does it cost?"} value={faqQuestions} onChange={e => setFaqQuestions(e.target.value)} />
+              <textarea style={{ ...inputStyle, resize: 'vertical' }} rows={6} placeholder={"Do you offer delivery?\nWhat are your hours?\nHow much does it cost?"} value={faqQuestions} onChange={e => setFaqQuestions(e.target.value)} />
             </div>
           </div>
         )}
         {tab === 'about' && !isPro && <LockOverlay feature="About Your Business" onUpgrade={onUpgrade} />}
         {tab === 'about' && isPro && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+            {prefilled && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#f5f3ff', border: '1px solid #ddd6fe', borderRadius: '10px', padding: '10px 14px' }}>
+                <span style={{ fontSize: '16px' }}>✨</span>
+                <span style={{ fontSize: '14px', color: '#6d28d9', fontWeight: 600 }}>Pre-filled from your site — edit anything and hit Generate</span>
+              </div>
+            )}
             <div><label style={labelStyle}>Your business name</label><input type="text" style={inputStyle} placeholder="Acme Plumbing Co." value={aboutName} onChange={e => setAboutName(e.target.value)} /></div>
             <div><label style={labelStyle}>What do you do? <span style={{ color: '#9ca3af', fontWeight: 400 }}>(1–2 sentences)</span></label><textarea style={{ ...inputStyle, resize: 'vertical' }} rows={3} placeholder="We provide residential plumbing services throughout Austin, TX." value={aboutDesc} onChange={e => setAboutDesc(e.target.value)} /></div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>

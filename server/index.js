@@ -649,7 +649,7 @@ async function analyzeUrl(url) {
     console.warn('[dataforseo] ai_market_data skipped:', err.message);
   }
 
-  return { url: finalUrl, score: overall, categories: categoryScores, findings, suggestions, ai_market_data };
+  return { url: finalUrl, score: overall, categories: categoryScores, findings, suggestions, ai_market_data, site_info: { title, metaDesc, h1: h1Texts[0] || '' } };
 }
 
 // ── POST /api/analyze ─────────────────────────────────────────────────────────

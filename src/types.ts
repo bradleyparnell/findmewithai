@@ -33,4 +33,5 @@ export interface AnalysisResult {
   findings: Finding[];
   suggestions?: { category: string; title: string; description: string; impact: string }[];
   ai_market_data?: AiMarketData | null;
+  site_info?: { title: string; metaDesc: string; h1: string };
 }

@@ -30,6 +30,14 @@ function buildSnippets(siteUrl: string, result: AnalysisResult | null) {
   const domain = url.replace(/^https?:\/\//, '').replace(/\/$/, '');
   const hasFaq = result?.findings.find(f => f.id === 'has_faq_schema' && f.status === 'pass');
 
+  // Pre-fill from site_info if available
+  const si = result?.site_info;
+  const businessName = si?.h1 || si?.title?.replace(/\s*[\|\-–—:].*/g, '').trim() || domain;
+  const businessDesc = si?.metaDesc || '[What you do in 1–2 sentences]';
+  const llmsAbout = si?.metaDesc
+    ? `${businessName} — ${si.metaDesc}`
+    : `${businessName} helps [who you serve] with [what you provide].`;
+
   return [
     {
       id: 'llms_txt', badge: '⭐ Most Important — Free', badgeColor: '#7c3aed',
@@ -37,7 +45,7 @@ function buildSnippets(siteUrl: string, result: AnalysisResult | null) {
       why: "This is like a business card for AI. When ChatGPT or Perplexity visits your website, this file tells them exactly who you are and what you do. It's the single most impactful thing you can add.",
       where: 'Create a new text file called llms.txt and upload it to your website so it lives at yourdomain.com/llms.txt. Your web developer can do this in 2 minutes.',
       isFile: true, proOnly: false,
-      code: `# ${domain}\n> [Describe your business in 1 sentence]\n\n## About\n[Your business name] helps [who you serve] with [what you provide].\n\n## Services\n- [Your main service or product]\n- [Another service]\n\n## Contact\n- Website: ${url}\n- Location: [Your city, state]\n- Phone: [Your phone number]`,
+      code: `# ${domain}\n> ${si?.metaDesc || '[Describe your business in 1 sentence]'}\n\n## About\n${llmsAbout}\n\n## Services\n- [Your main service or product]\n- [Another service]\n\n## Contact\n- Website: ${url}\n- Location: [Your city, state]\n- Phone: [Your phone number]`,
     },
     {
       id: 'org_schema', badge: '🏆 High Impact', badgeColor: '#d97706',
@@ -45,7 +53,7 @@ function buildSnippets(siteUrl: string, result: AnalysisResult | null) {
       why: "This hidden code tells AI your business name, what you do, where you're located, and how to contact you — all in a language AI understands perfectly.",
       where: 'Paste this just before the </body> tag on every page of your website, especially your homepage.',
       isFile: false, proOnly: true,
-      code: `<script type="application/ld+json">\n${JSON.stringify({ "@context": "https://schema.org", "@type": "Organization", "name": "[Your Business Name]", "description": "[What you do in 1–2 sentences]", "url": url, "telephone": "[Your phone number]", "address": { "@type": "PostalAddress", "streetAddress": "[Street]", "addressLocality": "[City]", "addressRegion": "[State]", "postalCode": "[ZIP]", "addressCountry": "US" } }, null, 2)}\n</script>`,
+      code: `<script type="application/ld+json">\n${JSON.stringify({ "@context": "https://schema.org", "@type": "Organization", "name": businessName, "description": businessDesc, "url": url, "telephone": "[Your phone number]", "address": { "@type": "PostalAddress", "streetAddress": "[Street]", "addressLocality": "[City]", "addressRegion": "[State]", "postalCode": "[ZIP]", "addressCountry": "US" } }, null, 2)}\n</script>`,
     },
     {
       id: 'faq_schema', badge: hasFaq ? '✅ Already Added' : '💡 Great Boost', badgeColor: hasFaq ? '#10b981' : '#6d28d9',
