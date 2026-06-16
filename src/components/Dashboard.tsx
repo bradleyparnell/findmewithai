@@ -485,7 +485,7 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
           {/* Site card */}
           {latestScan ? (
             <div style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', padding: '11px 13px' }}>
-              <div style={{ fontSize: '10px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '3px' }}>Scanning</div>
+              <div style={{ fontSize: '10px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '3px' }}>Current Site</div>
               <div style={{ fontSize: '13px', fontWeight: 700, color: 'white', wordBreak: 'break-all', lineHeight: 1.3 }}>
                 {latestScan.url.replace(/^https?:\/\//, '').replace(/\/$/, '')}
               </div>
@@ -554,7 +554,16 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
       </aside>
 
       {/* ── MAIN CONTENT ── */}
-      <div style={{ marginLeft: '240px', flex: 1, padding: '40px 48px 100px', minWidth: 0 }}>
+      <div style={{ marginLeft: '240px', flex: 1, padding: '40px 48px 100px', minWidth: 0, overflowX: 'hidden' }}>
+        {/* Page header */}
+        {latestScan && (
+          <div style={{ marginBottom: '32px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '6px' }}>AI Visibility Dashboard</div>
+            <h1 style={{ margin: 0, fontSize: '26px', fontWeight: 900, color: '#111827', letterSpacing: '-0.02em' }}>
+              {latestScan.url.replace(/^https?:\/\//, '').replace(/\/$/, '')}
+            </h1>
+          </div>
+        )}
 
         {/* Pro monitoring banner */}
         {isPro && (
@@ -581,9 +590,9 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
           </button>
         </div>
       ) : (
-        <>
+        <div style={{ maxWidth: '1100px' }}>
           {/* ── OVERVIEW: score + category bars ── */}
-          <div ref={scoreRef} style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: '20px', marginBottom: '24px' }}>
+          <div ref={scoreRef} style={{ display: 'grid', gridTemplateColumns: '300px minmax(0,1fr)', gap: '24px', marginBottom: '32px' }}>
 
             {/* Score circle */}
             <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '24px', padding: '32px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
@@ -1013,7 +1022,7 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
           })()}
 
           {/* ── COMPETITOR COMPARISON ── */}
-          <div ref={competitorRef} style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '24px', padding: '40px 48px', marginBottom: '24px' }}>
+          <div ref={competitorRef} style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '24px', padding: '40px 48px', marginBottom: '40px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', flexWrap: 'wrap', gap: '12px' }}>
               <div style={{ fontSize: '24px', fontWeight: 800, color: '#111827', display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <Target size={22} style={{ color: '#7c3aed' }} /> How Do You Compare?
@@ -1369,7 +1378,7 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
               </button>
             </div>
           )}
-        </>
+        </div>
       )}
       </div>
     </div>
