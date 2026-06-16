@@ -1,7 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Search, FileText, Code2, Sparkles, TrendingUp, LogIn } from 'lucide-react';
 import { analyzeWebsite } from '../utils/analyzer';
 import type { AnalysisResult } from '../types';
+
+const EXAMPLE_DOMAINS = [
+  'spartantrail.com',
+  'marysbakery.com',
+  'acmeplumbing.com',
+  'downtown-boutique.com',
+  'rivercitydental.com',
+  'shopbrightgear.com',
+];
 
 interface Props {
   onAnalyzed: (result: AnalysisResult, url: string) => void;
@@ -27,6 +36,38 @@ export const HeroStep: React.FC<Props> = ({ onAnalyzed, user, onSignIn, onGoToDa
   const [signInEmail, setSignInEmail] = useState('');
   const [signInLoading, setSignInLoading] = useState(false);
   const [signInSent, setSignInSent] = useState(false);
+
+  // Typewriter placeholder animation
+  const [typedDomain, setTypedDomain] = useState('');
+  const [domainIdx, setDomainIdx] = useState(0);
+  const [charIdx, setCharIdx] = useState(0);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [pauseTyping, setPauseTyping] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (url || loading || pauseTyping) return;
+    const current = EXAMPLE_DOMAINS[domainIdx];
+    if (!isDeleting && charIdx === current.length) {
+      const t = setTimeout(() => setIsDeleting(true), 1600);
+      return () => clearTimeout(t);
+    }
+    const speed = isDeleting ? 55 : 95;
+    const t = setTimeout(() => {
+      if (isDeleting) {
+        setTypedDomain(current.slice(0, charIdx - 1));
+        setCharIdx(c => c - 1);
+        if (charIdx - 1 === 0) {
+          setIsDeleting(false);
+          setDomainIdx(i => (i + 1) % EXAMPLE_DOMAINS.length);
+        }
+      } else {
+        setTypedDomain(current.slice(0, charIdx + 1));
+        setCharIdx(c => c + 1);
+      }
+    }, speed);
+    return () => clearTimeout(t);
+  }, [url, loading, pauseTyping, charIdx, isDeleting, domainIdx]);
 
   useEffect(() => {
     if (!loading) return;
@@ -101,9 +142,9 @@ export const HeroStep: React.FC<Props> = ({ onAnalyzed, user, onSignIn, onGoToDa
 
         {/* Main headline */}
         <h1 style={{ fontSize: '42px', fontWeight: 900, lineHeight: 1.15, color: '#111827', marginBottom: '20px', letterSpacing: '-0.5px' }}>
-          Your customers are asking AI<br />
-          who to hire.{' '}
-          <span style={{ color: '#7c3aed' }}>Are they finding you?</span>
+          Right now, someone is asking AI<br />
+          for exactly what you sell.{' '}
+          <span style={{ color: '#7c3aed' }}>Do they find you?</span>
         </h1>
 
         {/* Subhead */}
@@ -124,24 +165,90 @@ export const HeroStep: React.FC<Props> = ({ onAnalyzed, user, onSignIn, onGoToDa
           ))}
         </div>
 
-        {/* URL input */}
-        <div style={{ display: 'flex', gap: '10px', maxWidth: '540px', margin: '0 auto 10px' }}>
-          <input
-            type="url"
-            style={{ flex: 1, padding: '14px 18px', border: '1.5px solid #ddd6fe', borderRadius: '12px', fontSize: '15px', outline: 'none', boxShadow: '0 1px 4px rgba(124,58,237,0.07)' }}
-            placeholder="yourbusiness.com"
-            value={url}
-            onChange={e => setUrl(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && !loading && handleCheck()}
-            disabled={loading}
-          />
-          <button
-            style={{ background: '#7c3aed', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 700, fontSize: '15px', padding: '14px 24px', cursor: loading ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', opacity: loading ? 0.7 : 1, boxShadow: '0 4px 14px rgba(124,58,237,0.35)' }}
-            onClick={handleCheck}
-            disabled={loading}
-          >
-            {loading ? 'Checking…' : 'Check My Site →'}
-          </button>
+        {/* Animated search bar */}
+        <div style={{ maxWidth: '580px', margin: '0 auto 10px' }}>
+          {/* Outer glow wrapper */}
+          <div style={{
+            position: 'relative',
+            borderRadius: '16px',
+            padding: '3px',
+            background: url ? 'linear-gradient(135deg, #7c3aed, #f59e0b)' : 'linear-gradient(135deg, #ddd6fe, #e5e7eb)',
+            boxShadow: url ? '0 0 0 4px rgba(124,58,237,0.12), 0 6px 24px rgba(124,58,237,0.18)' : '0 2px 12px rgba(0,0,0,0.06)',
+            transition: 'all 0.3s ease',
+          }}>
+            <div style={{ display: 'flex', background: 'white', borderRadius: '13px', overflow: 'hidden', alignItems: 'center' }}>
+              {/* Search icon */}
+              <div style={{ paddingLeft: '18px', color: url ? '#7c3aed' : '#9ca3af', flexShrink: 0, display: 'flex', alignItems: 'center', transition: 'color 0.2s' }}>
+                <Search size={20} />
+              </div>
+
+              {/* Input + fake typewriter placeholder */}
+              <div style={{ flex: 1, position: 'relative' }}>
+                <input
+                  ref={inputRef}
+                  type="url"
+                  style={{
+                    width: '100%',
+                    padding: '17px 14px',
+                    border: 'none',
+                    fontSize: '17px',
+                    outline: 'none',
+                    color: '#111827',
+                    background: 'transparent',
+                    fontWeight: 500,
+                    caretColor: '#7c3aed',
+                    boxSizing: 'border-box',
+                  }}
+                  placeholder=""
+                  value={url}
+                  onChange={e => setUrl(e.target.value)}
+                  onFocus={() => setPauseTyping(true)}
+                  onBlur={() => { if (!url) setPauseTyping(false); }}
+                  onKeyDown={e => e.key === 'Enter' && !loading && handleCheck()}
+                  disabled={loading}
+                />
+                {/* Animated typewriter placeholder */}
+                {!url && !loading && (
+                  <div style={{
+                    position: 'absolute', top: '50%', left: '14px',
+                    transform: 'translateY(-50%)',
+                    fontSize: '17px', color: '#9ca3af', fontWeight: 400,
+                    pointerEvents: 'none', display: 'flex', alignItems: 'center', gap: '1px',
+                    whiteSpace: 'nowrap',
+                  }}>
+                    <span>{typedDomain || 'yourbusiness'}</span>
+                    {!pauseTyping && <span style={{ animation: 'caretBlink 1s step-end infinite', borderLeft: '2px solid #9ca3af', height: '18px', display: 'inline-block', marginLeft: '1px' }} />}
+                    {!typedDomain && <span style={{ color: '#c4b5fd' }}>.com</span>}
+                  </div>
+                )}
+              </div>
+
+              {/* CTA button — inside the bar */}
+              <button
+                style={{
+                  background: '#7c3aed',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '10px',
+                  fontWeight: 700,
+                  fontSize: '15px',
+                  padding: '13px 24px',
+                  margin: '4px',
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                  whiteSpace: 'nowrap',
+                  opacity: loading ? 0.7 : 1,
+                  flexShrink: 0,
+                  transition: 'background 0.2s, transform 0.1s',
+                }}
+                onClick={handleCheck}
+                disabled={loading}
+                onMouseEnter={e => { if (!loading) (e.currentTarget as HTMLButtonElement).style.background = '#6d28d9'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = '#7c3aed'; }}
+              >
+                {loading ? 'Scanning…' : 'Scan My Site →'}
+              </button>
+            </div>
+          </div>
         </div>
 
         {loading && (
