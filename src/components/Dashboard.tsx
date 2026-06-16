@@ -821,7 +821,13 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
                       <span style={{ fontSize: '24px' }}>⚡</span>
                       <div>
                         <div style={{ fontSize: '16px', fontWeight: 800, color: '#dc2626' }}>
-                          {amd ? `You're currently missing these ${(amd.total_volume + customKeywords.reduce((s, k) => s + k.volume, 0)).toLocaleString()} searches` : "You're not showing up in AI searches yet"}
+                          {(() => {
+                            const custom = customKeywords.reduce((s, k) => s + k.volume, 0);
+                            const base = amd?.total_volume ?? 0;
+                            const total = base + custom;
+                            const n = (!amd && custom === 0) ? null : total;
+                            return n ? `You're currently missing these ${n.toLocaleString()} AI searches per month` : "You're not showing up in AI searches yet";
+                          })()}
                         </div>
                         <div style={{ fontSize: '14px', color: '#ef4444', marginTop: '4px' }}>
                           Your competitors are getting found instead. Fix the items below to change that.
@@ -1306,6 +1312,7 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
             <CodeStep
               siteUrl={latestScan.url}
               result={latestScan.result}
+              scanId={latestScan.id}
               isPro={isPro}
               onUpgrade={onUpgrade}
               onNewCheck={onNewScan}

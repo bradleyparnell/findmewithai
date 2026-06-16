@@ -847,6 +847,89 @@ app.get('/api/leads', (req, res) => {
   res.json(leads);
 });
 
+// ── GET /api/widget/:scanId.js — hosted AEO widget ───────────────────────────
+app.get('/api/widget/:scanId.js', async (req, res) => {
+  const { scanId } = req.params;
+
+  const err = (msg) => res.status(404).type('application/javascript')
+    .send(`/* findmewith.ai widget: ${msg} */`);
+
+  if (!supabaseAdmin) return err('server not configured');
+
+  try {
+    const { data: scan, error } = await supabaseAdmin
+      .from('scans')
+      .select('result, url')
+      .eq('id', scanId)
+      .single();
+
+    if (error || !scan) return err('scan not found');
+
+    const result = scan.result || {};
+    const url = scan.url || '';
+    const domain = url.replace(/^https?:\/\//, '').replace(/\/$/, '');
+    const si = result.site_info || {};
+    const businessName = si.h1 || (si.title || '').replace(/\s*[\|\-–—:].*/g, '').trim() || domain;
+    const businessDesc = si.metaDesc || '';
+
+    const schemas = [
+      {
+        '@context': 'https://schema.org',
+        '@type': 'Organization',
+        name: businessName,
+        description: businessDesc,
+        url,
+      },
+      {
+        '@context': 'https://schema.org',
+        '@type': 'WebSite',
+        name: businessName,
+        url,
+        description: businessDesc,
+      },
+    ];
+
+    // Inject FAQ if scan has passing FAQ findings
+    const hasFaq = (result.findings || []).some(f => f.id === 'has_faq_schema' && f.status === 'pass');
+    if (!hasFaq) {
+      schemas.push({
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: [
+          {
+            '@type': 'Question',
+            name: `What does ${businessName} do?`,
+            acceptedAnswer: { '@type': 'Answer', text: businessDesc || `${businessName} provides professional services. Visit ${url} to learn more.` },
+          },
+        ],
+      });
+    }
+
+    const js = `/* findmewith.ai Managed AEO Widget | ${domain} | ${new Date().toISOString().slice(0, 10)} */
+(function(){
+  if(window.__fmwai)return;window.__fmwai=1;
+  var schemas=${JSON.stringify(schemas)};
+  function inject(){
+    schemas.forEach(function(s){
+      var el=document.createElement('script');
+      el.type='application/ld+json';
+      el.text=JSON.stringify(s);
+      document.head.appendChild(el);
+    });
+  }
+  if(document.head){inject();}else{document.addEventListener('DOMContentLoaded',inject);}
+})();`;
+
+    res.set('Content-Type', 'application/javascript; charset=utf-8');
+    res.set('Cache-Control', 'public, max-age=3600');
+    res.set('Access-Control-Allow-Origin', '*');
+    res.send(js);
+  } catch (err) {
+    console.error('[widget]', err.message);
+    res.status(500).type('application/javascript').send('/* findmewith.ai widget: error */');
+  }
+});
+
 // ── SPA fallback ──────────────────────────────────────────────────────────────
 app.get('*', (_req, res) => {
   const index = join(__dirname, '../dist/index.html');

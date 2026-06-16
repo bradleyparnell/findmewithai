@@ -6,12 +6,13 @@ import type { AnalysisResult } from '../types';
 interface Props {
   siteUrl: string;
   result: AnalysisResult | null;
+  scanId?: string;
   isPro: boolean;
   onUpgrade: () => void;
   onNewCheck: () => void;
 }
 
-function buildSnippets(siteUrl: string, result: AnalysisResult | null) {
+function buildSnippets(siteUrl: string, result: AnalysisResult | null, scanId?: string) {
   const url = siteUrl || 'https://yourbusiness.com';
   const domain = url.replace(/^https?:\/\//, '').replace(/\/$/, '');
   const hasFaq = result?.findings.find(f => f.id === 'has_faq_schema' && f.status === 'pass');
@@ -54,7 +55,47 @@ function buildSnippets(siteUrl: string, result: AnalysisResult | null) {
       why: "This tells AI the official name and purpose of your website. A small but meaningful signal that connects everything together.",
       where: 'Paste this inside the <head> tag on your homepage.',
       isFile: false, proOnly: true,
-      code: `<script type="application/ld+json">\n${JSON.stringify({ "@context": "https://schema.org", "@type": "WebSite", "name": "[Your Business Name]", "url": url, "description": "[One sentence about your business]" }, null, 2)}\n</script>`,
+      code: `<script type="application/ld+json">\n${JSON.stringify({ "@context": "https://schema.org", "@type": "WebSite", "name": businessName, "url": url, "description": businessDesc || "[One sentence about your business]" }, null, 2)}\n</script>`,
+    },
+    {
+      id: 'ai_robots', badge: '🤖 Allow AI Crawlers', badgeColor: '#059691',
+      title: 'Give AI Search Engines Permission to Find You',
+      why: "ChatGPT, Perplexity, Claude, and Google AI ask permission before crawling your site. If you haven't said yes, many skip you entirely. This file snippet tells them they're welcome — it's one of the easiest wins available.",
+      where: 'Add these lines to your existing robots.txt file. If you don\'t have one, create a file called robots.txt and upload it to your website so it lives at yourdomain.com/robots.txt.',
+      isFile: true, proOnly: false,
+      code: `# Allow AI search engine crawlers (added via findmewith.ai)\nUser-agent: GPTBot\nAllow: /\n\nUser-agent: PerplexityBot\nAllow: /\n\nUser-agent: ClaudeBot\nAllow: /\n\nUser-agent: Google-Extended\nAllow: /\n\nUser-agent: CCBot\nAllow: /\n\nUser-agent: Applebot-Extended\nAllow: /\n\nUser-agent: cohere-ai\nAllow: /`,
+    },
+    {
+      id: 'local_business', badge: '📍 Local Business Boost', badgeColor: '#d97706',
+      title: 'Tell AI Your Location, Hours, and Service Area',
+      why: "If you serve customers in a specific area, this is one of the most powerful things you can add. When someone asks 'best [your service] near [city]', this is what gets you recommended over competitors.",
+      where: 'Paste this just before the </body> tag on your homepage and contact page. Fill in your real details — accurate info beats empty placeholders every time.',
+      isFile: false, proOnly: true,
+      code: `<script type="application/ld+json">\n${JSON.stringify({ "@context": "https://schema.org", "@type": "LocalBusiness", "name": businessName, "description": businessDesc || "[Describe your business]", "url": url, "telephone": "[Your phone number]", "email": "[Your business email]", "openingHours": ["Mo-Fr 09:00-17:00"], "priceRange": "$$", "address": { "@type": "PostalAddress", "streetAddress": "[Street address]", "addressLocality": "[City]", "addressRegion": "[State]", "postalCode": "[ZIP]", "addressCountry": "US" }, "areaServed": { "@type": "GeoCircle", "geoMidpoint": { "@type": "GeoCoordinates", "latitude": "[Your lat]", "longitude": "[Your lng]" }, "geoRadius": "50000" }, "sameAs": ["[Your Facebook URL]", "[Your LinkedIn URL]"] }, null, 2)}\n</script>`,
+    },
+    {
+      id: 'service_schema', badge: '🛠️ Services Schema', badgeColor: '#7c3aed',
+      title: 'List Your Services in AI Language',
+      why: "This tells AI exactly what you offer, who it's for, and where you provide it. Duplicate this snippet once for each major service — the more specific you are, the more AI searches you can capture.",
+      where: 'Paste one of these on each service page, just before the </body> tag. Customize the name and description for each service.',
+      isFile: false, proOnly: true,
+      code: `<script type="application/ld+json">\n${JSON.stringify({ "@context": "https://schema.org", "@type": "Service", "name": "[Your Service Name — e.g. CDL Class A Training]", "provider": { "@type": "Organization", "name": businessName, "url": url }, "description": "[Describe this specific service in 1–2 sentences]", "areaServed": "[City, State or Region]", "serviceType": "[Category — e.g. Truck Driver Training]", "audience": { "@type": "Audience", "audienceType": "[Who this is for — e.g. Career changers, new drivers]" } }, null, 2)}\n</script>`,
+    },
+    {
+      id: 'speakable', badge: '🎙️ Voice AI Ready', badgeColor: '#6366f1',
+      title: 'Make Your Key Content Readable by Voice AI',
+      why: "When someone asks Siri, Alexa, or Google Assistant a question, it reads aloud from the page it trusts most. This schema tells AI which sections of your page are most important to read. It's how you win voice search.",
+      where: 'Add this inside the <head> tag on pages with your most important text. Update the cssSelector values to match real elements on your page.',
+      isFile: false, proOnly: true,
+      code: `<script type="application/ld+json">\n${JSON.stringify({ "@context": "https://schema.org", "@type": "WebPage", "name": businessName, "url": url, "speakable": { "@type": "SpeakableSpecification", "cssSelector": ["h1", ".intro", ".description", ".summary", "article p:first-of-type"] } }, null, 2)}\n</script>`,
+    },
+    {
+      id: 'managed_widget', badge: '⚡ Auto-Update Widget — Pro', badgeColor: '#7c3aed',
+      title: 'Paste Once. Stay Found Forever.',
+      why: "This is the most powerful thing on this page. One line of code on your website — and we automatically keep all your AI visibility signals current. Update your FAQ answers or business info here, and your website updates automatically. No developer, no manual copy-paste, no outdated schemas. As long as this line is on your site, you're covered.",
+      where: 'Paste this single line inside the <head> tag on every page of your website. That\'s it. We handle everything else.',
+      isFile: false, proOnly: true,
+      code: `<!-- findmewith.ai Managed AEO Widget — updates automatically -->\n<script src="https://findmewith.ai/api/widget/${scanId || 'YOUR-SCAN-ID'}.js" defer></script>`,
     },
   ];
 }
@@ -140,8 +181,8 @@ function EditableSnippet({ snippet, isPro, onUpgrade }: { snippet: ReturnType<ty
   );
 }
 
-export const CodeStep: React.FC<Props> = ({ siteUrl, result, isPro, onUpgrade, onNewCheck }) => {
-  const snippets = buildSnippets(siteUrl, result);
+export const CodeStep: React.FC<Props> = ({ siteUrl, result, scanId, isPro, onUpgrade, onNewCheck }) => {
+  const snippets = buildSnippets(siteUrl, result, scanId);
 
   return (
     <div style={{ maxWidth: '100%', padding: '40px 0 60px' }}>
