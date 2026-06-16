@@ -377,24 +377,24 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
   const passItems = latestScan?.result.findings.filter(f => f.status === 'pass') ?? [];
 
   return (
-    <div style={{ maxWidth: '820px', margin: '0 auto', padding: '36px 24px 80px' }}>
+    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '48px 48px 100px' }}>
 
       {/* ── HEADER ── */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '28px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-            <div style={{ width: '28px', height: '28px', background: '#7c3aed', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Search size={13} color="white" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+            <div style={{ width: '36px', height: '36px', background: '#7c3aed', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Search size={17} color="white" />
             </div>
-            <span style={{ fontWeight: 800, fontSize: '15px', color: '#7c3aed' }}>findmewith.ai</span>
+            <span style={{ fontWeight: 800, fontSize: '18px', color: '#7c3aed' }}>findmewith.ai</span>
           </div>
-          <h1 style={{ fontSize: '24px', fontWeight: 900, color: '#111827', margin: 0 }}>Your Dashboard</h1>
-          <p style={{ fontSize: '13px', color: '#6b7280', margin: '4px 0 0' }}>{user.email}</p>
+          <h1 style={{ fontSize: '36px', fontWeight: 900, color: '#111827', margin: 0, lineHeight: 1.1 }}>Your Dashboard</h1>
+          <p style={{ fontSize: '15px', color: '#6b7280', margin: '6px 0 0' }}>{user.email}</p>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
           <button
             onClick={onNewScan}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#7c3aed', color: 'white', border: 'none', borderRadius: '10px', padding: '9px 16px', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}
+            style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#7c3aed', color: 'white', border: 'none', borderRadius: '12px', padding: '12px 22px', fontSize: '15px', fontWeight: 700, cursor: 'pointer' }}
           >
             <Plus size={14} /> New Scan
           </button>
@@ -424,34 +424,34 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
       ) : (
         <>
           {/* ── OVERVIEW: score + category bars ── */}
-          <div style={{ display: 'grid', gridTemplateColumns: '190px 1fr', gap: '16px', marginBottom: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: '20px', marginBottom: '24px' }}>
 
             {/* Score circle */}
-            <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '20px', padding: '24px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-              <div style={{ fontSize: '11px', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '12px' }}>AI Score</div>
-              <div style={{ position: 'relative', width: '96px', height: '96px', marginBottom: '12px' }}>
-                <svg width="96" height="96" viewBox="0 0 96 96">
-                  <circle cx="48" cy="48" r="40" fill="none" stroke="#f3f4f6" strokeWidth="9" />
+            <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '24px', padding: '32px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+              <div style={{ fontSize: '12px', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '16px' }}>AI Visibility Score</div>
+              <div style={{ position: 'relative', width: '160px', height: '160px', marginBottom: '16px' }}>
+                <svg width="160" height="160" viewBox="0 0 160 160">
+                  <circle cx="80" cy="80" r="68" fill="none" stroke="#f3f4f6" strokeWidth="12" />
                   <circle
-                    cx="48" cy="48" r="40"
+                    cx="80" cy="80" r="68"
                     fill="none"
                     stroke={scoreColor(latestScan.score)}
-                    strokeWidth="9"
-                    strokeDasharray={`${(latestScan.score / 100) * 251.33} 251.33`}
+                    strokeWidth="12"
+                    strokeDasharray={`${(latestScan.score / 100) * 427.26} 427.26`}
                     strokeLinecap="round"
-                    transform="rotate(-90 48 48)"
+                    transform="rotate(-90 80 80)"
                   />
                 </svg>
                 <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ fontSize: '26px', fontWeight: 900, color: scoreColor(latestScan.score), lineHeight: 1 }}>{latestScan.score}</span>
-                  <span style={{ fontSize: '10px', color: '#9ca3af' }}>/ 100</span>
+                  <span style={{ fontSize: '60px', fontWeight: 900, color: scoreColor(latestScan.score), lineHeight: 1 }}>{latestScan.score}</span>
+                  <span style={{ fontSize: '13px', color: '#9ca3af', fontWeight: 600 }}>/ 100</span>
                 </div>
               </div>
-              <span style={{ fontSize: '13px', fontWeight: 700, color: scoreColor(latestScan.score) }}>{scoreLabel(latestScan.score)}</span>
-              <span style={{ fontSize: '11px', color: '#9ca3af', marginTop: '4px' }}>{formatDate(latestScan.created_at)}</span>
+              <span style={{ fontSize: '18px', fontWeight: 800, color: scoreColor(latestScan.score) }}>{scoreLabel(latestScan.score)}</span>
+              <span style={{ fontSize: '13px', color: '#9ca3af', marginTop: '6px' }}>{formatDate(latestScan.created_at)}</span>
               <button
                 onClick={() => onViewScan(latestScan)}
-                style={{ marginTop: '12px', fontSize: '11px', fontWeight: 700, color: '#7c3aed', background: '#f5f3ff', border: 'none', borderRadius: '8px', padding: '5px 12px', cursor: 'pointer' }}
+                style={{ marginTop: '16px', fontSize: '14px', fontWeight: 700, color: '#7c3aed', background: '#f5f3ff', border: 'none', borderRadius: '10px', padding: '10px 20px', cursor: 'pointer', width: '100%' }}
               >
                 See Action Plan →
               </button>
@@ -459,27 +459,27 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
                 onClick={handleRescan}
                 disabled={rescanLoading}
                 title="Re-scan your site to get a fresh score"
-                style={{ marginTop: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', fontSize: '11px', fontWeight: 600, color: rescanLoading ? '#9ca3af' : '#6b7280', background: 'transparent', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '5px 12px', cursor: rescanLoading ? 'not-allowed' : 'pointer', width: '100%' }}
+                style={{ marginTop: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, color: rescanLoading ? '#9ca3af' : '#6b7280', background: 'transparent', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '9px 16px', cursor: rescanLoading ? 'not-allowed' : 'pointer', width: '100%' }}
               >
-                <RefreshCw size={10} style={{ animation: rescanLoading ? 'spin 1s linear infinite' : 'none' }} />
+                <RefreshCw size={13} style={{ animation: rescanLoading ? 'spin 1s linear infinite' : 'none' }} />
                 {rescanLoading ? 'Scanning…' : 'Re-scan now'}
               </button>
             </div>
 
             {/* Category bars */}
-            <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '20px', padding: '22px 24px' }}>
-              <div style={{ fontSize: '13px', fontWeight: 700, color: '#374151', marginBottom: '16px' }}>How you score in each area</div>
+            <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '24px', padding: '32px 36px' }}>
+              <div style={{ fontSize: '18px', fontWeight: 800, color: '#111827', marginBottom: '24px' }}>How you score in each area</div>
               {Object.entries(CATEGORY_LABELS).map(([key, label]) => {
                 const pct = normalizePct(latestScan.result.categories)[key];
                 const color = pct >= 70 ? '#7c3aed' : pct >= 40 ? '#d97706' : '#ef4444';
                 return (
-                  <div key={key} style={{ marginBottom: '11px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-                      <span style={{ fontSize: '12px', color: '#374151', fontWeight: 500 }}>{label}</span>
-                      <span style={{ fontSize: '12px', fontWeight: 700, color }}>{pct}%</span>
+                  <div key={key} style={{ marginBottom: '18px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '15px', color: '#374151', fontWeight: 600 }}>{label}</span>
+                      <span style={{ fontSize: '15px', fontWeight: 800, color }}>{pct}%</span>
                     </div>
-                    <div style={{ background: '#f3f4f6', borderRadius: '99px', height: '7px' }}>
-                      <div style={{ background: color, borderRadius: '99px', height: '7px', width: `${pct}%`, transition: 'width 0.7s ease' }} />
+                    <div style={{ background: '#f3f4f6', borderRadius: '99px', height: '10px' }}>
+                      <div style={{ background: color, borderRadius: '99px', height: '10px', width: `${pct}%`, transition: 'width 0.8s ease' }} />
                     </div>
                   </div>
                 );
@@ -513,33 +513,33 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
                   {/* Header */}
                   <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '16px' }}>
                     <div>
-                      <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(124,58,237,0.8)', marginBottom: '6px' }}>
+                      <div style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(124,58,237,0.9)', marginBottom: '10px' }}>
                         ⚡ Your Signal in AI Search
                       </div>
-                      <div style={{ fontSize: '20px', fontWeight: 800, color: 'white', marginBottom: '4px' }}>
+                      <div style={{ fontSize: '34px', fontWeight: 900, color: 'white', marginBottom: '8px', lineHeight: 1.15 }}>
                         People ask AI about businesses like yours
                       </div>
-                      <div style={{ fontSize: '14px', color: 'rgba(255,255,255,0.5)' }}>
+                      <div style={{ fontSize: '17px', color: 'rgba(255,255,255,0.5)' }}>
                         Every month, in your market
                       </div>
                     </div>
-                    <div style={{ background: 'rgba(124,58,237,0.2)', border: '1.5px solid rgba(124,58,237,0.4)', borderRadius: '16px', padding: '14px 22px', textAlign: 'center', minWidth: '110px' }}>
-                      <div style={{ fontSize: '40px', fontWeight: 900, color: '#f59e0b', lineHeight: 1 }}>
+                    <div style={{ background: 'rgba(124,58,237,0.2)', border: '1.5px solid rgba(124,58,237,0.4)', borderRadius: '20px', padding: '24px 32px', textAlign: 'center', minWidth: '160px' }}>
+                      <div style={{ fontSize: '72px', fontWeight: 900, color: '#f59e0b', lineHeight: 1 }}>
                         {amd.total_volume.toLocaleString()}
                       </div>
-                      <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', fontWeight: 600, marginTop: '4px' }}>AI searches / mo</div>
+                      <div style={{ fontSize: '14px', color: 'rgba(255,255,255,0.5)', fontWeight: 600, marginTop: '8px' }}>AI searches / mo</div>
                     </div>
                   </div>
 
                   {/* Top keywords */}
                   <div style={{ marginBottom: '16px' }}>
-                    <div style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px' }}>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '14px' }}>
                       What people are searching
                     </div>
                     {amd.keywords.slice(0, 4).map((kw, i) => (
-                      <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 0', borderBottom: i < Math.min(amd.keywords.length, 4) - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
-                        <span style={{ fontSize: '14px', color: 'rgba(255,255,255,0.8)' }}>"{kw.keyword}"</span>
-                        <span style={{ fontSize: '13px', fontWeight: 700, color: '#f59e0b', background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: '8px', padding: '4px 12px' }}>
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 0', borderBottom: i < Math.min(amd.keywords.length, 4) - 1 ? '1px solid rgba(255,255,255,0.07)' : 'none' }}>
+                        <span style={{ fontSize: '17px', color: 'rgba(255,255,255,0.85)' }}>"{kw.keyword}"</span>
+                        <span style={{ fontSize: '15px', fontWeight: 700, color: '#f59e0b', background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: '10px', padding: '6px 16px' }}>
                           {kw.volume.toLocaleString()}/mo
                         </span>
                       </div>
