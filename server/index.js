@@ -386,43 +386,62 @@ async function fetchAiKeywordVolume(keywords) {
 
 function generateKeywordsFromSite({ title, metaDesc, h1Texts, url }) {
   const keywords = new Set();
-  const stopWords = new Set(['the','a','an','and','or','but','in','on','at','to','for','of','with','by','from','is','are','we','our','your','this','that','all','any','get','find','how','best','top','near','local']);
 
-  // Core phrase from title (text before first dash/pipe)
-  const cleanTitle = title
-    ? title.split(/[\-\|–—]/)[0].trim().toLowerCase().replace(/[^a-z0-9\s]/g, '').trim()
-    : '';
-  if (cleanTitle.length > 3 && cleanTitle.length < 55) {
-    keywords.add(cleanTitle);
-    keywords.add(`best ${cleanTitle}`);
-    keywords.add(`${cleanTitle} near me`);
+  // Extended stop words — include generic site words that produce bad keywords
+  const stopWords = new Set([
+    'the','a','an','and','or','but','in','on','at','to','for','of','with','by','from',
+    'is','are','we','our','your','this','that','all','any','get','find','how',
+    'best','top','near','local','home','homes','welcome','page','click','here',
+    'read','more','learn','about','us','contact','services','service','team',
+    'website','site','online','free','new','now','today','great','good',
+    'world','life','love','time','work','place','make','take',
+  ]);
+
+  // Helper: strip a raw string to meaningful content words only
+  function cleanPhrase(raw) {
+    if (!raw) return '';
+    return raw
+      .split(/[\-\|–—:]/)[0]   // take only the part before separators
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, '')
+      .split(/\s+/)
+      .filter(w => w.length > 2 && !stopWords.has(w))
+      .slice(0, 5)
+      .join(' ')
+      .trim();
   }
 
-  // From H1
-  const cleanH1 = h1Texts[0]
-    ? h1Texts[0].split(/[\-\|–—]/)[0].trim().toLowerCase().replace(/[^a-z0-9\s]/g, '').trim()
-    : '';
-  if (cleanH1 && cleanH1 !== cleanTitle && cleanH1.length > 3 && cleanH1.length < 55) {
-    keywords.add(cleanH1);
+  const coreTitle = cleanPhrase(title);
+  const coreH1   = cleanPhrase(h1Texts[0]);
+  const coreMeta = cleanPhrase(metaDesc);
+
+  // Use the longest / most descriptive as primary
+  const primary = [coreTitle, coreH1, coreMeta].sort((a, b) => b.split(' ').length - a.split(' ').length)[0];
+
+  if (primary && primary.length > 3) {
+    keywords.add(primary);
+    keywords.add(`best ${primary}`);
+    keywords.add(`${primary} near me`);
+    keywords.add(`find ${primary}`);
   }
 
-  // From meta description — first 4 meaningful words
-  if (metaDesc) {
-    const metaWords = metaDesc.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/)
-      .filter(w => w.length > 3 && !stopWords.has(w));
-    if (metaWords.length >= 2) keywords.add(metaWords.slice(0, 4).join(' '));
+  // Add H1 if different from primary
+  if (coreH1 && coreH1 !== primary && coreH1.length > 3) {
+    keywords.add(coreH1);
   }
 
-  // Domain slug as fallback
-  try {
-    const domainWords = new URL(url).hostname.replace('www.', '').split('.')[0]
-      .replace(/[^a-z]/gi, ' ').trim().toLowerCase();
-    if (domainWords.length > 3 && ![...keywords].some(k => k.includes(domainWords))) {
-      keywords.add(domainWords);
-    }
-  } catch {}
+  // Add meta phrase if different
+  if (coreMeta && coreMeta !== primary && coreMeta.length > 3) {
+    keywords.add(`${coreMeta}`);
+  }
 
-  return [...keywords].filter(k => k.length > 3 && k.split(' ').length <= 6).slice(0, 8);
+  return [...keywords]
+    .filter(k => {
+      const words = k.split(' ');
+      return words.length >= 1 && words.length <= 6 && k.length > 3;
+    })
+    .slice(0, 8);
 }
 
 function fetchUrl(urlStr, redirectCount = 0) {

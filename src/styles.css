@@ -8,6 +8,32 @@
   to { transform: rotate(360deg); }
 }
 
+/* ── Radar brand animations ── */
+@keyframes radarSweep {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes pingPulse {
+  0%, 100% { transform: scale(1);   opacity: 1;   box-shadow: 0 0 8px #f59e0b; }
+  50%       { transform: scale(1.5); opacity: 0.7; box-shadow: 0 0 20px #f59e0b, 0 0 40px rgba(245,158,11,0.4); }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
+@keyframes radarRing {
+  0%   { transform: translate(-50%,-50%) scale(1);   opacity: 0.5; }
+  100% { transform: translate(-50%,-50%) scale(1.8); opacity: 0;   }
+}
+
+@keyframes stateReveal {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1);    }
+}
+
 :root {
   /* Backgrounds */
   --color-bg-white: #ffffff;

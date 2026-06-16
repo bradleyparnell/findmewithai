@@ -456,6 +456,33 @@ interface Props {
   isAuthenticated?: boolean;
 }
 
+function getFoundState(score: number): { state: string; label: string; bg: string; border: string; textColor: string; subColor: string } {
+  if (score >= 70) return {
+    state: 'FOUND',
+    label: 'AI knows and recommends you',
+    bg: '#0D0D1A',
+    border: '#059669',
+    textColor: '#34d399',
+    subColor: 'rgba(52,211,153,0.7)',
+  };
+  if (score >= 40) return {
+    state: 'GETTING FOUND',
+    label: 'AI finds you sometimes — not consistently',
+    bg: '#0D0D1A',
+    border: '#d97706',
+    textColor: '#fbbf24',
+    subColor: 'rgba(251,191,36,0.7)',
+  };
+  return {
+    state: 'NOT FOUND',
+    label: 'AI doesn\'t know you exist yet',
+    bg: '#0D0D1A',
+    border: '#dc2626',
+    textColor: '#f87171',
+    subColor: 'rgba(248,113,113,0.7)',
+  };
+}
+
 function getBenchmarkLine(score: number): string {
   if (score >= 70) return `You're above average — most businesses score between 28–55.`;
   if (score >= 45) return `You're near the middle of the pack. Most businesses score between 28–55.`;
@@ -524,20 +551,45 @@ export const ScoreStep: React.FC<Props> = ({ result, onFixContent, onGetCode, on
     <div style={{ maxWidth: '700px', margin: '0 auto', padding: '36px 24px 60px' }}>
 
       {/* Score card */}
-      <div style={{ background: 'linear-gradient(135deg, #f5f3ff, #ffffff)', border: '1px solid #ddd6fe', borderRadius: '24px', padding: '36px', textAlign: 'center', marginBottom: '20px' }}>
+      <div style={{ background: 'linear-gradient(135deg, #f5f3ff, #ffffff)', border: '1px solid #ddd6fe', borderRadius: '24px', padding: '36px', textAlign: 'center', marginBottom: '20px', overflow: 'hidden' }}>
+
+        {/* ── FOUND / NOT FOUND state banner ── */}
+        {(() => {
+          const fs = getFoundState(score);
+          return (
+            <div style={{ background: fs.bg, borderRadius: '16px', padding: '20px 24px', marginBottom: '28px', border: `1.5px solid ${fs.border}`, animation: 'stateReveal 0.5s ease', position: 'relative', overflow: 'hidden' }}>
+              {/* Radar ring behind */}
+              <div style={{ position: 'absolute', top: '50%', left: '50%', width: '200px', height: '200px', borderRadius: '50%', border: `1px solid ${fs.border}`, opacity: 0.15, transform: 'translate(-50%,-50%)' }} />
+              {/* Sweeping arm */}
+              <div style={{ position: 'absolute', top: '50%', left: '50%', width: '100px', height: '1px', transformOrigin: '0% 50%', background: `linear-gradient(90deg, ${fs.border}, transparent)`, animation: 'radarSweep 3s linear infinite', opacity: 0.3, marginTop: '-0.5px' }} />
+              <div style={{ position: 'relative', zIndex: 1 }}>
+                <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', marginBottom: '8px' }}>
+                  Your AI Visibility Status
+                </div>
+                <div style={{ fontSize: '42px', fontWeight: 900, color: fs.textColor, letterSpacing: '-1px', lineHeight: 1, marginBottom: '8px' }}>
+                  {fs.state}
+                </div>
+                <div style={{ fontSize: '14px', color: fs.subColor, fontWeight: 500 }}>
+                  {fs.label}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
         <div style={{ fontSize: '24px', marginBottom: '6px' }}>{msg.emoji}</div>
-        <div style={{ fontSize: '68px', fontWeight: 900, color, lineHeight: 1, marginBottom: '4px' }}>
-          {score}<span style={{ fontSize: '28px', fontWeight: 600 }}>%</span>
+        <div style={{ fontSize: '80px', fontWeight: 900, color, lineHeight: 1, marginBottom: '4px' }}>
+          {score}<span style={{ fontSize: '32px', fontWeight: 600 }}>%</span>
         </div>
-        <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '6px' }}>
+        <div style={{ fontSize: '15px', color: '#6b7280', marginBottom: '6px' }}>
           AI search engines can identify <strong style={{ color: '#111827' }}>{score}%</strong> of what makes your business worth recommending
         </div>
         {/* Benchmark context */}
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#f5f3ff', border: '1px solid #ddd6fe', borderRadius: '100px', padding: '4px 14px', fontSize: '12px', color: '#5b21b6', fontWeight: 600, marginBottom: '12px' }}>
           📊 {getBenchmarkLine(score)}
         </div>
-        <div style={{ fontSize: '20px', fontWeight: 800, color: '#111827', marginBottom: '6px' }}>{msg.headline}</div>
-        <div style={{ fontSize: '14px', color: '#6b7280', maxWidth: '440px', margin: '0 auto', lineHeight: 1.6, marginBottom: '16px' }}>{msg.sub}</div>
+        <div style={{ fontSize: '22px', fontWeight: 800, color: '#111827', marginBottom: '8px' }}>{msg.headline}</div>
+        <div style={{ fontSize: '16px', color: '#6b7280', maxWidth: '460px', margin: '0 auto', lineHeight: 1.65, marginBottom: '18px' }}>{msg.sub}</div>
         {/* Share button */}
         <button
           onClick={handleShare}
@@ -552,9 +604,9 @@ export const ScoreStep: React.FC<Props> = ({ result, onFixContent, onGetCode, on
       <div style={{ background: '#fffbeb', border: '1.5px solid #fde68a', borderRadius: '16px', padding: '22px 24px', marginBottom: '20px', display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
         <div style={{ fontSize: '22px', flexShrink: 0, marginTop: '2px' }}>🗣️</div>
         <div>
-          <div style={{ fontWeight: 700, fontSize: '14px', color: '#92400e', marginBottom: '6px' }}>What this means in plain English</div>
-          <div style={{ fontSize: '14px', color: '#78350f', lineHeight: 1.65, marginBottom: '8px' }}>{msg.realWorld}</div>
-          <div style={{ fontSize: '13px', color: '#d97706', fontWeight: 600 }}>{msg.urgency}</div>
+          <div style={{ fontWeight: 700, fontSize: '16px', color: '#92400e', marginBottom: '8px' }}>What this means in plain English</div>
+          <div style={{ fontSize: '15px', color: '#78350f', lineHeight: 1.7, marginBottom: '10px' }}>{msg.realWorld}</div>
+          <div style={{ fontSize: '14px', color: '#d97706', fontWeight: 600 }}>{msg.urgency}</div>
         </div>
       </div>
 

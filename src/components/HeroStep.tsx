@@ -145,17 +145,65 @@ export const HeroStep: React.FC<Props> = ({ onAnalyzed, user, onSignIn, onGoToDa
         </div>
 
         {loading && (
-          <div style={{ marginTop: '20px', background: 'white', border: '1.5px solid #ddd6fe', borderRadius: '16px', padding: '20px 24px', maxWidth: '480px', margin: '20px auto 0', textAlign: 'left' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-              <div style={{ width: '10px', height: '10px', background: '#7c3aed', borderRadius: '50%', animation: 'spin 1s linear infinite', flexShrink: 0 }} />
-              <span style={{ fontSize: '14px', fontWeight: 600, color: '#7c3aed' }}>{LOADING_MESSAGES[loadingMsg].text}</span>
+          <div style={{ marginTop: '20px', background: '#0D0D1A', borderRadius: '20px', padding: '32px 28px', maxWidth: '480px', margin: '20px auto 0', textAlign: 'center', boxShadow: '0 8px 40px rgba(124,58,237,0.25)' }}>
+
+            {/* Radar display */}
+            <div style={{ position: 'relative', width: '140px', height: '140px', margin: '0 auto 24px' }}>
+              {/* Concentric rings */}
+              {[140, 96, 52].map((size, i) => (
+                <div key={i} style={{
+                  position: 'absolute', top: '50%', left: '50%',
+                  width: `${size}px`, height: `${size}px`,
+                  borderRadius: '50%',
+                  border: `1px solid rgba(124,58,237,${0.15 + i * 0.1})`,
+                  transform: 'translate(-50%,-50%)',
+                }} />
+              ))}
+              {/* Sweeping arm */}
+              <div style={{
+                position: 'absolute', top: '50%', left: '50%',
+                width: '70px', height: '2px',
+                transformOrigin: '0% 50%',
+                background: 'linear-gradient(90deg, rgba(124,58,237,0.9), rgba(124,58,237,0))',
+                animation: 'radarSweep 2.5s linear infinite',
+                marginTop: '-1px',
+              }} />
+              {/* Amber ping — found signal */}
+              <div style={{
+                position: 'absolute', top: '28%', left: '64%',
+                width: '10px', height: '10px',
+                background: '#f59e0b',
+                borderRadius: '50%',
+                animation: 'pingPulse 1.8s ease-in-out infinite',
+              }} />
+              {/* Center dot */}
+              <div style={{
+                position: 'absolute', top: '50%', left: '50%',
+                width: '7px', height: '7px',
+                background: '#7c3aed',
+                borderRadius: '50%',
+                transform: 'translate(-50%,-50%)',
+              }} />
             </div>
+
+            {/* Scanning label */}
+            <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(124,58,237,0.8)', marginBottom: '10px' }}>
+              Signal scan in progress
+            </div>
+
+            {/* Message */}
+            <div style={{ fontSize: '15px', fontWeight: 600, color: 'white', lineHeight: 1.5, marginBottom: '18px', animation: 'fadeInUp 0.4s ease', minHeight: '46px' }}>
+              {LOADING_MESSAGES[loadingMsg].text}
+            </div>
+
             {/* Progress bar */}
-            <div style={{ height: '4px', background: '#ede9fe', borderRadius: '99px', marginBottom: '12px' }}>
-              <div style={{ height: '100%', background: 'linear-gradient(90deg, #7c3aed, #d97706)', borderRadius: '99px', width: `${((loadingMsg + 1) / LOADING_MESSAGES.length) * 100}%`, transition: 'width 0.5s ease' }} />
+            <div style={{ height: '3px', background: 'rgba(255,255,255,0.08)', borderRadius: '99px', marginBottom: '16px' }}>
+              <div style={{ height: '100%', background: 'linear-gradient(90deg, #7c3aed, #f59e0b)', borderRadius: '99px', width: `${((loadingMsg + 1) / LOADING_MESSAGES.length) * 100}%`, transition: 'width 0.6s ease' }} />
             </div>
-            <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px', padding: '10px 14px', fontSize: '13px', color: '#92400e', fontWeight: 500 }}>
-              💡 {LOADING_MESSAGES[loadingMsg].fear}
+
+            {/* Fear/hope fact */}
+            <div style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: '10px', padding: '10px 14px', fontSize: '13px', color: '#fbbf24', fontWeight: 500, textAlign: 'left' }}>
+              ⚡ {LOADING_MESSAGES[loadingMsg].fear}
             </div>
           </div>
         )}

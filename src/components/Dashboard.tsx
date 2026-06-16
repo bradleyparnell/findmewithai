@@ -78,6 +78,12 @@ const INDUSTRY_BENCHMARKS: Record<string, IndustryBenchmark> = {
     categories: { structured_data: 25, content_quality: 50, entity_authority: 30, technical_seo: 55, ai_bonus: 10 },
     keywords: ['gym', 'fitness', 'yoga', 'pilates', 'crossfit', 'wellness', 'trainer', 'workout', 'studio', 'spa', 'massage'],
   },
+  outdoorSports: {
+    label: 'Outdoor Sports & Racing',
+    avg: 30, top: 54,
+    categories: { structured_data: 22, content_quality: 45, entity_authority: 28, technical_seo: 52, ai_bonus: 8 },
+    keywords: ['trail', 'race', 'racing', 'spartan', 'obstacle', 'mud', 'run', 'running', 'triathlon', 'marathon', 'cycling', 'mtb', 'climb', 'climbing', 'kayak', 'hike', 'hiking', 'adventure', 'outdoor', 'endurance'],
+  },
   retail: {
     label: 'Retail & E-commerce',
     avg: 39, top: 64,
@@ -478,6 +484,98 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
             </div>
           </div>
 
+          {/* ── AI SIGNAL STRENGTH (leads — most valuable data) ── */}
+          {latestScan?.result?.ai_market_data && (() => {
+            const amd = latestScan.result.ai_market_data as AiMarketData;
+            const isGrowing   = amd.trend_direction === 'growing';
+            const isDeclining = amd.trend_direction === 'declining';
+            const trendIcon  = isGrowing ? '📈' : isDeclining ? '📉' : '📊';
+            const trendColor = isGrowing ? '#059669' : isDeclining ? '#ef4444' : '#6b7280';
+            const trendBg    = isGrowing ? '#f0fdf4' : isDeclining ? '#fef2f2' : '#f9fafb';
+            const trendText  = isGrowing
+              ? `Growing +${amd.trend_pct}% — the window to get found is right now`
+              : isDeclining
+              ? `Down ${amd.trend_pct}% recently — act before competitors pull further ahead`
+              : 'Steady volume — consistent improvements keep you visible';
+            const score = latestScan.score;
+            const isVisible = score >= 70;
+
+            return (
+              <div style={{ background: '#0D0D1A', borderRadius: '20px', padding: '26px 28px', marginBottom: '20px', border: '1.5px solid rgba(124,58,237,0.4)', position: 'relative', overflow: 'hidden' }}>
+                {/* Subtle radar ring */}
+                <div style={{ position: 'absolute', top: '50%', right: '-60px', width: '220px', height: '220px', borderRadius: '50%', border: '1px solid rgba(124,58,237,0.12)', transform: 'translateY(-50%)' }} />
+                <div style={{ position: 'absolute', top: '50%', right: '-110px', width: '340px', height: '340px', borderRadius: '50%', border: '1px solid rgba(124,58,237,0.06)', transform: 'translateY(-50%)' }} />
+
+                <div style={{ position: 'relative', zIndex: 1 }}>
+                  {/* Header */}
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '16px' }}>
+                    <div>
+                      <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(124,58,237,0.8)', marginBottom: '6px' }}>
+                        ⚡ Your Signal in AI Search
+                      </div>
+                      <div style={{ fontSize: '20px', fontWeight: 800, color: 'white', marginBottom: '4px' }}>
+                        People ask AI about businesses like yours
+                      </div>
+                      <div style={{ fontSize: '14px', color: 'rgba(255,255,255,0.5)' }}>
+                        Every month, in your market
+                      </div>
+                    </div>
+                    <div style={{ background: 'rgba(124,58,237,0.2)', border: '1.5px solid rgba(124,58,237,0.4)', borderRadius: '16px', padding: '14px 22px', textAlign: 'center', minWidth: '110px' }}>
+                      <div style={{ fontSize: '40px', fontWeight: 900, color: '#f59e0b', lineHeight: 1 }}>
+                        {amd.total_volume.toLocaleString()}
+                      </div>
+                      <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', fontWeight: 600, marginTop: '4px' }}>AI searches / mo</div>
+                    </div>
+                  </div>
+
+                  {/* Top keywords */}
+                  <div style={{ marginBottom: '16px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px' }}>
+                      What people are searching
+                    </div>
+                    {amd.keywords.slice(0, 4).map((kw, i) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 0', borderBottom: i < Math.min(amd.keywords.length, 4) - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
+                        <span style={{ fontSize: '14px', color: 'rgba(255,255,255,0.8)' }}>"{kw.keyword}"</span>
+                        <span style={{ fontSize: '13px', fontWeight: 700, color: '#f59e0b', background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: '8px', padding: '4px 12px' }}>
+                          {kw.volume.toLocaleString()}/mo
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Trend */}
+                  <div style={{ background: trendBg, borderRadius: '10px', padding: '10px 14px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '18px' }}>{trendIcon}</span>
+                    <span style={{ fontSize: '13px', fontWeight: 600, color: trendColor }}>{trendText}</span>
+                  </div>
+
+                  {/* Visibility hook */}
+                  {isVisible ? (
+                    <div style={{ background: 'rgba(5,150,105,0.15)', border: '1.5px solid rgba(5,150,105,0.4)', borderRadius: '12px', padding: '14px 18px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <span style={{ fontSize: '22px' }}>✅</span>
+                      <div>
+                        <div style={{ fontSize: '14px', fontWeight: 800, color: '#34d399' }}>You're positioned to appear in these searches</div>
+                        <div style={{ fontSize: '13px', color: 'rgba(52,211,153,0.7)', marginTop: '3px' }}>Keep your score above 70 and re-scan monthly to stay visible.</div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ background: 'rgba(220,38,38,0.12)', border: '1.5px solid rgba(220,38,38,0.35)', borderRadius: '12px', padding: '14px 18px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <span style={{ fontSize: '22px' }}>⚡</span>
+                      <div>
+                        <div style={{ fontSize: '14px', fontWeight: 800, color: '#f87171' }}>
+                          You're currently missing these {amd.total_volume.toLocaleString()} searches
+                        </div>
+                        <div style={{ fontSize: '13px', color: 'rgba(248,113,113,0.7)', marginTop: '3px' }}>
+                          Your competitors are getting found instead. Fix the items below to change that.
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+
           {/* ── NEXT STEPS STRIP ── */}
           <div style={{ background: 'linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)', borderRadius: '20px', padding: '24px', marginBottom: '20px', color: 'white' }}>
             <div style={{ fontSize: '15px', fontWeight: 800, marginBottom: '4px' }}>Ready to improve your score?</div>
@@ -528,87 +626,7 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
             </div>
           </div>
 
-          {/* ── AI MARKET ACTIVITY ── */}
-          {latestScan?.result?.ai_market_data && (() => {
-            const amd = latestScan.result.ai_market_data as AiMarketData;
-            const isGrowing   = amd.trend_direction === 'growing';
-            const isDeclining = amd.trend_direction === 'declining';
-            const trendIcon  = isGrowing ? '📈' : isDeclining ? '📉' : '📊';
-            const trendColor = isGrowing ? '#059669' : isDeclining ? '#ef4444' : '#6b7280';
-            const trendText  = isGrowing
-              ? `Growing +${amd.trend_pct}% in recent months — the window to act is now`
-              : isDeclining
-              ? `Down ${amd.trend_pct}% recently — act before you fall further behind`
-              : 'Holding steady — consistent improvement keeps you visible';
-            const score = latestScan.score;
-            const isVisible = score >= 70;
-
-            return (
-              <div style={{ background: 'white', border: '1.5px solid #e9d5ff', borderRadius: '20px', padding: '22px 24px', marginBottom: '20px' }}>
-                {/* Header */}
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
-                  <div>
-                    <div style={{ fontSize: '14px', fontWeight: 800, color: '#111827', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                      🔍 Your Market's AI Search Activity
-                    </div>
-                    <div style={{ fontSize: '13px', color: '#6b7280' }}>
-                      How many times people asked AI about services like yours — last month
-                    </div>
-                  </div>
-                  <div style={{ background: '#f5f3ff', borderRadius: '14px', padding: '10px 18px', textAlign: 'center', minWidth: '90px' }}>
-                    <div style={{ fontSize: '30px', fontWeight: 900, color: '#7c3aed', lineHeight: 1 }}>
-                      {amd.total_volume.toLocaleString()}
-                    </div>
-                    <div style={{ fontSize: '11px', color: '#7c3aed', fontWeight: 600, marginTop: '3px' }}>AI searches/mo</div>
-                  </div>
-                </div>
-
-                {/* Trend badge */}
-                <div style={{ background: '#f9fafb', borderRadius: '10px', padding: '10px 14px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '18px' }}>{trendIcon}</span>
-                  <span style={{ fontSize: '13px', fontWeight: 600, color: trendColor }}>{trendText}</span>
-                </div>
-
-                {/* Top keywords */}
-                <div style={{ marginBottom: '16px' }}>
-                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
-                    What people are searching
-                  </div>
-                  {amd.keywords.slice(0, 4).map((kw, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0', borderBottom: i < Math.min(amd.keywords.length, 4) - 1 ? '1px solid #f3f4f6' : 'none' }}>
-                      <span style={{ fontSize: '13px', color: '#374151' }}>"{kw.keyword}"</span>
-                      <span style={{ fontSize: '12px', fontWeight: 700, color: '#7c3aed', background: '#f5f3ff', borderRadius: '6px', padding: '3px 9px' }}>
-                        {kw.volume.toLocaleString()}/mo
-                      </span>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Visibility hook */}
-                {isVisible ? (
-                  <div style={{ background: 'linear-gradient(135deg, #f0fdf4, #fff)', border: '1.5px solid #86efac', borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span style={{ fontSize: '20px' }}>✅</span>
-                    <div>
-                      <div style={{ fontSize: '13px', fontWeight: 800, color: '#166534' }}>You're well-positioned to appear in these searches</div>
-                      <div style={{ fontSize: '12px', color: '#15803d', marginTop: '2px' }}>Keep your score above 70 and re-scan monthly to maintain visibility.</div>
-                    </div>
-                  </div>
-                ) : (
-                  <div style={{ background: 'linear-gradient(135deg, #fef3c7, #fff)', border: '1.5px solid #fbbf24', borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span style={{ fontSize: '20px' }}>⚠️</span>
-                    <div>
-                      <div style={{ fontSize: '13px', fontWeight: 800, color: '#92400e' }}>
-                        You're likely missing most of these {amd.total_volume.toLocaleString()} searches right now
-                      </div>
-                      <div style={{ fontSize: '12px', color: '#78350f', marginTop: '2px' }}>
-                        Fix the items in your action plan to start showing up — your competitors already are.
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })()}
+          {/* AI Signal panel moved above Next Steps — see above */}
 
           {/* ── SCORE TREND ── */}
           <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '20px', padding: '22px 24px', marginBottom: '20px', position: 'relative', overflow: 'hidden' }}>
