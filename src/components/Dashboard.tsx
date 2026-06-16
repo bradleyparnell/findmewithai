@@ -1371,7 +1371,7 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
           )}
         </>
       )}
-      </div>{/* end main content */}
-    </div>{/* end outer flex */}
+      </div>
+    </div>
   );
 };
