@@ -248,6 +248,7 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
   const [customTerm, setCustomTerm] = useState('');
   const [customKeywords, setCustomKeywords] = useState<{keyword: string; volume: number; custom?: boolean}[]>([]);
   const [checkingVolume, setCheckingVolume] = useState(false);
+  const [activeSection, setActiveSection] = useState('score');
 
   // Map each check ID → which fix tool it routes to
   const FIX_CTA: Record<string, { label: string; type: 'code' | 'content' }> = {
@@ -281,6 +282,7 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
     else contentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
   const [industryOverride, setIndustryOverride] = useState<string | null>(null);
+  const scoreRef     = useRef<HTMLDivElement>(null);
   const signalRef    = useRef<HTMLDivElement>(null);
   const fixRef       = useRef<HTMLDivElement>(null);
   const contentRef   = useRef<HTMLDivElement>(null);
@@ -288,6 +290,38 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
   const competitorRef = useRef<HTMLDivElement>(null);
   const historyRef   = useRef<HTMLDivElement>(null);
   const benchmarkRef = useRef<HTMLDivElement>(null);
+
+  // Track active nav section via IntersectionObserver
+  useEffect(() => {
+    const sections: { id: string; ref: React.RefObject<HTMLDivElement> }[] = [
+      { id: 'score',      ref: scoreRef },
+      { id: 'signal',     ref: signalRef },
+      { id: 'benchmark',  ref: benchmarkRef },
+      { id: 'fix',        ref: fixRef },
+      { id: 'content',    ref: contentRef },
+      { id: 'code',       ref: codeRef },
+      { id: 'competitor', ref: competitorRef },
+      { id: 'history',    ref: historyRef },
+    ];
+    const observer = new IntersectionObserver(
+      (entries) => {
+        // Pick the first entry that is intersecting (top-most visible)
+        const visible = entries.filter(e => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+        if (visible.length > 0) {
+          const id = visible[0].target.getAttribute('data-section');
+          if (id) setActiveSection(id);
+        }
+      },
+      { rootMargin: '-20% 0px -70% 0px', threshold: 0 }
+    );
+    sections.forEach(({ id, ref }) => {
+      if (ref.current) {
+        ref.current.setAttribute('data-section', id);
+        observer.observe(ref.current);
+      }
+    });
+    return () => observer.disconnect();
+  }, []);
 
   const scrollTo = (ref: React.RefObject<HTMLDivElement>) => {
     ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -422,80 +456,116 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
   const warnItems = latestScan?.result.findings.filter(f => f.status === 'warn') ?? [];
   const passItems = latestScan?.result.findings.filter(f => f.status === 'pass') ?? [];
 
-  return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '48px 48px 100px' }}>
+  const NAV_ITEMS = [
+    { id: 'score',      label: 'Score',       icon: '📊', ref: scoreRef },
+    { id: 'signal',     label: 'AI Market',   icon: '⚡', ref: signalRef },
+    { id: 'benchmark',  label: 'Benchmarks',  icon: '🏆', ref: benchmarkRef },
+    { id: 'fix',        label: 'What to Fix', icon: '🔴', ref: fixRef },
+    { id: 'content',    label: 'Content',     icon: '✍️',  ref: contentRef },
+    { id: 'code',       label: 'Code',        icon: '💻', ref: codeRef },
+    { id: 'competitor', label: 'Competitors', icon: '🏁', ref: competitorRef },
+    { id: 'history',    label: 'History',     icon: '📋', ref: historyRef },
+  ];
 
-      {/* ── HEADER ── */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-            <div style={{ width: '38px', height: '38px', background: '#7c3aed', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Search size={18} color="white" />
+  return (
+    <div style={{ display: 'flex', minHeight: '100vh', background: '#f4f3f8' }}>
+
+      {/* ── LEFT SIDEBAR ── */}
+      <aside style={{ position: 'fixed', top: 0, left: 0, width: '240px', height: '100vh', background: '#1e1b4b', display: 'flex', flexDirection: 'column', zIndex: 100, overflowY: 'auto' }}>
+
+        {/* Brand */}
+        <div style={{ padding: '22px 20px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '18px' }}>
+            <div style={{ width: '28px', height: '28px', background: '#7c3aed', borderRadius: '7px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Search size={13} color="white" />
             </div>
-            <span style={{ fontWeight: 800, fontSize: '19px', color: '#7c3aed' }}>findmewith.ai</span>
+            <span style={{ fontWeight: 800, fontSize: '14px', color: '#e2e8f0', letterSpacing: '-0.01em' }}>findmewith.ai</span>
           </div>
-          <h1 style={{ fontSize: '36px', fontWeight: 900, color: '#111827', margin: 0, lineHeight: 1.1 }}>
-            {latestScan ? latestScan.url.replace(/^https?:\/\//, '').replace(/\/$/, '') : 'Your Dashboard'}
-          </h1>
-          <p style={{ fontSize: '15px', color: '#6b7280', margin: '6px 0 0' }}>{user.email}</p>
+
+          {/* Site card */}
+          {latestScan ? (
+            <div style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', padding: '11px 13px' }}>
+              <div style={{ fontSize: '10px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '3px' }}>Scanning</div>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: 'white', wordBreak: 'break-all', lineHeight: 1.3 }}>
+                {latestScan.url.replace(/^https?:\/\//, '').replace(/\/$/, '')}
+              </div>
+              <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '5px' }}>
+                Score: <span style={{ color: '#f59e0b', fontWeight: 800 }}>{latestScan.score}/100</span>
+                {isPro && <span style={{ marginLeft: '8px', fontSize: '10px', color: '#22c55e', fontWeight: 700 }}>● LIVE</span>}
+              </div>
+            </div>
+          ) : (
+            <div style={{ fontSize: '13px', color: '#64748b' }}>No scan yet</div>
+          )}
         </div>
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-          <button
-            onClick={() => scrollTo(fixRef)}
-            style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#f59e0b', color: 'white', border: 'none', borderRadius: '12px', padding: '13px 24px', fontSize: '16px', fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 14px rgba(245,158,11,0.35)' }}
-          >
-            ⚡ Start Fixing
-          </button>
+
+        {/* Nav items */}
+        <nav style={{ flex: 1, padding: '12px 10px' }}>
+          {NAV_ITEMS.map(({ id, label, icon, ref }) => {
+            const isActive = activeSection === id;
+            return (
+              <button
+                key={id}
+                onClick={() => {
+                  setActiveSection(id);
+                  if (ref?.current) ref.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  else window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '10px',
+                  width: '100%', padding: '9px 12px', marginBottom: '2px',
+                  background: isActive ? 'rgba(245,158,11,0.18)' : 'transparent',
+                  border: isActive ? '1px solid rgba(245,158,11,0.35)' : '1px solid transparent',
+                  borderRadius: '9px',
+                  color: isActive ? '#fbbf24' : '#94a3b8',
+                  fontSize: '14px', fontWeight: isActive ? 700 : 500,
+                  cursor: 'pointer', textAlign: 'left',
+                  transition: 'all 0.12s',
+                }}
+                onMouseEnter={e => { if (!isActive) { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.06)'; (e.currentTarget as HTMLButtonElement).style.color = '#e2e8f0'; } }}
+                onMouseLeave={e => { if (!isActive) { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = '#94a3b8'; } }}
+              >
+                <span style={{ fontSize: '15px', lineHeight: 1 }}>{icon}</span>
+                {label}
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* New Scan */}
+        <div style={{ padding: '12px 10px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
           <button
             onClick={onNewScan}
-            style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#7c3aed', color: 'white', border: 'none', borderRadius: '12px', padding: '13px 22px', fontSize: '15px', fontWeight: 700, cursor: 'pointer' }}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px', width: '100%', background: '#7c3aed', color: 'white', border: 'none', borderRadius: '9px', padding: '10px', fontSize: '14px', fontWeight: 700, cursor: 'pointer' }}
           >
             <Plus size={14} /> New Scan
           </button>
-          <button
-            onClick={onSignOut}
-            title="Sign out"
-            style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'transparent', color: '#9ca3af', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '10px 14px', fontSize: '14px', cursor: 'pointer' }}
-          >
+        </div>
+
+        {/* User / sign out */}
+        <div style={{ padding: '14px 16px', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ flex: 1, fontSize: '12px', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {user.email}
+          </div>
+          <button onClick={onSignOut} title="Sign out" style={{ background: 'transparent', border: 'none', color: '#475569', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
             <LogOut size={15} />
           </button>
         </div>
-      </div>
+      </aside>
 
-      {/* ── PRO MONITORING BANNER ── */}
-      {isPro && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%)', border: '1.5px solid #c4b5fd', borderRadius: '14px', padding: '14px 20px', marginBottom: '20px' }}>
-          <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 0 3px rgba(34,197,94,0.2)', flexShrink: 0, animation: 'pulse 2s infinite' }} />
-          <div>
-            <span style={{ fontWeight: 700, fontSize: '15px', color: '#5b21b6' }}>🛰️ Site Monitoring Active</span>
-            <span style={{ fontSize: '14px', color: '#7c3aed', marginLeft: '10px' }}>Your site is re-scanned weekly — we'll email you if your score changes.</span>
+      {/* ── MAIN CONTENT ── */}
+      <div style={{ marginLeft: '240px', flex: 1, padding: '40px 48px 100px', minWidth: 0 }}>
+
+        {/* Pro monitoring banner */}
+        {isPro && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%)', border: '1.5px solid #c4b5fd', borderRadius: '14px', padding: '13px 18px', marginBottom: '28px' }}>
+            <div style={{ width: '9px', height: '9px', borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 0 3px rgba(34,197,94,0.2)', flexShrink: 0, animation: 'pulse 2s infinite' }} />
+            <div>
+              <span style={{ fontWeight: 700, fontSize: '14px', color: '#5b21b6' }}>🛰️ Site Monitoring Active</span>
+              <span style={{ fontSize: '13px', color: '#7c3aed', marginLeft: '10px' }}>Your site is re-scanned weekly — we'll email you if your score changes.</span>
+            </div>
           </div>
-        </div>
-      )}
-
-      {/* ── SECTION NAV ── */}
-      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '32px', padding: '12px 16px', background: 'white', border: '1px solid #e5e7eb', borderRadius: '16px' }}>
-        {[
-          { label: '📊 Score',        ref: null },
-          { label: '⚡ AI Market',    ref: signalRef },
-          { label: '🏆 Benchmarks',  ref: benchmarkRef },
-          { label: '🔴 What to Fix', ref: fixRef },
-          { label: '✍️ Content',      ref: contentRef },
-          { label: '🏷️ Code',         ref: codeRef },
-          { label: '🏁 Competitors',  ref: competitorRef },
-          { label: '📋 History',      ref: historyRef },
-        ].map(({ label, ref }) => (
-          <button
-            key={label}
-            onClick={() => ref ? scrollTo(ref) : window.scrollTo({ top: 0, behavior: 'smooth' })}
-            style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '99px', padding: '7px 16px', fontSize: '14px', fontWeight: 600, color: '#374151', cursor: 'pointer', whiteSpace: 'nowrap' }}
-            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#f5f3ff'; (e.currentTarget as HTMLButtonElement).style.borderColor = '#c4b5fd'; (e.currentTarget as HTMLButtonElement).style.color = '#7c3aed'; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = '#f9fafb'; (e.currentTarget as HTMLButtonElement).style.borderColor = '#e5e7eb'; (e.currentTarget as HTMLButtonElement).style.color = '#374151'; }}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+        )}
 
       {loading ? (
         <div style={{ textAlign: 'center', padding: '80px 0', color: '#9ca3af', fontSize: '14px' }}>
@@ -513,7 +583,7 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
       ) : (
         <>
           {/* ── OVERVIEW: score + category bars ── */}
-          <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: '20px', marginBottom: '24px' }}>
+          <div ref={scoreRef} style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: '20px', marginBottom: '24px' }}>
 
             {/* Score circle */}
             <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '24px', padding: '32px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
@@ -1301,6 +1371,7 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
           )}
         </>
       )}
-    </div>
+      </div>{/* end main content */}
+    </div>{/* end outer flex */}
   );
 };
