@@ -189,7 +189,7 @@ const app = express();
 // ── CORS ─────────────────────────────────────────────────────────────────────
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, stripe-signature');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, stripe-signature, Authorization');
   res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   if (req.method === 'OPTIONS') return res.sendStatus(200);
   next();
