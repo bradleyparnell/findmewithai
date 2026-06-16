@@ -162,10 +162,10 @@ function WidgetHeroCard({ scanId, isPro, onUpgrade, isMobile }: {
 
       {/* Headline */}
       <h2 style={{ fontSize: isMobile ? '22px' : '30px', fontWeight: 900, color: 'white', marginBottom: '10px', lineHeight: 1.2 }}>
-        ⚡ The one script your business needs.
+        ⚡ Paste once. Stay updated forever.
       </h2>
       <p style={{ fontSize: isMobile ? '15px' : '17px', color: 'rgba(255,255,255,0.75)', lineHeight: 1.65, marginBottom: '24px', maxWidth: '580px' }}>
-        Paste one line of code into your website. We keep your AI visibility signals current — automatically — the moment you make changes here.
+        After you add the snippets above, paste this one line into your website header. Whenever you make changes here — new FAQs, updated services, new locations — your site updates automatically. Also boosts your traditional Google SEO.
         {!isPro && <><br /><span style={{ color: '#fcd34d', fontWeight: 600 }}> Free includes 3 signals. Pro unlocks all 6.</span></>}
       </p>
 
@@ -207,8 +207,8 @@ function WidgetHeroCard({ scanId, isPro, onUpgrade, isMobile }: {
       }}>
         {[
           { icon: <Zap size={16} />, label: 'Paste once', sub: 'One line in your header' },
-          { icon: <RefreshCw size={16} />, label: 'Auto-updates', sub: 'Changes here push live' },
-          { icon: <ShieldCheck size={16} />, label: 'Always current', sub: 'Evolves as AI search does' },
+          { icon: <RefreshCw size={16} />, label: 'Auto-syncs', sub: 'Edit here, updates everywhere' },
+          { icon: <ShieldCheck size={16} />, label: 'Boosts Google too', sub: 'Google renders JS — it sees all' },
         ].map(p => (
           <div key={p.label} style={{
             background: 'rgba(255,255,255,0.08)', borderRadius: '12px',
@@ -380,18 +380,19 @@ export const CodeStep: React.FC<Props> = ({ siteUrl, result, scanId, isPro, onUp
         <h1 style={{ fontSize: isMobile ? '26px' : '38px', fontWeight: 900, color: '#111827', marginBottom: '10px' }}>
           Get found by AI search
         </h1>
-        <p style={{ color: '#6b7280', fontSize: isMobile ? '16px' : '19px', lineHeight: 1.65, maxWidth: '620px' }}>
-          Start with the script below — free for everyone. Or copy individual snippets and paste them yourself.
+        <p style={{ color: '#6b7280', fontSize: isMobile ? '16px' : '19px', lineHeight: 1.65, maxWidth: '640px' }}>
+          AI search engines like ChatGPT, Perplexity, and Claude read your website's HTML directly — they don't run JavaScript. Add the snippets below so they can find and understand your business.
         </p>
       </div>
 
-      {/* ── HERO: Managed widget ── */}
-      <WidgetHeroCard scanId={scanId} isPro={isPro} onUpgrade={onUpgrade} isMobile={isMobile} />
-
-      {/* Divider */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '24px' }}>
-        <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }} />
-        <span style={{ fontSize: '13px', color: '#9ca3af', fontWeight: 600, whiteSpace: 'nowrap' }}>or copy individual snippets</span>
+      {/* ── STEP 1: Snippets ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '20px' }}>
+        <div style={{
+          background: '#7c3aed', color: 'white', fontWeight: 800, fontSize: '13px',
+          borderRadius: '100px', padding: '5px 16px', whiteSpace: 'nowrap', letterSpacing: '0.03em',
+        }}>
+          Step 1 — Add to your website HTML
+        </div>
         <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }} />
       </div>
 
@@ -403,12 +404,26 @@ export const CodeStep: React.FC<Props> = ({ siteUrl, result, scanId, isPro, onUp
         </div>
       </div>
 
-      {/* Supporting snippets */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      {/* Snippets */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginBottom: '40px' }}>
         {snippets.map(snippet => (
           <EditableSnippet key={snippet.id} snippet={snippet} isPro={isPro} onUpgrade={onUpgrade} isMobile={isMobile} />
         ))}
       </div>
+
+      {/* ── STEP 2: Widget ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '20px' }}>
+        <div style={{
+          background: '#1e1b4b', color: '#fcd34d', fontWeight: 800, fontSize: '13px',
+          borderRadius: '100px', padding: '5px 16px', whiteSpace: 'nowrap', letterSpacing: '0.03em',
+        }}>
+          Step 2 — Keep everything updated automatically
+        </div>
+        <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }} />
+      </div>
+
+      {/* ── HERO: Managed widget ── */}
+      <WidgetHeroCard scanId={scanId} isPro={isPro} onUpgrade={onUpgrade} isMobile={isMobile} />
 
       {/* Footer CTA */}
       <div style={{ marginTop: '48px', padding: isMobile ? '24px 20px' : '36px', background: 'linear-gradient(135deg, #f5f3ff, #ffffff)', border: '1.5px solid #ddd6fe', borderRadius: '20px', textAlign: 'center' }}>
