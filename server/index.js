@@ -1044,6 +1044,24 @@ app.post('/api/leads', (req, res) => {
   res.json({ ok: true });
 });
 
+// ── GET /api/debug-email (temp) ───────────────────────────────────────────────
+app.get('/api/debug-email', async (req, res) => {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return res.json({ error: 'RESEND_API_KEY not set' });
+  const result = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      from: 'findmewith.ai <hello@findmewithai.com>',
+      to: 'hello@genierocket.com',
+      subject: 'findmewith.ai debug test',
+      html: '<p>This is a debug test from findmewith.ai. If you see this, Resend is working!</p>',
+    }),
+  });
+  const data = await result.json();
+  res.json({ status: result.status, ok: result.ok, data, keyPrefix: apiKey.slice(0, 8) + '...' });
+});
+
 // ── POST /api/welcome-email ───────────────────────────────────────────────────
 app.post('/api/welcome-email', async (req, res) => {
   const { email, url, score } = req.body;
