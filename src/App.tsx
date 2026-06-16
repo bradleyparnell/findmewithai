@@ -9,6 +9,7 @@ import { PricingPage } from './components/PricingPage';
 import { Dashboard } from './components/Dashboard';
 import { AuthPage } from './components/AuthPage';
 import { Nav } from './components/Nav';
+import { ChatBot } from './components/ChatBot';
 import { supabase } from './lib/supabase';
 import type { AnalysisResult } from './types';
 
@@ -257,14 +258,17 @@ const App: React.FC = () => {
   // Dashboard gets its own full-screen layout — render it outside the App shell
   if (step === 'dashboard' && user) {
     return (
-      <Dashboard
-        user={user}
-        isPro={isPro}
-        onViewScan={handleViewScan}
-        onNewScan={handleNewCheck}
-        onUpgrade={handleUpgrade}
-        onSignOut={handleSignOut}
-      />
+      <>
+        <Dashboard
+          user={user}
+          isPro={isPro}
+          onViewScan={handleViewScan}
+          onNewScan={handleNewCheck}
+          onUpgrade={handleUpgrade}
+          onSignOut={handleSignOut}
+        />
+        <ChatBot />
+      </>
     );
   }
 
@@ -343,6 +347,7 @@ const App: React.FC = () => {
         />
       )}
       {/* Dashboard is rendered outside this shell (see early return above) */}
+      <ChatBot />
       <footer style={{
         textAlign: 'center',
         padding: '24px 16px',
