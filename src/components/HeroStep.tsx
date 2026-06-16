@@ -27,6 +27,16 @@ const LOADING_MESSAGES = [
   { text: 'Building your personalized action plan…', fear: 'The good news: most fixes take less than 15 minutes.' },
 ];
 
+function useWindowWidth() {
+  const [w, setW] = React.useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
+  React.useEffect(() => {
+    const handler = () => setW(window.innerWidth);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, []);
+  return w;
+}
+
 export const HeroStep: React.FC<Props> = ({ onAnalyzed, user, onGoToDashboard, onGoToLogin }) => {
   const windowWidth = useWindowWidth();
   const isMobile = windowWidth < 640;
@@ -329,7 +339,7 @@ export const HeroStep: React.FC<Props> = ({ onAnalyzed, user, onGoToDashboard, o
         )}
 
         {/* Steps — below the fold, simplified */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginTop: '72px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: '16px', marginTop: '72px' }}>
           {steps.map(s => (
             <div key={s.num} style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '16px', padding: '24px 20px', textAlign: 'left', boxShadow: '0 1px 6px rgba(0,0,0,0.04)' }}>
               <div style={{ fontSize: '22px', marginBottom: '10px' }}>
