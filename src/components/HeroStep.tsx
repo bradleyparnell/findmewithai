@@ -28,6 +28,8 @@ const LOADING_MESSAGES = [
 ];
 
 export const HeroStep: React.FC<Props> = ({ onAnalyzed, user, onGoToDashboard, onGoToLogin }) => {
+  const windowWidth = useWindowWidth();
+  const isMobile = windowWidth < 640;
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingMsg, setLoadingMsg] = useState(0);

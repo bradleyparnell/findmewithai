@@ -138,28 +138,18 @@ export const EmailGate: React.FC<Props> = ({ score, siteUrl, onSignUp, onGoToLog
           padding: '28px',
           boxShadow: '0 2px 16px rgba(0,0,0,0.04)',
         }}>
-          {/* Social proof */}
+          {/* Trust signal */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '18px', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex' }}>
-              {['#f59e0b', '#7c3aed', '#059669', '#3b82f6'].map((color, i) => (
-                <div key={i} style={{ width: '28px', height: '28px', borderRadius: '50%', background: color, border: '2px solid white', marginLeft: i > 0 ? '-8px' : '0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', color: 'white', fontWeight: 700 }}>
-                  {['J', 'M', 'S', 'A'][i]}
-                </div>
-              ))}
-            </div>
-            <div style={{ fontSize: '12px', color: '#374151', fontWeight: 600 }}>
-              <strong style={{ color: '#7c3aed' }}>1,200+</strong> business owners already scanned
-            </div>
-            <div style={{ display: 'flex', gap: '1px' }}>
-              {[1, 2, 3, 4, 5].map(s => <span key={s} style={{ color: '#f59e0b', fontSize: '13px' }}>★</span>)}
-            </div>
+            <span style={{ fontSize: '13px', fontWeight: 700, color: '#7c3aed', background: '#f5f3ff', border: '1px solid #ddd6fe', borderRadius: '100px', padding: '5px 14px' }}>
+              🚀 Early access — free forever for founding members
+            </span>
           </div>
 
           <h2 style={{ fontSize: '19px', fontWeight: 800, color: '#111827', marginBottom: '6px' }}>
             Create your free account to unlock your results
           </h2>
           <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '20px', lineHeight: 1.55 }}>
-            No credit card. We'll also check in weekly as your AI visibility score changes.
+            No credit card. We'll notify you when your AI visibility score changes.
           </p>
 
           {error && (

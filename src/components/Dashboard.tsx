@@ -491,7 +491,7 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
               </div>
               <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '5px' }}>
                 Score: <span style={{ color: '#f59e0b', fontWeight: 800 }}>{latestScan.score}/100</span>
-                {isPro && <span style={{ marginLeft: '8px', fontSize: '10px', color: '#22c55e', fontWeight: 700 }}>● LIVE</span>}
+                {isPro && <span style={{ marginLeft: '8px', fontSize: '10px', color: '#22c55e', fontWeight: 700 }}>● MONITORING</span>}
               </div>
             </div>
           ) : (
@@ -1220,7 +1220,7 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
                       <div key={item.id} style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '14px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '18px', padding: '20px 24px' }}>
                         <div style={{ width: '11px', height: '11px', background: '#ef4444', borderRadius: '50%', flexShrink: 0 }} />
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: '17px', fontWeight: 700, color: '#111827' }}>{item.label}</div>
+                          <div style={{ fontSize: '17px', fontWeight: 700, color: '#111827' }}>{FINDING_PLAIN_LABELS[item.id] || item.label}</div>
                           {item.suggestion && <div style={{ fontSize: '14px', color: '#6b7280', marginTop: '5px', lineHeight: 1.55 }}>{item.suggestion}</div>}
                         </div>
                         {cta && (
@@ -1251,7 +1251,7 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
                       <div key={item.id} style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '14px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '18px', padding: '20px 24px' }}>
                         <div style={{ width: '11px', height: '11px', background: '#d97706', borderRadius: '50%', flexShrink: 0 }} />
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: '17px', fontWeight: 700, color: '#111827' }}>{item.label}</div>
+                          <div style={{ fontSize: '17px', fontWeight: 700, color: '#111827' }}>{FINDING_PLAIN_LABELS[item.id] || item.label}</div>
                           {item.suggestion && <div style={{ fontSize: '14px', color: '#6b7280', marginTop: '5px', lineHeight: 1.55 }}>{item.suggestion}</div>}
                         </div>
                         {cta && (

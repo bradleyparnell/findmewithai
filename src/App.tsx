@@ -357,6 +357,12 @@ const App: React.FC = () => {
         marginTop: 'auto',
       }}>
         © {new Date().getFullYear()} findmewith.ai — All rights reserved.
+        <span style={{ margin: '0 8px' }}>·</span>
+        <a href="mailto:hello@findmewithai.com" style={{ color: '#9ca3af', textDecoration: 'none' }}>hello@findmewithai.com</a>
+        <span style={{ margin: '0 8px' }}>·</span>
+        <a href="/privacy" style={{ color: '#9ca3af', textDecoration: 'none' }}>Privacy Policy</a>
+        <span style={{ margin: '0 8px' }}>·</span>
+        <a href="/terms" style={{ color: '#9ca3af', textDecoration: 'none' }}>Terms of Service</a>
       </footer>
     </div>
   );

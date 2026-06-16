@@ -267,9 +267,9 @@ function generatePDFHtml(result: AnalysisResult, score: number, msg: ReturnType<
 // "Do it for me" config — free items go straight to the tool; Pro items show the paywall
 const FINDING_DO_IT_FOR_ME: Record<string, { dest: 'content' | 'code'; isPro: boolean; label: string }> = {
   has_llms_txt:            { dest: 'code',    isPro: false, label: '✨ Generate my llms.txt file' },
-  has_meta_description:    { dest: 'content', isPro: false, label: '✨ Write my meta description' },
-  has_title_tag:           { dest: 'content', isPro: false, label: '✨ Write my page title' },
-  has_contact_info:        { dest: 'content', isPro: false, label: '✨ Generate my contact page text' },
+  has_meta_description:    { dest: 'content', isPro: false, label: '✨ Get AI writing help →' },
+  has_title_tag:           { dest: 'content', isPro: false, label: '✨ Get AI writing help →' },
+  has_contact_info:        { dest: 'content', isPro: false, label: '✨ Get AI writing help →' },
   has_faq_schema:          { dest: 'content', isPro: true,  label: '✨ Generate my FAQ answers' },
   has_schema_org:          { dest: 'code',    isPro: true,  label: '✨ Generate my schema code' },
   has_organization_schema: { dest: 'code',    isPro: true,  label: '✨ Generate my org schema' },

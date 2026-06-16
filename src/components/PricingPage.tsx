@@ -1,5 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Check, ArrowLeft, Search, Star, Zap, Building2, Settings } from 'lucide-react';
+
+function useWindowWidth() {
+  const [w, setW] = useState(typeof window !== 'undefined' ? window.innerWidth : 1024);
+  useEffect(() => {
+    const h = () => setW(window.innerWidth);
+    window.addEventListener('resize', h);
+    return () => window.removeEventListener('resize', h);
+  }, []);
+  return w;
+}
 
 const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://findmewithai-production.up.railway.app';
 
@@ -56,7 +66,7 @@ export const PricingPage: React.FC<Props> = ({ onBack, onProActivated, userEmail
       price: annual ? '$249' : '$29', period: annual ? 'per year' : 'per month',
       annualNote: annual ? 'Save $99 vs monthly' : 'Or $249/year — save $99',
       desc: 'Everything you need to get found by AI',
-      cta: isPro ? 'Your current plan' : 'Try Pro free for 7 days',
+      cta: isPro ? 'Your current plan' : 'Start Pro — 7-day money-back',
       ctaStyle: 'primary' as const, highlight: true,
       note: '',
       features: [

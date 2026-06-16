@@ -89,6 +89,11 @@ const KB: QA[] = [
     answer: `You can reach our team anytime at **hello@findmewithai.com** — we're friendly, I promise! 😊\n\nWe typically respond within a few hours during business days. If you're having trouble with installation, include your website URL and we'll walk you through it.`,
   },
   {
+    keywords: ['did it work', 'how do i know', 'verify', 'check if', 'working', 'installed correctly', 'confirm', 'test it', 'can i check'],
+    answer: `Great question — here's how to confirm everything is working:\n\n**For the widget script:**\n1. Go to your website in a browser\n2. Right-click anywhere → **View Page Source**\n3. Press **Ctrl+F** (or Cmd+F on Mac) and search for "findmewith"\n4. You should see the script tag in your page's \`<head>\` section ✅\n\n**For llms.txt:**\n1. Open a new browser tab\n2. Go to **yoursite.com/llms.txt** (replace with your actual domain)\n3. You should see the plain text file you created ✅\n\n**To see your score improve:**\nRe-scan your site on your findmewith.ai dashboard (hit "Re-scan now" on the Score card). AI search engines typically pick up the changes within **1–2 weeks**. 📡`,
+    chips: ['How long until I see results?', 'Something looks wrong', 'What does the script do?'],
+  },
+  {
     keywords: ['slow', 'speed', 'performance', 'load', 'page speed'],
     answer: `The script is designed to be **lightweight and non-blocking**. It loads asynchronously, which means it won't slow down your page at all.\n\nIt also caches the schema data from our servers, so repeat visitors won't even make a new network request.`,
     chips: ['What does the script do?', 'How do I install it?'],
@@ -107,7 +112,7 @@ const SUGGESTIONS = [
   'How do I install the script?',
   'I use WordPress',
   'What is llms.txt?',
-  'How long until it works?',
+  'Did it work? How do I check?',
   'I need help from a developer',
 ];
 
