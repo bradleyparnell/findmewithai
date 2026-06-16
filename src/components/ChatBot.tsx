@@ -76,17 +76,17 @@ const KB: QA[] = [
   },
   {
     keywords: ['developer', 'web developer', 'someone else', "can't", 'help', 'don\'t know how'],
-    answer: `Totally fine — most people just forward it to their web developer!\n\nHere's a message you can send them:\n\n---\n*"Hey, could you add a script to our website header and upload a text file? I have the exact code — it should take about 10 minutes. Let me know and I'll send the details."*\n\n---\n\nYou can also email us at **hello@findmewithai.com** and we'll help coordinate.`,
+    answer: `Totally fine — most people just forward it to their web developer!\n\nHere's a message you can send them:\n\n---\n*"Hey, could you add a script to our website header and upload a text file? I have the exact code — it should take about 10 minutes. Let me know and I'll send the details."*\n\n---\n\nYou can also email us at **hello@findmewith.ai** and we'll help coordinate.`,
     chips: ['What about WordPress?', 'What is the script for?'],
   },
   {
     keywords: ['not working', 'broken', 'error', 'issue', 'problem', 'wrong'],
-    answer: `Sorry to hear that! Let's figure it out.\n\nA few things to check:\n1. Make sure the script tag is inside your \`<head>\` section (not \`<body>\`)\n2. Make sure you copied the entire script — from \`<script\` all the way to \`</script>\`\n3. Try viewing your page source (right-click → View Source) and search for "findmewith" to confirm it's there\n\nIf it's still not working, email us at **hello@findmewithai.com** with your website URL and we'll take a look. 🔧`,
+    answer: `Sorry to hear that! Let's figure it out.\n\nA few things to check:\n1. Make sure the script tag is inside your \`<head>\` section (not \`<body>\`)\n2. Make sure you copied the entire script — from \`<script\` all the way to \`</script>\`\n3. Try viewing your page source (right-click → View Source) and search for "findmewith" to confirm it's there\n\nIf it's still not working, email us at **hello@findmewith.ai** with your website URL and we'll take a look. 🔧`,
     chips: ['How do I install it?', 'I use WordPress', 'I use Shopify'],
   },
   {
     keywords: ['contact', 'support', 'email', 'talk', 'human', 'person'],
-    answer: `You can reach our team anytime at **hello@findmewithai.com** — we're friendly, I promise! 😊\n\nWe typically respond within a few hours during business days. If you're having trouble with installation, include your website URL and we'll walk you through it.`,
+    answer: `You can reach our team anytime at **hello@findmewith.ai** — we're friendly, I promise! 😊\n\nWe typically respond within a few hours during business days. If you're having trouble with installation, include your website URL and we'll walk you through it.`,
   },
   {
     keywords: ['did it work', 'how do i know', 'verify', 'check if', 'working', 'installed correctly', 'confirm', 'test it', 'can i check'],
@@ -106,7 +106,7 @@ const KB: QA[] = [
 ];
 
 // ── Fallback response ─────────────────────────────────────────────────────────
-const FALLBACK = `Hmm, I'm not sure about that one! Here's what I *can* help with:\n\n- How to install the script on WordPress, Shopify, Wix, etc.\n- What llms.txt is and how to upload it\n- What schemas do for your AI search visibility\n- How long it takes to see results\n\nOr email us at **hello@findmewithai.com** and a real human will help you out. 😊`;
+const FALLBACK = `Hmm, I'm not sure about that one! Here's what I *can* help with:\n\n- How to install the script on WordPress, Shopify, Wix, etc.\n- What llms.txt is and how to upload it\n- What schemas do for your AI search visibility\n- How long it takes to see results\n\nOr email us at **hello@findmewith.ai** and a real human will help you out. 😊`;
 
 const SUGGESTIONS = [
   'How do I install the script?',

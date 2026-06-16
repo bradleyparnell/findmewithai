@@ -38,7 +38,7 @@ export const PricingPage: React.FC<Props> = ({ onBack, onProActivated, userEmail
       window.location.href = data.url;
     } catch {
       setActivating(null);
-      alert('Payment setup failed. Please try again or email hello@findmewithai.com');
+      alert('Payment setup failed. Please try again or email hello@findmewith.ai');
     }
   };
 
@@ -184,7 +184,7 @@ export const PricingPage: React.FC<Props> = ({ onBack, onProActivated, userEmail
                 )}
                 {plan.ctaStyle === 'amber' && (
                   <a
-                    href="mailto:hello@findmewithai.com?subject=Agency%20Plan%20Waitlist&body=Hi%2C%20I%27d%20like%20to%20join%20the%20Agency%20waitlist%20for%20findmewith.ai."
+                    href="mailto:hello@findmewith.ai?subject=Agency%20Plan%20Waitlist&body=Hi%2C%20I%27d%20like%20to%20join%20the%20Agency%20waitlist%20for%20findmewith.ai."
                     style={{ display: 'block', width: '100%', height: '40px', background: '#f59e0b', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 700, cursor: 'pointer', textAlign: 'center', lineHeight: '40px', textDecoration: 'none', fontSize: '14px', boxSizing: 'border-box' }}
                   >
                     {plan.cta}
@@ -232,7 +232,7 @@ export const PricingPage: React.FC<Props> = ({ onBack, onProActivated, userEmail
         <div style={{ textAlign: 'center', marginTop: '32px' }}>
           <p style={{ fontSize: '13px', color: '#6b7280' }}>7-day money-back guarantee · <strong>Your free account stays free forever</strong> · Cancel Pro any time</p>
           <p style={{ fontSize: '13px', color: '#6b7280', marginTop: '6px' }}>
-            Questions? Email <a href="mailto:hello@findmewithai.com" style={{ color: '#7c3aed', fontWeight: 600 }}>hello@findmewithai.com</a>
+            Questions? Email <a href="mailto:hello@findmewith.ai" style={{ color: '#7c3aed', fontWeight: 600 }}>hello@findmewith.ai</a>
           </p>
           {/* Stripe trust badge */}
           <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginTop: '20px', padding: '12px 24px', background: '#f9fafb', borderRadius: '12px', border: '1px solid #e5e7eb' }}>

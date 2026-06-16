@@ -16,7 +16,7 @@ export const TermsPage: React.FC = () => {
           These terms govern your use of findmewith.ai, a product of GenieRocket LLC. By creating an account
           or using our service, you agree to these terms. We've written them in plain English — if anything
           is unclear, just ask at{' '}
-          <a href="mailto:hello@findmewithai.com" style={{ color: '#6d28d9' }}>hello@findmewithai.com</a>.
+          <a href="mailto:hello@findmewith.ai" style={{ color: '#6d28d9' }}>hello@findmewith.ai</a>.
         </p>
 
         <Section title="What findmewith.ai does">
@@ -109,7 +109,7 @@ export const TermsPage: React.FC = () => {
 
         <Section title="Contact">
           <p style={{ color: '#374151', lineHeight: 1.7 }}>
-            GenieRocket LLC — <a href="mailto:hello@findmewithai.com" style={{ color: '#6d28d9' }}>hello@findmewithai.com</a>
+            GenieRocket LLC — <a href="mailto:hello@findmewith.ai" style={{ color: '#6d28d9' }}>hello@findmewith.ai</a>
           </p>
         </Section>
 

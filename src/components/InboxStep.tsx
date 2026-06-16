@@ -297,7 +297,7 @@ export const InboxStep: React.FC<Props> = ({ email, siteUrl, score, linkExpired 
 
         <p style={{ fontSize: '12px', color: '#9ca3af', marginTop: '20px' }}>
           Links expire after 1 hour. Need help?{' '}
-          <a href="mailto:hello@findmewithai.com" style={{ color: '#7c3aed' }}>hello@findmewithai.com</a>
+          <a href="mailto:hello@findmewith.ai" style={{ color: '#7c3aed' }}>hello@findmewith.ai</a>
         </p>
       </div>
     </div>

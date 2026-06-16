@@ -254,7 +254,7 @@ function generatePDFHtml(result: AnalysisResult, score: number, msg: ReturnType<
   <div style="text-align:center;padding:24px;background:#f9fafb;border-radius:12px;border:1px solid #f0f0f0;">
     <div style="font-size:16px;font-weight:800;color:#7c3aed;margin-bottom:6px;">findmewith.ai</div>
     <div style="font-size:13px;color:#6b7280;line-height:1.65;">
-      Questions about this report? Email us at <strong>hello@findmewithai.com</strong><br/>
+      Questions about this report? Email us at <strong>hello@findmewith.ai</strong><br/>
       Re-scan your site anytime at <strong>findmewith.ai</strong> to track your progress.
     </div>
   </div>
@@ -940,7 +940,7 @@ export const ScoreStep: React.FC<Props> = ({ result, onFixContent, onGetCode, on
       {/* Encouragement footer */}
       <div style={{ textAlign: 'center', padding: '20px', background: '#f9fafb', borderRadius: '14px', border: '1px solid #f0f0f0' }}>
         <div style={{ fontSize: '13px', color: '#6b7280', lineHeight: 1.65 }}>
-          💡 <strong style={{ color: '#111827' }}>You don't have to do this alone.</strong> Every suggestion above comes with step-by-step guidance written in plain English. Questions? Email us at <a href="mailto:hello@findmewithai.com" style={{ color: '#7c3aed', textDecoration: 'none', fontWeight: 600 }}>hello@findmewithai.com</a>
+          💡 <strong style={{ color: '#111827' }}>You don't have to do this alone.</strong> Every suggestion above comes with step-by-step guidance written in plain English. Questions? Email us at <a href="mailto:hello@findmewith.ai" style={{ color: '#7c3aed', textDecoration: 'none', fontWeight: 600 }}>hello@findmewith.ai</a>
         </div>
       </div>
 

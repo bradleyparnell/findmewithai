@@ -284,8 +284,8 @@ export const AuthPage: React.FC<Props> = ({ onBack }) => {
 
       <p style={{ fontSize: '12px', color: '#9ca3af', marginTop: '24px', textAlign: 'center' }}>
         Questions? Email us at{' '}
-        <a href="mailto:hello@findmewithai.com" style={{ color: '#7c3aed', textDecoration: 'none', fontWeight: 600 }}>
-          hello@findmewithai.com
+        <a href="mailto:hello@findmewith.ai" style={{ color: '#7c3aed', textDecoration: 'none', fontWeight: 600 }}>
+          hello@findmewith.ai
         </a>
       </p>
     </div>

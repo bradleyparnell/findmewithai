@@ -59,7 +59,7 @@ export const PrivacyPage: React.FC = () => {
           <p style={{ color: '#374151', lineHeight: 1.7 }}>
             We keep your scan results and account data for as long as your account is active.
             If you'd like your data deleted, email us at{' '}
-            <a href="mailto:hello@findmewithai.com" style={{ color: '#6d28d9' }}>hello@findmewithai.com</a>{' '}
+            <a href="mailto:hello@findmewith.ai" style={{ color: '#6d28d9' }}>hello@findmewith.ai</a>{' '}
             and we'll remove everything within 7 business days.
           </p>
         </Section>
@@ -75,7 +75,7 @@ export const PrivacyPage: React.FC = () => {
           <p style={{ color: '#374151', lineHeight: 1.7 }}>
             You can request a copy of your data, ask us to correct it, or ask us to delete it at any time.
             Just email{' '}
-            <a href="mailto:hello@findmewithai.com" style={{ color: '#6d28d9' }}>hello@findmewithai.com</a>.
+            <a href="mailto:hello@findmewith.ai" style={{ color: '#6d28d9' }}>hello@findmewith.ai</a>.
           </p>
         </Section>
 
@@ -87,7 +87,7 @@ export const PrivacyPage: React.FC = () => {
 
         <Section title="Contact">
           <p style={{ color: '#374151', lineHeight: 1.7 }}>
-            GenieRocket LLC — <a href="mailto:hello@findmewithai.com" style={{ color: '#6d28d9' }}>hello@findmewithai.com</a>
+            GenieRocket LLC — <a href="mailto:hello@findmewith.ai" style={{ color: '#6d28d9' }}>hello@findmewith.ai</a>
           </p>
         </Section>
 
