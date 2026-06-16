@@ -245,7 +245,17 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
   const [showHistory, setShowHistory] = useState(false);
   const [rescanLoading, setRescanLoading] = useState(false);
   const [industryOverride, setIndustryOverride] = useState<string | null>(null);
-  const codeRef = useRef<HTMLDivElement>(null);
+  const signalRef    = useRef<HTMLDivElement>(null);
+  const fixRef       = useRef<HTMLDivElement>(null);
+  const contentRef   = useRef<HTMLDivElement>(null);
+  const codeRef      = useRef<HTMLDivElement>(null);
+  const competitorRef = useRef<HTMLDivElement>(null);
+  const historyRef   = useRef<HTMLDivElement>(null);
+  const benchmarkRef = useRef<HTMLDivElement>(null);
+
+  const scrollTo = (ref: React.RefObject<HTMLDivElement>) => {
+    ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   const latestScan = scans[0] ?? null;
 
@@ -380,32 +390,62 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
     <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '48px 48px 100px' }}>
 
       {/* ── HEADER ── */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '28px', flexWrap: 'wrap', gap: '12px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
-            <div style={{ width: '36px', height: '36px', background: '#7c3aed', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Search size={17} color="white" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+            <div style={{ width: '38px', height: '38px', background: '#7c3aed', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Search size={18} color="white" />
             </div>
-            <span style={{ fontWeight: 800, fontSize: '18px', color: '#7c3aed' }}>findmewith.ai</span>
+            <span style={{ fontWeight: 800, fontSize: '19px', color: '#7c3aed' }}>findmewith.ai</span>
           </div>
           <h1 style={{ fontSize: '36px', fontWeight: 900, color: '#111827', margin: 0, lineHeight: 1.1 }}>Your Dashboard</h1>
           <p style={{ fontSize: '15px', color: '#6b7280', margin: '6px 0 0' }}>{user.email}</p>
         </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <button
+            onClick={() => scrollTo(fixRef)}
+            style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#f59e0b', color: 'white', border: 'none', borderRadius: '12px', padding: '13px 24px', fontSize: '16px', fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 14px rgba(245,158,11,0.35)' }}
+          >
+            ⚡ Start Fixing
+          </button>
           <button
             onClick={onNewScan}
-            style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#7c3aed', color: 'white', border: 'none', borderRadius: '12px', padding: '12px 22px', fontSize: '15px', fontWeight: 700, cursor: 'pointer' }}
+            style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#7c3aed', color: 'white', border: 'none', borderRadius: '12px', padding: '13px 22px', fontSize: '15px', fontWeight: 700, cursor: 'pointer' }}
           >
             <Plus size={14} /> New Scan
           </button>
           <button
             onClick={onSignOut}
             title="Sign out"
-            style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'transparent', color: '#9ca3af', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '9px 12px', fontSize: '13px', cursor: 'pointer' }}
+            style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'transparent', color: '#9ca3af', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '10px 14px', fontSize: '14px', cursor: 'pointer' }}
           >
-            <LogOut size={14} />
+            <LogOut size={15} />
           </button>
         </div>
+      </div>
+
+      {/* ── SECTION NAV ── */}
+      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '32px', padding: '12px 16px', background: 'white', border: '1px solid #e5e7eb', borderRadius: '16px' }}>
+        {[
+          { label: '📊 Score',        ref: null },
+          { label: '⚡ AI Market',    ref: signalRef },
+          { label: '🏆 Benchmarks',  ref: benchmarkRef },
+          { label: '🔴 What to Fix', ref: fixRef },
+          { label: '✍️ Content',      ref: contentRef },
+          { label: '🏷️ Code',         ref: codeRef },
+          { label: '🏁 Competitors',  ref: competitorRef },
+          { label: '📋 History',      ref: historyRef },
+        ].map(({ label, ref }) => (
+          <button
+            key={label}
+            onClick={() => ref ? scrollTo(ref) : window.scrollTo({ top: 0, behavior: 'smooth' })}
+            style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '99px', padding: '7px 16px', fontSize: '14px', fontWeight: 600, color: '#374151', cursor: 'pointer', whiteSpace: 'nowrap' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#f5f3ff'; (e.currentTarget as HTMLButtonElement).style.borderColor = '#c4b5fd'; (e.currentTarget as HTMLButtonElement).style.color = '#7c3aed'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = '#f9fafb'; (e.currentTarget as HTMLButtonElement).style.borderColor = '#e5e7eb'; (e.currentTarget as HTMLButtonElement).style.color = '#374151'; }}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
       {loading ? (
@@ -504,7 +544,7 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
             const isVisible = score >= 70;
 
             return (
-              <div style={{ background: '#0D0D1A', borderRadius: '20px', padding: '26px 28px', marginBottom: '20px', border: '1.5px solid rgba(124,58,237,0.4)', position: 'relative', overflow: 'hidden' }}>
+              <div ref={signalRef} style={{ background: '#0D0D1A', borderRadius: '24px', padding: '48px 52px', marginBottom: '24px', border: '1.5px solid rgba(124,58,237,0.4)', position: 'relative', overflow: 'hidden' }}>
                 {/* Subtle radar ring */}
                 <div style={{ position: 'absolute', top: '50%', right: '-60px', width: '220px', height: '220px', borderRadius: '50%', border: '1px solid rgba(124,58,237,0.12)', transform: 'translateY(-50%)' }} />
                 <div style={{ position: 'absolute', top: '50%', right: '-110px', width: '340px', height: '340px', borderRadius: '50%', border: '1px solid rgba(124,58,237,0.06)', transform: 'translateY(-50%)' }} />
@@ -582,9 +622,9 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
           {/* AI Signal leads — see above */}
 
           {/* ── SCORE TREND ── */}
-          <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '20px', padding: '22px 24px', marginBottom: '20px', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ fontSize: '14px', fontWeight: 700, color: '#111827', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <TrendingUp size={15} style={{ color: '#7c3aed' }} /> Your Progress Over Time
+          <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '24px', padding: '40px 48px', marginBottom: '24px', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ fontSize: '24px', fontWeight: 800, color: '#111827', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <TrendingUp size={22} style={{ color: '#7c3aed' }} /> Your Progress Over Time
             </div>
             {/* Plain English progress summary */}
             {(() => {
@@ -610,13 +650,13 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
               );
             })()}
             {trendData.length < 2 ? (
-              <div style={{ textAlign: 'center', padding: '24px', background: '#f9fafb', borderRadius: '12px', fontSize: '13px', color: '#6b7280' }}>
+              <div style={{ textAlign: 'center', padding: '32px', background: '#f9fafb', borderRadius: '16px', fontSize: '16px', color: '#6b7280' }}>
                 📈 Hit <strong>Re-scan now</strong> above (or check back Monday!) to start tracking your progress here.
               </div>
             ) : (
               <>
                 <div style={!isPro ? { filter: 'blur(5px)', pointerEvents: 'none' } : {}}>
-                  <ResponsiveContainer width="100%" height={180}>
+                  <ResponsiveContainer width="100%" height={220}>
                     <LineChart data={trendData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
                       <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#9ca3af' }} />
@@ -663,11 +703,11 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
             const ahead  = catGaps.filter(c => c.gap >  8);
 
             return (
-              <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '20px', padding: '22px 24px', marginBottom: '20px' }}>
+              <div ref={benchmarkRef} style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '24px', padding: '40px 48px', marginBottom: '24px' }}>
                 {/* Header row */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', marginBottom: '4px' }}>
-                  <div style={{ fontSize: '14px', fontWeight: 700, color: '#111827', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <Award size={15} style={{ color: '#7c3aed' }} /> How You Compare to Your Industry
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '8px' }}>
+                  <div style={{ fontSize: '24px', fontWeight: 800, color: '#111827', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <Award size={22} style={{ color: '#7c3aed' }} /> How You Compare to Your Industry
                   </div>
                   {/* Industry selector */}
                   <select
@@ -681,26 +721,26 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
                     <option value="general">Small Businesses (General)</option>
                   </select>
                 </div>
-                <p style={{ fontSize: '13px', color: '#6b7280', margin: '0 0 16px' }}>
+                <p style={{ fontSize: '16px', color: '#6b7280', margin: '0 0 24px' }}>
                   {activeKey !== detectedKey ? 'Comparing against your selected industry.' : `We detected this industry from your website.`} Change it above if it doesn't look right.
                 </p>
 
                 {/* Score comparison pill */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', background: isAhead ? '#f0fdf4' : '#fffbeb', border: `1.5px solid ${isAhead ? '#bbf7d0' : '#fde68a'}`, borderRadius: '14px', padding: '16px 20px', marginBottom: '20px', flexWrap: 'wrap' }}>
-                  <div style={{ textAlign: 'center', minWidth: '70px' }}>
-                    <div style={{ fontSize: '36px', fontWeight: 900, color: scoreColor(score), lineHeight: 1 }}>{score}</div>
-                    <div style={{ fontSize: '11px', color: '#6b7280', fontWeight: 600, marginTop: '2px' }}>Your score</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '24px', background: isAhead ? '#f0fdf4' : '#fffbeb', border: `1.5px solid ${isAhead ? '#bbf7d0' : '#fde68a'}`, borderRadius: '20px', padding: '28px 32px', marginBottom: '28px', flexWrap: 'wrap' }}>
+                  <div style={{ textAlign: 'center', minWidth: '90px' }}>
+                    <div style={{ fontSize: '56px', fontWeight: 900, color: scoreColor(score), lineHeight: 1 }}>{score}</div>
+                    <div style={{ fontSize: '14px', color: '#6b7280', fontWeight: 600, marginTop: '4px' }}>Your score</div>
                   </div>
-                  <div style={{ fontSize: '22px', color: '#d1d5db' }}>vs</div>
-                  <div style={{ textAlign: 'center', minWidth: '70px' }}>
-                    <div style={{ fontSize: '36px', fontWeight: 900, color: '#6b7280', lineHeight: 1 }}>{bench.avg}</div>
-                    <div style={{ fontSize: '11px', color: '#6b7280', fontWeight: 600, marginTop: '2px' }}>Industry avg</div>
+                  <div style={{ fontSize: '28px', color: '#d1d5db', fontWeight: 300 }}>vs</div>
+                  <div style={{ textAlign: 'center', minWidth: '90px' }}>
+                    <div style={{ fontSize: '56px', fontWeight: 900, color: '#6b7280', lineHeight: 1 }}>{bench.avg}</div>
+                    <div style={{ fontSize: '14px', color: '#6b7280', fontWeight: 600, marginTop: '4px' }}>Industry avg</div>
                   </div>
-                  <div style={{ flex: 1, minWidth: '180px' }}>
-                    <div style={{ fontSize: '15px', fontWeight: 800, color: isAhead ? '#059669' : '#d97706', marginBottom: '4px' }}>
+                  <div style={{ flex: 1, minWidth: '200px' }}>
+                    <div style={{ fontSize: '20px', fontWeight: 800, color: isAhead ? '#059669' : '#d97706', marginBottom: '8px' }}>
                       {isAhead ? `🎉 You're ahead of most ${bench.label}!` : `⚠️ You're below the ${bench.label} average`}
                     </div>
-                    <div style={{ fontSize: '13px', color: '#6b7280' }}>
+                    <div style={{ fontSize: '16px', color: '#6b7280', lineHeight: 1.6 }}>
                       {isAhead
                         ? `Only the top 25% of ${bench.label} score ${bench.top} or higher. ${score >= bench.top ? "You're already there — excellent work! 🚀" : `You're ${bench.top - score} points away from top-quartile.`}`
                         : `Fix the items below to close the ${Math.abs(delta)}-point gap and get ahead of your competition.`}
@@ -709,30 +749,28 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
                 </div>
 
                 {/* Category comparison bars */}
-                <div style={{ marginBottom: '20px' }}>
-                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#374151', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Area by area breakdown</div>
+                <div style={{ marginBottom: '24px' }}>
+                  <div style={{ fontSize: '15px', fontWeight: 700, color: '#374151', marginBottom: '16px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Area by area breakdown</div>
                   {Object.entries(CATEGORY_LABELS).map(([key, label]) => {
                     const mine = myPct[key] ?? 0;
                     const ind  = bench.categories[key] ?? 50;
                     const gap  = mine - ind;
                     const color = gap >= 0 ? '#7c3aed' : '#ef4444';
                     return (
-                      <div key={key} style={{ marginBottom: '13px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
-                          <span style={{ fontSize: '12px', color: '#374151', fontWeight: 500 }}>{label}</span>
-                          <span style={{ fontSize: '11px', fontWeight: 700, color }}>
+                      <div key={key} style={{ marginBottom: '18px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                          <span style={{ fontSize: '16px', color: '#374151', fontWeight: 600 }}>{label}</span>
+                          <span style={{ fontSize: '14px', fontWeight: 700, color }}>
                             {gap >= 0 ? `+${gap}` : gap} pts vs avg
                           </span>
                         </div>
-                        <div style={{ position: 'relative', background: '#f3f4f6', borderRadius: '99px', height: '8px' }}>
-                          {/* Industry avg marker */}
-                          <div style={{ position: 'absolute', top: '-3px', bottom: '-3px', width: '2px', background: '#9ca3af', left: `${ind}%`, borderRadius: '99px' }} title={`${bench.label} avg: ${ind}%`} />
-                          {/* Your bar */}
-                          <div style={{ background: color, borderRadius: '99px', height: '8px', width: `${mine}%`, transition: 'width 0.7s ease', opacity: 0.85 }} />
+                        <div style={{ position: 'relative', background: '#f3f4f6', borderRadius: '99px', height: '12px' }}>
+                          <div style={{ position: 'absolute', top: '-4px', bottom: '-4px', width: '3px', background: '#9ca3af', left: `${ind}%`, borderRadius: '99px' }} title={`${bench.label} avg: ${ind}%`} />
+                          <div style={{ background: color, borderRadius: '99px', height: '12px', width: `${mine}%`, transition: 'width 0.7s ease', opacity: 0.85 }} />
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '3px' }}>
-                          <span style={{ fontSize: '10px', color: '#9ca3af' }}>You: {mine}%</span>
-                          <span style={{ fontSize: '10px', color: '#9ca3af' }}>Industry avg: {ind}%</span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '5px' }}>
+                          <span style={{ fontSize: '13px', color: '#9ca3af' }}>You: {mine}%</span>
+                          <span style={{ fontSize: '13px', color: '#9ca3af' }}>Industry avg: {ind}%</span>
                         </div>
                       </div>
                     );
@@ -741,22 +779,22 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
 
                 {/* Plain English gap analysis */}
                 {(behind.length > 0 || ahead.length > 0) && (
-                  <div style={{ display: 'grid', gridTemplateColumns: behind.length && ahead.length ? '1fr 1fr' : '1fr', gap: '12px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: behind.length && ahead.length ? '1fr 1fr' : '1fr', gap: '16px' }}>
                     {behind.length > 0 && (
-                      <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '12px', padding: '14px 16px' }}>
-                        <div style={{ fontSize: '12px', fontWeight: 700, color: '#dc2626', marginBottom: '8px' }}>🔴 Where you're falling behind</div>
+                      <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '16px', padding: '20px 24px' }}>
+                        <div style={{ fontSize: '16px', fontWeight: 700, color: '#dc2626', marginBottom: '12px' }}>🔴 Where you're falling behind</div>
                         {behind.map(c => (
-                          <div key={c.key} style={{ fontSize: '12px', color: '#374151', marginBottom: '5px', paddingLeft: '8px', borderLeft: '2px solid #fca5a5' }}>
+                          <div key={c.key} style={{ fontSize: '15px', color: '#374151', marginBottom: '8px', paddingLeft: '12px', borderLeft: '3px solid #fca5a5' }}>
                             <strong>{c.label}</strong> — {Math.abs(c.gap)} points below the {bench.label} average
                           </div>
                         ))}
                       </div>
                     )}
                     {ahead.length > 0 && (
-                      <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px', padding: '14px 16px' }}>
-                        <div style={{ fontSize: '12px', fontWeight: 700, color: '#16a34a', marginBottom: '8px' }}>🟢 Where you're winning</div>
+                      <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '16px', padding: '20px 24px' }}>
+                        <div style={{ fontSize: '16px', fontWeight: 700, color: '#16a34a', marginBottom: '12px' }}>🟢 Where you're winning</div>
                         {ahead.map(c => (
-                          <div key={c.key} style={{ fontSize: '12px', color: '#374151', marginBottom: '5px', paddingLeft: '8px', borderLeft: '2px solid #86efac' }}>
+                          <div key={c.key} style={{ fontSize: '15px', color: '#374151', marginBottom: '8px', paddingLeft: '12px', borderLeft: '3px solid #86efac' }}>
                             <strong>{c.label}</strong> — {c.gap} points above average
                           </div>
                         ))}
@@ -769,10 +807,10 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
           })()}
 
           {/* ── COMPETITOR COMPARISON ── */}
-          <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '20px', padding: '22px 24px', marginBottom: '20px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px', flexWrap: 'wrap', gap: '10px' }}>
-              <div style={{ fontSize: '14px', fontWeight: 700, color: '#111827', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Target size={15} style={{ color: '#7c3aed' }} /> How Do You Compare?
+          <div ref={competitorRef} style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '24px', padding: '40px 48px', marginBottom: '24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', flexWrap: 'wrap', gap: '12px' }}>
+              <div style={{ fontSize: '24px', fontWeight: 800, color: '#111827', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Target size={22} style={{ color: '#7c3aed' }} /> How Do You Compare?
               </div>
               {isPro && competitors.length < 5 && (
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flex: '1 1 280px', maxWidth: '360px' }}>
@@ -794,7 +832,7 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
                 </div>
               )}
             </div>
-            <p style={{ fontSize: '13px', color: '#6b7280', margin: '0 0 16px' }}>Add a competitor's website and we'll show you exactly what they're doing that you're not — and where you're already winning.</p>
+            <p style={{ fontSize: '16px', color: '#6b7280', margin: '0 0 20px', lineHeight: 1.6 }}>Add a competitor's website and we'll show you exactly what they're doing that you're not — and where you're already winning.</p>
 
             {competitorError && (
               <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '8px 12px', fontSize: '12px', color: '#dc2626', marginBottom: '12px' }}>
@@ -938,23 +976,23 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
 
           {/* ── WHAT TO FIX NEXT ── */}
           {(failItems.length > 0 || warnItems.length > 0 || passItems.length > 0) && (
-            <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '20px', padding: '22px 24px', marginBottom: '20px' }}>
-              <div style={{ fontSize: '14px', fontWeight: 700, color: '#111827', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Zap size={15} style={{ color: '#d97706' }} /> What to Fix Next
+            <div ref={fixRef} style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '24px', padding: '40px 48px', marginBottom: '24px' }}>
+              <div style={{ fontSize: '24px', fontWeight: 800, color: '#111827', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Zap size={22} style={{ color: '#d97706' }} /> What to Fix Next
               </div>
 
               {failItems.length > 0 && (
-                <div style={{ marginBottom: '16px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '8px' }}>
-                    <AlertTriangle size={12} style={{ color: '#ef4444' }} />
-                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#ef4444', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Fix These First</span>
+                <div style={{ marginBottom: '24px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+                    <AlertTriangle size={16} style={{ color: '#ef4444' }} />
+                    <span style={{ fontSize: '14px', fontWeight: 700, color: '#ef4444', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Fix These First</span>
                   </div>
                   {failItems.map(item => (
-                    <div key={item.id} style={{ display: 'flex', gap: '10px', padding: '10px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', marginBottom: '6px' }}>
-                      <div style={{ width: '6px', height: '6px', background: '#ef4444', borderRadius: '50%', flexShrink: 0, marginTop: '5px' }} />
+                    <div key={item.id} style={{ display: 'flex', gap: '14px', padding: '16px 20px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '14px', marginBottom: '10px' }}>
+                      <div style={{ width: '8px', height: '8px', background: '#ef4444', borderRadius: '50%', flexShrink: 0, marginTop: '7px' }} />
                       <div>
-                        <div style={{ fontSize: '13px', fontWeight: 700, color: '#111827', marginBottom: '2px' }}>{item.label}</div>
-                        {item.suggestion && <div style={{ fontSize: '12px', color: '#6b7280', lineHeight: 1.5 }}>{item.suggestion}</div>}
+                        <div style={{ fontSize: '17px', fontWeight: 700, color: '#111827', marginBottom: '4px' }}>{item.label}</div>
+                        {item.suggestion && <div style={{ fontSize: '15px', color: '#6b7280', lineHeight: 1.6 }}>{item.suggestion}</div>}
                       </div>
                     </div>
                   ))}
@@ -962,17 +1000,17 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
               )}
 
               {warnItems.length > 0 && (
-                <div style={{ marginBottom: passItems.length > 0 ? '16px' : '0' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '8px' }}>
-                    <AlertTriangle size={12} style={{ color: '#d97706' }} />
-                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#d97706', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Worth Improving</span>
+                <div style={{ marginBottom: passItems.length > 0 ? '24px' : '0' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+                    <AlertTriangle size={16} style={{ color: '#d97706' }} />
+                    <span style={{ fontSize: '14px', fontWeight: 700, color: '#d97706', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Worth Improving</span>
                   </div>
                   {warnItems.map(item => (
-                    <div key={item.id} style={{ display: 'flex', gap: '10px', padding: '10px 12px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px', marginBottom: '6px' }}>
-                      <div style={{ width: '6px', height: '6px', background: '#d97706', borderRadius: '50%', flexShrink: 0, marginTop: '5px' }} />
+                    <div key={item.id} style={{ display: 'flex', gap: '14px', padding: '16px 20px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '14px', marginBottom: '10px' }}>
+                      <div style={{ width: '8px', height: '8px', background: '#d97706', borderRadius: '50%', flexShrink: 0, marginTop: '7px' }} />
                       <div>
-                        <div style={{ fontSize: '13px', fontWeight: 700, color: '#111827', marginBottom: '2px' }}>{item.label}</div>
-                        {item.suggestion && <div style={{ fontSize: '12px', color: '#6b7280', lineHeight: 1.5 }}>{item.suggestion}</div>}
+                        <div style={{ fontSize: '17px', fontWeight: 700, color: '#111827', marginBottom: '4px' }}>{item.label}</div>
+                        {item.suggestion && <div style={{ fontSize: '15px', color: '#6b7280', lineHeight: 1.6 }}>{item.suggestion}</div>}
                       </div>
                     </div>
                   ))}
@@ -981,13 +1019,13 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
 
               {passItems.length > 0 && (
                 <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '8px' }}>
-                    <CheckCircle size={12} style={{ color: '#10b981' }} />
-                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Already Looking Good</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+                    <CheckCircle size={16} style={{ color: '#10b981' }} />
+                    <span style={{ fontSize: '14px', fontWeight: 700, color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Already Looking Good</span>
                   </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                     {passItems.map(item => (
-                      <span key={item.id} style={{ fontSize: '11px', fontWeight: 600, background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#15803d', borderRadius: '99px', padding: '3px 10px' }}>
+                      <span key={item.id} style={{ fontSize: '14px', fontWeight: 600, background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#15803d', borderRadius: '99px', padding: '6px 16px' }}>
                         ✓ {item.label}
                       </span>
                     ))}
@@ -997,11 +1035,11 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
             </div>
           )}
 
-          {/* ── SECTION DIVIDER ── */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', margin: '8px 0 28px' }}>
-            <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }} />
-            <span style={{ fontSize: '12px', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>✍️ Fix Your Content</span>
-            <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }} />
+          {/* ── SECTION DIVIDER: CONTENT ── */}
+          <div ref={contentRef} style={{ display: 'flex', alignItems: 'center', gap: '16px', margin: '16px 0 32px' }}>
+            <div style={{ flex: 1, height: '2px', background: '#f3f4f6' }} />
+            <span style={{ fontSize: '15px', fontWeight: 800, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>✍️ Fix Your Content</span>
+            <div style={{ flex: 1, height: '2px', background: '#f3f4f6' }} />
           </div>
 
           {/* ── CONTENT WRITER (inline) ── */}
@@ -1015,11 +1053,11 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
             />
           )}
 
-          {/* ── SECTION DIVIDER ── */}
-          <div ref={codeRef} style={{ display: 'flex', alignItems: 'center', gap: '14px', margin: '8px 0 28px' }}>
-            <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }} />
-            <span style={{ fontSize: '12px', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>🏷️ Your Code Snippets</span>
-            <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }} />
+          {/* ── SECTION DIVIDER: CODE ── */}
+          <div ref={codeRef} style={{ display: 'flex', alignItems: 'center', gap: '16px', margin: '16px 0 32px' }}>
+            <div style={{ flex: 1, height: '2px', background: '#f3f4f6' }} />
+            <span style={{ fontSize: '15px', fontWeight: 800, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>🏷️ Your Code Snippets</span>
+            <div style={{ flex: 1, height: '2px', background: '#f3f4f6' }} />
           </div>
 
           {/* ── CODE SNIPPETS (inline) ── */}
@@ -1033,29 +1071,29 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
             />
           )}
 
-          {/* ── SECTION DIVIDER ── */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', margin: '8px 0 28px' }}>
-            <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }} />
-            <span style={{ fontSize: '12px', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>📋 Scan History</span>
-            <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }} />
+          {/* ── SECTION DIVIDER: HISTORY ── */}
+          <div ref={historyRef} style={{ display: 'flex', alignItems: 'center', gap: '16px', margin: '16px 0 32px' }}>
+            <div style={{ flex: 1, height: '2px', background: '#f3f4f6' }} />
+            <span style={{ fontSize: '15px', fontWeight: 800, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>📋 Scan History</span>
+            <div style={{ flex: 1, height: '2px', background: '#f3f4f6' }} />
           </div>
 
           {/* ── SCAN HISTORY ── */}
-          <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '20px', padding: '22px 24px', marginBottom: '20px' }}>
+          <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '24px', padding: '40px 48px', marginBottom: '24px' }}>
             <button
               onClick={() => setShowHistory(h => !h)}
               style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 0 }}
             >
-              <div style={{ fontSize: '14px', fontWeight: 700, color: '#111827', display: 'flex', alignItems: 'center', gap: '7px' }}>
-                <Award size={15} style={{ color: '#7c3aed' }} />
+              <div style={{ fontSize: '24px', fontWeight: 800, color: '#111827', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Award size={22} style={{ color: '#7c3aed' }} />
                 Scan History
-                <span style={{ fontSize: '12px', fontWeight: 500, color: '#9ca3af', background: '#f3f4f6', borderRadius: '99px', padding: '1px 8px' }}>{scans.length}</span>
+                <span style={{ fontSize: '15px', fontWeight: 600, color: '#9ca3af', background: '#f3f4f6', borderRadius: '99px', padding: '2px 12px' }}>{scans.length}</span>
               </div>
-              {showHistory ? <ChevronUp size={16} style={{ color: '#9ca3af' }} /> : <ChevronDown size={16} style={{ color: '#9ca3af' }} />}
+              {showHistory ? <ChevronUp size={20} style={{ color: '#9ca3af' }} /> : <ChevronDown size={20} style={{ color: '#9ca3af' }} />}
             </button>
 
             {showHistory && (
-              <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {scans.map(scan => {
                   const domain = scan.url.replace(/^https?:\/\//, '').replace(/\/$/, '');
                   const color = scoreColor(scan.score);
@@ -1063,20 +1101,20 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
                     <div
                       key={scan.id}
                       onClick={() => onViewScan(scan)}
-                      style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '12px 14px', border: '1.5px solid #f3f4f6', borderRadius: '12px', cursor: 'pointer' }}
+                      style={{ display: 'flex', alignItems: 'center', gap: '18px', padding: '16px 20px', border: '1.5px solid #f3f4f6', borderRadius: '16px', cursor: 'pointer' }}
                       onMouseEnter={e => (e.currentTarget.style.borderColor = '#ddd6fe')}
                       onMouseLeave={e => (e.currentTarget.style.borderColor = '#f3f4f6')}
                     >
-                      <div style={{ width: '46px', height: '46px', borderRadius: '50%', background: `${color}18`, border: `2.5px solid ${color}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <span style={{ fontSize: '13px', fontWeight: 900, color, lineHeight: 1 }}>{scan.score}</span>
+                      <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: `${color}18`, border: `3px solid ${color}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <span style={{ fontSize: '16px', fontWeight: 900, color, lineHeight: 1 }}>{scan.score}</span>
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: '13px', fontWeight: 700, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{domain}</div>
-                        <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '2px' }}>{formatDate(scan.created_at)}</div>
+                        <div style={{ fontSize: '17px', fontWeight: 700, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{domain}</div>
+                        <div style={{ fontSize: '14px', color: '#9ca3af', marginTop: '3px' }}>{formatDate(scan.created_at)}</div>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontSize: '11px', fontWeight: 600, color, background: `${color}14`, padding: '2px 8px', borderRadius: '99px' }}>{scoreLabel(scan.score)}</span>
-                        <ExternalLink size={12} style={{ color: '#c4b5fd' }} />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{ fontSize: '14px', fontWeight: 600, color, background: `${color}14`, padding: '4px 14px', borderRadius: '99px' }}>{scoreLabel(scan.score)}</span>
+                        <ExternalLink size={16} style={{ color: '#c4b5fd' }} />
                       </div>
                     </div>
                   );
