@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend,
@@ -10,6 +10,8 @@ import {
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { AnalysisResult, AiMarketData } from '../types';
+import { ContentStep } from './ContentStep';
+import { CodeStep } from './CodeStep';
 
 const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://findmewithai-production.up.railway.app';
 
@@ -232,7 +234,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   );
 };
 
-export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan, onUpgrade, onSignOut, onNavigate }) => {
+export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan, onUpgrade, onSignOut }) => {
   const [scans, setScans] = useState<Scan[]>([]);
   const [competitors, setCompetitors] = useState<Competitor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -243,6 +245,7 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
   const [showHistory, setShowHistory] = useState(false);
   const [rescanLoading, setRescanLoading] = useState(false);
   const [industryOverride, setIndustryOverride] = useState<string | null>(null);
+  const codeRef = useRef<HTMLDivElement>(null);
 
   const latestScan = scans[0] ?? null;
 
@@ -576,57 +579,7 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
             );
           })()}
 
-          {/* ── NEXT STEPS STRIP ── */}
-          <div style={{ background: 'linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)', borderRadius: '20px', padding: '24px', marginBottom: '20px', color: 'white' }}>
-            <div style={{ fontSize: '15px', fontWeight: 800, marginBottom: '4px' }}>Ready to improve your score?</div>
-            <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.75)', marginBottom: '20px' }}>
-              Pick where to start — each step takes less than 15 minutes.
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
-
-              {/* Step 1: Action Plan */}
-              <button
-                onClick={() => onViewScan(latestScan!)}
-                style={{ background: 'rgba(255,255,255,0.15)', border: '1.5px solid rgba(255,255,255,0.3)', borderRadius: '14px', padding: '16px', textAlign: 'left', cursor: 'pointer', color: 'white', transition: 'background 0.2s' }}
-                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.25)')}
-                onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.15)')}
-              >
-                <div style={{ fontSize: '24px', marginBottom: '8px' }}>🌳</div>
-                <div style={{ fontSize: '13px', fontWeight: 800, marginBottom: '4px' }}>See Your Action Plan</div>
-                <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.75)', lineHeight: 1.4 }}>Low, medium & harder fixes ranked so you know exactly where to start.</div>
-                <div style={{ marginTop: '10px', fontSize: '12px', fontWeight: 700, color: '#fbbf24' }}>View plan →</div>
-              </button>
-
-              {/* Step 2: Fix Content */}
-              <button
-                onClick={() => onNavigate('content')}
-                style={{ background: 'rgba(255,255,255,0.15)', border: '1.5px solid rgba(255,255,255,0.3)', borderRadius: '14px', padding: '16px', textAlign: 'left', cursor: 'pointer', color: 'white', transition: 'background 0.2s' }}
-                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.25)')}
-                onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.15)')}
-              >
-                <div style={{ fontSize: '24px', marginBottom: '8px' }}>✍️</div>
-                <div style={{ fontSize: '13px', fontWeight: 800, marginBottom: '4px' }}>Fix Your Content</div>
-                <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.75)', lineHeight: 1.4 }}>Generate AI-ready content — FAQ answers, your About page, and how-to guides.</div>
-                <div style={{ marginTop: '10px', fontSize: '12px', fontWeight: 700, color: '#fbbf24' }}>Write content →</div>
-              </button>
-
-              {/* Step 3: Get Code */}
-              <button
-                onClick={() => onNavigate('code')}
-                style={{ background: 'rgba(255,255,255,0.15)', border: '1.5px solid rgba(255,255,255,0.3)', borderRadius: '14px', padding: '16px', textAlign: 'left', cursor: 'pointer', color: 'white', transition: 'background 0.2s' }}
-                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.25)')}
-                onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.15)')}
-              >
-                <div style={{ fontSize: '24px', marginBottom: '8px' }}>🏷️</div>
-                <div style={{ fontSize: '13px', fontWeight: 800, marginBottom: '4px' }}>Get Your Code Snippets</div>
-                <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.75)', lineHeight: 1.4 }}>Copy-paste code your web person can add in minutes. No technical skills needed.</div>
-                <div style={{ marginTop: '10px', fontSize: '12px', fontWeight: 700, color: '#fbbf24' }}>Get snippets →</div>
-              </button>
-
-            </div>
-          </div>
-
-          {/* AI Signal panel moved above Next Steps — see above */}
+          {/* AI Signal leads — see above */}
 
           {/* ── SCORE TREND ── */}
           <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '20px', padding: '22px 24px', marginBottom: '20px', position: 'relative', overflow: 'hidden' }}>
@@ -1043,6 +996,49 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
               )}
             </div>
           )}
+
+          {/* ── SECTION DIVIDER ── */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', margin: '8px 0 28px' }}>
+            <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }} />
+            <span style={{ fontSize: '12px', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>✍️ Fix Your Content</span>
+            <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }} />
+          </div>
+
+          {/* ── CONTENT WRITER (inline) ── */}
+          {latestScan && (
+            <ContentStep
+              siteUrl={latestScan.url}
+              result={latestScan.result}
+              isPro={isPro}
+              onUpgrade={onUpgrade}
+              onNext={() => codeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+            />
+          )}
+
+          {/* ── SECTION DIVIDER ── */}
+          <div ref={codeRef} style={{ display: 'flex', alignItems: 'center', gap: '14px', margin: '8px 0 28px' }}>
+            <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }} />
+            <span style={{ fontSize: '12px', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>🏷️ Your Code Snippets</span>
+            <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }} />
+          </div>
+
+          {/* ── CODE SNIPPETS (inline) ── */}
+          {latestScan && (
+            <CodeStep
+              siteUrl={latestScan.url}
+              result={latestScan.result}
+              isPro={isPro}
+              onUpgrade={onUpgrade}
+              onNewCheck={onNewScan}
+            />
+          )}
+
+          {/* ── SECTION DIVIDER ── */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', margin: '8px 0 28px' }}>
+            <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }} />
+            <span style={{ fontSize: '12px', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>📋 Scan History</span>
+            <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }} />
+          </div>
 
           {/* ── SCAN HISTORY ── */}
           <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '20px', padding: '22px 24px', marginBottom: '20px' }}>

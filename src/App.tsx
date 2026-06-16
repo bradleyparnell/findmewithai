@@ -45,11 +45,12 @@ const App: React.FC = () => {
       return;
     }
 
-    // Get current session on load
+    // Get current session on load — if already logged in, go straight to dashboard
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         setUser(session.user);
         setUserEmail(session.user.email || '');
+        setStep('dashboard');
       }
     });
 
@@ -76,31 +77,11 @@ const App: React.FC = () => {
                 score: pending.score,
                 result: pending.result,
               });
-              setResult(pending.result as AnalysisResult);
-              setSiteUrl(pending.url);
               localStorage.removeItem('fmw_pending_scan');
-              setStep('score');
-              return;
             } catch (_e) { /* fall through */ }
           }
 
-          // No localStorage scan — fetch most recent scan from Supabase (different browser case)
-          try {
-            const { data: scans } = await supabase
-              .from('scans')
-              .select('*')
-              .eq('user_id', session.user.id)
-              .order('created_at', { ascending: false })
-              .limit(1);
-            if (scans && scans.length > 0) {
-              setResult(scans[0].result as AnalysisResult);
-              setSiteUrl(scans[0].url);
-              setStep('score');
-              return;
-            }
-          } catch (_e) { /* fall through */ }
-
-          // No scans at all — go to dashboard
+          // Always land on dashboard — it loads the latest scan itself
           setStep('dashboard');
         }
       } else {
@@ -269,7 +250,7 @@ const App: React.FC = () => {
     setStep('home');
   };
 
-  const showNav = !['home', 'gate', 'inbox', 'pricing'].includes(step);
+  const showNav = !['home', 'gate', 'inbox', 'pricing', 'dashboard'].includes(step);
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--color-bg-white)' }}>
@@ -345,20 +326,7 @@ const App: React.FC = () => {
           onNewScan={handleNewCheck}
           onUpgrade={handleUpgrade}
           onSignOut={handleSignOut}
-          onNavigate={async (dest) => {
-            // Load latest scan result into state before navigating
-            const { data: scans } = await supabase
-              .from('scans')
-              .select('*')
-              .eq('user_id', user.id)
-              .order('created_at', { ascending: false })
-              .limit(1);
-            if (scans && scans.length > 0) {
-              setResult(scans[0].result as AnalysisResult);
-              setSiteUrl(scans[0].url);
-            }
-            setStep(dest);
-          }}
+
         />
       )}
       <footer style={{
