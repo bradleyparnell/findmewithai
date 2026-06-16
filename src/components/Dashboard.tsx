@@ -635,7 +635,7 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
                     </div>
                     <div style={{ background: '#fdf4ff', border: '2px solid #e9d5ff', borderRadius: '20px', padding: '24px 36px', textAlign: 'center', minWidth: '180px' }}>
                       <div style={{ fontSize: '72px', fontWeight: 900, color: '#f59e0b', lineHeight: 1 }}>
-                        {amd.total_volume.toLocaleString()}
+                        {(amd.total_volume + customKeywords.reduce((s, k) => s + k.volume, 0)).toLocaleString()}
                       </div>
                       <div style={{ fontSize: '15px', color: '#7c3aed', fontWeight: 700, marginTop: '8px' }}>AI searches / mo</div>
                     </div>
@@ -679,7 +679,7 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
                               )}
                             </div>
                             <span style={{ fontSize: '16px', fontWeight: 800, color: kw.volume > 0 ? '#d97706' : '#9ca3af', background: kw.volume > 0 ? '#fffbeb' : '#f9fafb', border: `1.5px solid ${kw.volume > 0 ? '#fde68a' : '#e5e7eb'}`, borderRadius: '10px', padding: '7px 18px', flexShrink: 0 }}>
-                              {kw.volume > 0 ? `${kw.volume.toLocaleString()}/mo` : '⏳ thinking…'}
+                              {kw.volume > 0 ? `${kw.volume.toLocaleString()}/mo` : 'low volume'}
                             </span>
                           </div>
                         ))}
@@ -735,7 +735,7 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
                       <span style={{ fontSize: '24px' }}>⚡</span>
                       <div>
                         <div style={{ fontSize: '16px', fontWeight: 800, color: '#dc2626' }}>
-                          You're currently missing these {amd.total_volume.toLocaleString()} searches
+                          You're currently missing these {(amd.total_volume + customKeywords.reduce((s, k) => s + k.volume, 0)).toLocaleString()} searches
                         </div>
                         <div style={{ fontSize: '14px', color: '#ef4444', marginTop: '4px' }}>
                           Your competitors are getting found instead. Fix the items below to change that.
