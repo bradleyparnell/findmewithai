@@ -366,6 +366,131 @@ function EditableSnippet({ snippet, isPro, onUpgrade, isMobile }: {
   );
 }
 
+// ── Quick Start Card ──────────────────────────────────────────────────────────
+function QuickStartCard({ siteUrl, result, scanId, isPro, isMobile }: {
+  siteUrl: string; result: AnalysisResult | null; scanId?: string; isPro: boolean; isMobile: boolean;
+}) {
+  const [copiedLlms, setCopiedLlms] = useState(false);
+  const [copiedWidget, setCopiedWidget] = useState(false);
+  const [checkedLlms, setCheckedLlms] = useState(false);
+  const [checkedWidget, setCheckedWidget] = useState(false);
+
+  const url = siteUrl || 'https://yourbusiness.com';
+  const domain = url.replace(/^https?:\/\//, '').replace(/\/$/, '');
+  const si = result?.site_info;
+  const businessName = si?.h1 || si?.title?.replace(/\s*[\|\-–—:].*/g, '').trim() || domain;
+
+  const llmsCode = `# ${domain}\n> ${si?.metaDesc || '[Describe your business in 1 sentence]'}\n\n## About\n${si?.metaDesc ? `${businessName} — ${si.metaDesc}` : `${businessName} helps [who you serve] with [what you provide].`}\n\n## Services\n- [Your main service or product]\n- [Another service]\n\n## Contact\n- Website: ${url}\n- Location: [Your city, state]\n- Phone: [Your phone number]`;
+
+  const widgetCode = isPro
+    ? `<!-- findmewith.ai — paste once, stay found forever (Pro: 6 signals) -->\n<script src="https://findmewith.ai/api/widget/${scanId || 'YOUR-SCAN-ID'}.js" defer></script>`
+    : `<!-- findmewith.ai — basic AI visibility (free) -->\n<script src="https://findmewith.ai/api/widget/${scanId || 'YOUR-SCAN-ID'}.js?tier=free" defer></script>`;
+
+  const handleCopyLlms = () => {
+    navigator.clipboard.writeText(llmsCode);
+    setCopiedLlms(true); setCheckedLlms(true);
+    setTimeout(() => setCopiedLlms(false), 2000);
+  };
+  const handleCopyWidget = () => {
+    navigator.clipboard.writeText(widgetCode);
+    setCopiedWidget(true); setCheckedWidget(true);
+    setTimeout(() => setCopiedWidget(false), 2000);
+  };
+
+  const allDone = checkedLlms && checkedWidget;
+
+  const row = (
+    num: number,
+    checked: boolean,
+    label: string,
+    sub: string,
+    onCopy: () => void,
+    copied: boolean,
+    accent: string,
+  ) => (
+    <div style={{
+      display: 'flex', alignItems: isMobile ? 'flex-start' : 'center',
+      flexDirection: isMobile ? 'column' : 'row',
+      gap: '14px', padding: '18px 20px',
+      background: checked ? '#f0fdf4' : 'white',
+      border: `1.5px solid ${checked ? '#bbf7d0' : '#e5e7eb'}`,
+      borderRadius: '14px', transition: 'all 0.3s',
+    }}>
+      {/* Number / check */}
+      <div style={{
+        width: '36px', height: '36px', borderRadius: '50%', flexShrink: 0,
+        background: checked ? '#10b981' : accent,
+        color: 'white', fontWeight: 800, fontSize: '16px',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        transition: 'background 0.3s',
+      }}>
+        {checked ? <Check size={18} /> : num}
+      </div>
+
+      {/* Text */}
+      <div style={{ flex: 1 }}>
+        <div style={{ fontWeight: 700, fontSize: '15px', color: '#111827', marginBottom: '2px' }}>{label}</div>
+        <div style={{ fontSize: '13px', color: '#6b7280', lineHeight: 1.5 }}>{sub}</div>
+      </div>
+
+      {/* Copy button */}
+      <button
+        onClick={onCopy}
+        style={{
+          background: copied ? '#10b981' : checked ? '#f3f4f6' : accent,
+          color: copied || checked ? (copied ? 'white' : '#374151') : 'white',
+          border: 'none', borderRadius: '10px',
+          padding: '10px 20px', fontWeight: 700, fontSize: '14px',
+          cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '7px',
+          whiteSpace: 'nowrap', transition: 'all 0.2s', flexShrink: 0,
+          alignSelf: isMobile ? 'flex-start' : 'center',
+        }}
+      >
+        {copied ? <><Check size={14} /> Copied!</> : checked ? <><Check size={14} /> Done</> : <><Copy size={14} /> Copy</>}
+      </button>
+    </div>
+  );
+
+  return (
+    <div style={{
+      background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)',
+      borderRadius: '20px', padding: isMobile ? '24px 18px' : '32px 36px',
+      marginBottom: '36px', boxShadow: '0 8px 32px rgba(79,70,229,0.25)',
+    }}>
+      {/* Header */}
+      <div style={{ marginBottom: '22px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+          <span style={{ fontSize: '22px' }}>⚡</span>
+          <h2 style={{ fontSize: isMobile ? '20px' : '24px', fontWeight: 900, color: 'white', margin: 0 }}>
+            Your 2-minute setup
+          </h2>
+        </div>
+        <p style={{ fontSize: '14px', color: '#c4b5fd', margin: 0, lineHeight: 1.5 }}>
+          Copy these two things and you're done. Everything else below is optional but powerful.
+        </p>
+      </div>
+
+      {/* Rows */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
+        {row(1, checkedLlms, 'Upload your llms.txt file', 'Introduces your business to ChatGPT, Perplexity & Claude. The single most impactful thing you can do.', handleCopyLlms, copiedLlms, '#7c3aed')}
+        {row(2, checkedWidget, 'Add the auto-sync script to your website', 'Paste once in your header — keeps all your AI signals updated automatically.', handleCopyWidget, copiedWidget, '#d97706')}
+      </div>
+
+      {/* Done state */}
+      <div style={{
+        textAlign: 'center', padding: '12px',
+        background: allDone ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.07)',
+        borderRadius: '12px', transition: 'all 0.4s',
+      }}>
+        {allDone
+          ? <span style={{ color: '#6ee7b7', fontWeight: 700, fontSize: '15px' }}>✅ Nice work! Scroll down to add more signals and boost your score even further.</span>
+          : <span style={{ color: '#a5b4fc', fontSize: '14px' }}>Copy both → check them off → you're live. Scroll down to go further.</span>
+        }
+      </div>
+    </div>
+  );
+}
+
 // ── Main export ───────────────────────────────────────────────────────────────
 export const CodeStep: React.FC<Props> = ({ siteUrl, result, scanId, isPro, onUpgrade, onNewCheck }) => {
   const width = useWindowWidth();
@@ -381,9 +506,12 @@ export const CodeStep: React.FC<Props> = ({ siteUrl, result, scanId, isPro, onUp
           Get found by AI search
         </h1>
         <p style={{ color: '#6b7280', fontSize: isMobile ? '16px' : '19px', lineHeight: 1.65, maxWidth: '640px' }}>
-          AI search engines like ChatGPT, Perplexity, and Claude read your website's HTML directly — they don't run JavaScript. Add the snippets below so they can find and understand your business.
+          Two things get you found. Everything else makes you impossible to miss.
         </p>
       </div>
+
+      {/* ── QUICK START ── */}
+      <QuickStartCard siteUrl={siteUrl} result={result} scanId={scanId} isPro={isPro} isMobile={isMobile} />
 
       {/* ── STEP 1: Snippets ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '20px' }}>
