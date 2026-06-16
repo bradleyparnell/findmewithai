@@ -457,6 +457,17 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
         </div>
       </div>
 
+      {/* ── PRO MONITORING BANNER ── */}
+      {isPro && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%)', border: '1.5px solid #c4b5fd', borderRadius: '14px', padding: '14px 20px', marginBottom: '20px' }}>
+          <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 0 3px rgba(34,197,94,0.2)', flexShrink: 0, animation: 'pulse 2s infinite' }} />
+          <div>
+            <span style={{ fontWeight: 700, fontSize: '15px', color: '#5b21b6' }}>🛰️ Site Monitoring Active</span>
+            <span style={{ fontSize: '14px', color: '#7c3aed', marginLeft: '10px' }}>Your site is re-scanned weekly — we'll email you if your score changes.</span>
+          </div>
+        </div>
+      )}
+
       {/* ── SECTION NAV ── */}
       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '32px', padding: '12px 16px', background: 'white', border: '1px solid #e5e7eb', borderRadius: '16px' }}>
         {[

@@ -27,11 +27,79 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
-function makeFaq(businessType: string, questions: string): string {
+function generateAnswer(question: string, businessType: string, metaDesc: string): string {
+  const q = question.toLowerCase();
+  const bt = businessType;
+  const desc = metaDesc || '';
+
+  // Pricing / cost
+  if (q.includes('cost') || q.includes('price') || q.includes('pricing') || q.includes('fee') || q.includes('charge') || q.includes('much'))
+    return `Our pricing varies depending on the specific service or package you choose. We offer options for a range of budgets — contact us directly or visit our pricing page for current rates and any available discounts.`;
+
+  // Registration / get started / sign up
+  if (q.includes('register') || q.includes('sign up') || q.includes('get started') || q.includes('join') || q.includes('enroll'))
+    return `Getting started is easy. Visit our website, choose your option, and follow the simple sign-up steps. If you have any questions along the way, our team is happy to help — just reach out at hello@${bt.toLowerCase().replace(/\s+/g, '')}.com or via our contact page.`;
+
+  // Hours / location / where
+  if (q.includes('hours') || q.includes('location') || q.includes('where') || q.includes('open') || q.includes('address'))
+    return `${desc ? desc + ' ' : ''}You can find our current hours and location details on our website. We recommend checking our contact page or calling ahead to confirm, especially around holidays.`;
+
+  // Services / offer / provide / do you do
+  if (q.includes('offer') || q.includes('service') || q.includes('provide') || q.includes('do you do') || q.includes('specialize'))
+    return `${bt} offers a range of services designed to meet your needs. ${desc ? desc : `Our team is passionate about delivering great results for every client.`} Visit our services page to explore everything we offer.`;
+
+  // Gear / equipment / need / bring
+  if (q.includes('gear') || q.includes('equipment') || q.includes('need') || q.includes('bring') || q.includes('prepare') || q.includes('require'))
+    return `We recommend coming prepared with the basics — comfort and safety are our top priorities. Check our website for a full recommended gear list and any specific requirements for your activity or event.`;
+
+  // Insurance / coverage / accept
+  if (q.includes('insurance') || q.includes('accept') || q.includes('coverage'))
+    return `We accept a variety of payment methods and work with select plans to make things as easy as possible for you. Contact us directly to confirm whether your specific plan or payment method is accepted.`;
+
+  // Beginner / new / experience / first time
+  if (q.includes('beginner') || q.includes('new') || q.includes('first time') || q.includes('no experience') || q.includes('start'))
+    return `Absolutely — ${bt} welcomes people of all experience levels. Whether you're just starting out or looking to go deeper, we have options designed for you. Don't hesitate to reach out with any questions before you begin.`;
+
+  // Consultation / free / trial
+  if (q.includes('consultation') || q.includes('free') || q.includes('trial') || q.includes('demo'))
+    return `Yes, we offer an initial consultation so you can learn more about how we work and whether we're the right fit for you. Reach out via our website to schedule your first conversation — no commitment required.`;
+
+  // Group / team / corporate / business
+  if (q.includes('group') || q.includes('team') || q.includes('corporate') || q.includes('business') || q.includes('bulk'))
+    return `We love working with groups and teams. We offer tailored packages for organizations of all sizes. Contact us to discuss your group's specific needs and we'll put together the right plan for you.`;
+
+  // Area / serve / location / region
+  if (q.includes('area') || q.includes('serve') || q.includes('region') || q.includes('available') || q.includes('delivery'))
+    return `${bt} currently serves ${desc ? 'the areas described on our website' : 'a growing number of locations'}. Visit our website or contact us directly to find out if we cover your area.`;
+
+  // Cancellation / refund / policy
+  if (q.includes('cancel') || q.includes('refund') || q.includes('policy') || q.includes('return'))
+    return `We want you to feel confident booking with us. Our cancellation and refund policy is outlined on our website. If you have a specific situation, please reach out and we'll do our best to work with you.`;
+
+  // Contact / reach / talk
+  if (q.includes('contact') || q.includes('reach') || q.includes('talk') || q.includes('speak') || q.includes('call') || q.includes('email'))
+    return `The easiest way to reach us is through our contact page or by emailing us directly. We typically respond within one business day and are happy to answer any questions you have.`;
+
+  // Generic fallback with business context
+  return `Great question. ${desc ? desc + ' ' : ''}For complete details, we recommend visiting our website or reaching out to our team directly — we're always happy to help.`;
+}
+
+function makeFaq(businessType: string, questions: string, metaDesc?: string): string {
   const qs = questions.split('\n').filter(q => q.trim());
   if (!businessType || !qs.length) return '';
-  const htmlItems = qs.map(q => `  <div class="faq-item">\n    <h3>${q.trim()}</h3>\n    <p><!-- Your answer here --></p>\n  </div>`).join('\n');
-  const schema = JSON.stringify({ "@context": "https://schema.org", "@type": "FAQPage", mainEntity: qs.map(q => ({ "@type": "Question", name: q.trim(), acceptedAnswer: { "@type": "Answer", text: "<!-- Your answer here -->" } })) }, null, 2);
+  const htmlItems = qs.map(q => {
+    const answer = generateAnswer(q.trim(), businessType, metaDesc || '');
+    return `  <div class="faq-item">\n    <h3>${q.trim()}</h3>\n    <p>${answer}</p>\n  </div>`;
+  }).join('\n');
+  const schema = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: qs.map(q => ({
+      "@type": "Question",
+      name: q.trim(),
+      acceptedAnswer: { "@type": "Answer", text: generateAnswer(q.trim(), businessType, metaDesc || '') }
+    }))
+  }, null, 2);
   return `<!-- FAQ Section — add to your FAQ or homepage -->\n<section>\n  <h2>Frequently Asked Questions About ${businessType}</h2>\n${htmlItems}\n</section>\n\n<!-- Paste just before </body> — this is what AI reads -->\n<script type="application/ld+json">\n${schema}\n</script>`;
 }
 
@@ -109,7 +177,7 @@ export const ContentStep: React.FC<Props> = ({ siteUrl, result, isPro, onUpgrade
   const labelStyle = { fontSize: '13px', fontWeight: 600 as const, color: '#111827', display: 'block' as const, marginBottom: '7px' };
 
   const handleGenerate = () => {
-    if (tab === 'faq')   setOutput(makeFaq(faqBusiness, faqQuestions));
+    if (tab === 'faq')   setOutput(makeFaq(faqBusiness, faqQuestions, result?.site_info?.metaDesc));
     if (tab === 'about') setOutput(makeAbout(aboutName, aboutDesc, aboutLocation, siteUrl, aboutPhone));
     if (tab === 'howto') setOutput(makeHowTo(howToTitle, howToSteps));
   };
