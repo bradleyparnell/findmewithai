@@ -713,8 +713,14 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
                       </div>
                     </div>
                     <div style={{ background: '#fdf4ff', border: '2px solid #e9d5ff', borderRadius: '20px', padding: '24px 36px', textAlign: 'center', minWidth: '180px' }}>
-                      <div style={{ fontSize: '72px', fontWeight: 900, color: '#f59e0b', lineHeight: 1 }}>
-                        {amd ? (amd.total_volume + customKeywords.reduce((s, k) => s + k.volume, 0)).toLocaleString() : '—'}
+                      <div style={{ fontSize: (amd || customKeywords.length > 0) ? '72px' : '22px', fontWeight: 900, color: '#f59e0b', lineHeight: 1 }}>
+                        {(() => {
+                          const base = amd?.total_volume ?? 0;
+                          const custom = customKeywords.reduce((s, k) => s + k.volume, 0);
+                          const total = base + custom;
+                          if (!amd && custom === 0) return 'low volume';
+                          return total.toLocaleString();
+                        })()}
                       </div>
                       <div style={{ fontSize: '15px', color: '#7c3aed', fontWeight: 700, marginTop: '8px' }}>AI searches / mo</div>
                     </div>
