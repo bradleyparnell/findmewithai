@@ -11,26 +11,11 @@ interface Props {
   onNewCheck: () => void;
 }
 
-function CopyButton({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false);
-  return (
-    <button
-      onClick={() => { navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-      style={copied
-        ? { background: '#10b981', color: 'white', border: 'none', borderRadius: '8px', padding: '6px 14px', fontWeight: 600, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }
-        : { background: '#7c3aed', color: 'white', border: 'none', borderRadius: '8px', padding: '6px 14px', fontWeight: 600, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}
-    >
-      {copied ? <><Check size={13} /> Copied!</> : <><Copy size={13} /> Copy Code</>}
-    </button>
-  );
-}
-
 function buildSnippets(siteUrl: string, result: AnalysisResult | null) {
   const url = siteUrl || 'https://yourbusiness.com';
   const domain = url.replace(/^https?:\/\//, '').replace(/\/$/, '');
   const hasFaq = result?.findings.find(f => f.id === 'has_faq_schema' && f.status === 'pass');
 
-  // Pre-fill from site_info if available
   const si = result?.site_info;
   const businessName = si?.h1 || si?.title?.replace(/\s*[\|\-–—:].*/g, '').trim() || domain;
   const businessDesc = si?.metaDesc || '[What you do in 1–2 sentences]';
@@ -74,69 +59,126 @@ function buildSnippets(siteUrl: string, result: AnalysisResult | null) {
   ];
 }
 
+function EditableSnippet({ snippet, isPro, onUpgrade }: { snippet: ReturnType<typeof buildSnippets>[0]; isPro: boolean; onUpgrade: () => void }) {
+  const locked = snippet.proOnly && !isPro;
+  const [code, setCode] = useState(snippet.code);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  // Estimate a reasonable textarea height based on line count
+  const lineCount = code.split('\n').length;
+  const textareaHeight = Math.max(160, Math.min(lineCount * 22 + 24, 400));
+
+  return (
+    <div style={{ background: 'white', border: '1.5px solid #e5e7eb', borderRadius: '20px', overflow: 'hidden', position: 'relative' }}>
+      {/* Header */}
+      <div style={{ padding: '22px 26px', borderBottom: '1px solid #e5e7eb' }}>
+        <div style={{ display: 'inline-block', fontSize: '13px', fontWeight: 700, color: snippet.badgeColor, border: `1.5px solid ${snippet.badgeColor}`, borderRadius: '100px', padding: '3px 14px', marginBottom: '12px' }}>
+          {snippet.badge}
+        </div>
+        <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#111827', marginBottom: '8px' }}>{snippet.title}</h3>
+        <p style={{ fontSize: '15px', color: '#6b7280', lineHeight: 1.65, margin: 0 }}>{snippet.why}</p>
+      </div>
+
+      {/* Code area header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 20px', background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
+        <span style={{ fontSize: '13px', color: '#6b7280', fontFamily: 'monospace' }}>
+          {snippet.isFile ? 'llms.txt' : 'HTML snippet'} · <span style={{ color: '#7c3aed' }}>Edit directly before copying</span>
+        </span>
+        {!locked && (
+          <button
+            onClick={handleCopy}
+            style={{
+              background: copied ? '#10b981' : '#7c3aed',
+              color: 'white', border: 'none', borderRadius: '10px',
+              padding: '9px 20px', fontWeight: 700, fontSize: '14px',
+              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
+              transition: 'background 0.2s',
+            }}
+          >
+            {copied ? <><Check size={15} /> Copied!</> : <><Copy size={15} /> Copy Code</>}
+          </button>
+        )}
+      </div>
+
+      {/* Editable textarea */}
+      <div style={{ position: 'relative' }}>
+        <textarea
+          value={locked ? code : code}
+          onChange={e => !locked && setCode(e.target.value)}
+          readOnly={locked}
+          spellCheck={false}
+          style={{
+            display: 'block', width: '100%', boxSizing: 'border-box',
+            height: `${textareaHeight}px`,
+            padding: '20px 24px',
+            fontFamily: '"Fira Mono", "Cascadia Code", "Courier New", monospace',
+            fontSize: '13px', lineHeight: 1.75,
+            color: '#1f2937', background: locked ? '#f9fafb' : 'white',
+            border: 'none', outline: 'none', resize: 'vertical',
+            whiteSpace: 'pre', overflowX: 'auto',
+            filter: locked ? 'blur(3px)' : 'none',
+            userSelect: locked ? 'none' : 'text',
+          }}
+        />
+      </div>
+
+      {/* Where to put it */}
+      {!locked && (
+        <div style={{ padding: '14px 22px', background: '#fffbeb', borderTop: '1px solid #fde68a', fontSize: '14px', color: '#6b7280', lineHeight: 1.6 }}>
+          📌 <strong>Where to put it:</strong> {snippet.where}
+        </div>
+      )}
+
+      {locked && <LockOverlay feature={snippet.title} onUpgrade={onUpgrade} />}
+    </div>
+  );
+}
+
 export const CodeStep: React.FC<Props> = ({ siteUrl, result, isPro, onUpgrade, onNewCheck }) => {
   const snippets = buildSnippets(siteUrl, result);
 
   return (
     <div style={{ maxWidth: '100%', padding: '40px 0 60px' }}>
-      <div style={{ marginBottom: '26px' }}>
-        <h1 style={{ fontSize: '34px', fontWeight: 900, color: '#111827', marginBottom: '10px' }}>🏷️ Your code snippets</h1>
-        <p style={{ color: '#6b7280', fontSize: '18px', lineHeight: 1.6 }}>
-          Each snippet tells AI something important about your business. Not a developer? <strong>Forward this page to your web developer</strong> — every snippet is a 2-minute job.
+      <div style={{ marginBottom: '30px' }}>
+        <h1 style={{ fontSize: '38px', fontWeight: 900, color: '#111827', marginBottom: '12px' }}>🏷️ Your code snippets</h1>
+        <p style={{ color: '#6b7280', fontSize: '19px', lineHeight: 1.65 }}>
+          Each snippet tells AI something important about your business. <strong>Edit the placeholder text directly in each box</strong>, then copy and hand it to your web developer — every snippet is a 2-minute install.
         </p>
       </div>
 
       {!isPro && (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '12px', padding: '12px 16px', marginBottom: '20px' }}>
-          <div style={{ fontSize: '13px', color: '#374151' }}>✨ <strong>Free:</strong> Your AI introduction file · Upgrade for all 4 snippets</div>
-          <button onClick={onUpgrade} style={{ fontSize: '12px', fontWeight: 700, color: '#7c3aed', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Upgrade →</button>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fffbeb', border: '1.5px solid #fde68a', borderRadius: '14px', padding: '14px 20px', marginBottom: '24px' }}>
+          <div style={{ fontSize: '15px', color: '#374151' }}>✨ <strong>Free:</strong> Your AI introduction file · Upgrade for all 4 snippets</div>
+          <button onClick={onUpgrade} style={{ fontSize: '14px', fontWeight: 700, color: '#7c3aed', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Upgrade →</button>
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', background: '#f5f3ff', border: '1px solid #ddd6fe', borderRadius: '12px', padding: '14px 18px', marginBottom: '24px' }}>
-        <Code2 size={18} style={{ color: '#7c3aed', flexShrink: 0, marginTop: '1px' }} />
-        <div style={{ fontSize: '13px', color: '#374151', lineHeight: 1.6 }}>
+      <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', background: '#f5f3ff', border: '1.5px solid #ddd6fe', borderRadius: '14px', padding: '16px 20px', marginBottom: '28px' }}>
+        <Code2 size={20} style={{ color: '#7c3aed', flexShrink: 0, marginTop: '2px' }} />
+        <div style={{ fontSize: '15px', color: '#374151', lineHeight: 1.65 }}>
           <strong>No website access?</strong> You can add these using <strong>Google Tag Manager</strong> — no developer needed. Paste each snippet as a Custom HTML tag.
         </div>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        {snippets.map(snippet => {
-          const locked = snippet.proOnly && !isPro;
-          return (
-            <div key={snippet.id} style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '18px', overflow: 'hidden', position: 'relative' }}>
-              <div style={{ padding: '18px 22px', borderBottom: '1px solid #e5e7eb' }}>
-                <div style={{ display: 'inline-block', fontSize: '11px', fontWeight: 700, color: snippet.badgeColor, border: `1px solid ${snippet.badgeColor}`, borderRadius: '100px', padding: '2px 10px', marginBottom: '8px' }}>{snippet.badge}</div>
-                <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#111827', marginBottom: '5px' }}>{snippet.title}</h3>
-                <p style={{ fontSize: '13px', color: '#6b7280', lineHeight: 1.55, margin: 0 }}>{snippet.why}</p>
-              </div>
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 16px', background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
-                  <span style={{ fontSize: '11px', color: '#6b7280', fontFamily: 'monospace' }}>{snippet.isFile ? 'llms.txt' : 'HTML snippet'}</span>
-                  {!locked && <CopyButton text={snippet.code} />}
-                </div>
-                <pre style={{ margin: 0, padding: '16px 20px', fontSize: '11.5px', lineHeight: 1.7, overflowX: 'auto', color: '#374151', background: 'white', whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxHeight: '220px', overflowY: 'auto', filter: locked ? 'blur(3px)' : 'none', userSelect: locked ? 'none' : 'text' }}>
-                  {snippet.code}
-                </pre>
-              </div>
-              {!locked && (
-                <div style={{ padding: '11px 18px', background: '#fffbeb', borderTop: '1px solid #fde68a', fontSize: '12px', color: '#6b7280', lineHeight: 1.55 }}>
-                  📌 <strong>Where to put it:</strong> {snippet.where}
-                </div>
-              )}
-              {locked && <LockOverlay feature={snippet.title} onUpgrade={onUpgrade} />}
-            </div>
-          );
-        })}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        {snippets.map(snippet => (
+          <EditableSnippet key={snippet.id} snippet={snippet} isPro={isPro} onUpgrade={onUpgrade} />
+        ))}
       </div>
 
-      <div style={{ marginTop: '40px', padding: '28px', background: 'linear-gradient(135deg, #f5f3ff, #ffffff)', border: '1px solid #ddd6fe', borderRadius: '20px', textAlign: 'center' }}>
-        <div style={{ fontSize: '32px', marginBottom: '10px' }}>🚀</div>
-        <div style={{ fontSize: '18px', fontWeight: 800, color: '#111827', marginBottom: '6px' }}>You're all set!</div>
-        <div style={{ fontSize: '13px', color: '#6b7280', maxWidth: '380px', margin: '0 auto', lineHeight: 1.65 }}>
+      <div style={{ marginTop: '48px', padding: '36px', background: 'linear-gradient(135deg, #f5f3ff, #ffffff)', border: '1.5px solid #ddd6fe', borderRadius: '22px', textAlign: 'center' }}>
+        <div style={{ fontSize: '40px', marginBottom: '12px' }}>🚀</div>
+        <div style={{ fontSize: '22px', fontWeight: 800, color: '#111827', marginBottom: '8px' }}>You're all set!</div>
+        <div style={{ fontSize: '16px', color: '#6b7280', maxWidth: '420px', margin: '0 auto', lineHeight: 1.7 }}>
           Once you've added these to your website, AI search engines will start learning about your business within a few days. Come back and check your score again after a week!
         </div>
-        <button onClick={onNewCheck} style={{ marginTop: '20px', background: '#7c3aed', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 700, fontSize: '13px', padding: '8px 18px', cursor: 'pointer' }}>
+        <button onClick={onNewCheck} style={{ marginTop: '24px', background: '#7c3aed', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 700, fontSize: '16px', padding: '12px 28px', cursor: 'pointer' }}>
           Check Another Website
         </button>
       </div>
