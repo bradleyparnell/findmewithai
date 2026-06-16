@@ -34,7 +34,7 @@ async function sendEmail({ to, subject, html }) {
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ from: 'findmewith.ai <hello@findmewithai.com>', to, subject, html }),
+    body: JSON.stringify({ from: 'findmewith.ai <hello@findmewith.ai>', to, subject, html }),
   });
   const data = await res.json();
   if (!res.ok) { console.error('[email] Resend error:', data); return { ok: false, error: data }; }
@@ -1054,7 +1054,7 @@ app.get('/api/debug-email', async (req, res) => {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      from: 'findmewith.ai <hello@findmewithai.com>',
+      from: 'findmewith.ai <hello@findmewith.ai>',
       to: 'hello@genierocket.com',
       subject: 'findmewith.ai debug test',
       html: '<p>This is a debug test from findmewith.ai. If you see this, Resend is working!</p>',
