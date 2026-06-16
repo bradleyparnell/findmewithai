@@ -244,6 +244,39 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
   const [competitorError, setCompetitorError] = useState('');
   const [showHistory, setShowHistory] = useState(false);
   const [rescanLoading, setRescanLoading] = useState(false);
+  const [expandedFix, setExpandedFix] = useState<Set<string>>(new Set());
+
+  // Map each check ID → which fix tool it routes to
+  const FIX_CTA: Record<string, { label: string; type: 'code' | 'content' }> = {
+    has_schema_org:          { label: 'Get the code →', type: 'code' },
+    has_organization_schema: { label: 'Get the code →', type: 'code' },
+    has_person_schema:       { label: 'Get the code →', type: 'code' },
+    has_faq_schema:          { label: 'Get the code →', type: 'code' },
+    has_article_schema:      { label: 'Get the code →', type: 'code' },
+    has_llms_txt:            { label: 'Get the code →', type: 'code' },
+    has_robots_txt:          { label: 'Get the code →', type: 'code' },
+    has_sitemap:             { label: 'Get the code →', type: 'code' },
+    has_og_tags:             { label: 'Get the code →', type: 'code' },
+    has_meta_description:    { label: 'Write it for me →', type: 'content' },
+    content_length:          { label: 'Write it for me →', type: 'content' },
+    has_h1:                  { label: 'Write it for me →', type: 'content' },
+    has_about_page:          { label: 'Write it for me →', type: 'content' },
+    has_contact_info:        { label: 'Write it for me →', type: 'content' },
+    has_social_links:        { label: 'Write it for me →', type: 'content' },
+    has_title_tag:           { label: 'Write it for me →', type: 'content' },
+  };
+
+  const toggleFix = (id: string) =>
+    setExpandedFix(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+
+  const scrollToFix = (type: 'code' | 'content') => {
+    if (type === 'code') codeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    else contentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
   const [industryOverride, setIndustryOverride] = useState<string | null>(null);
   const signalRef    = useRef<HTMLDivElement>(null);
   const fixRef       = useRef<HTMLDivElement>(null);
@@ -987,15 +1020,43 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
                     <AlertTriangle size={16} style={{ color: '#ef4444' }} />
                     <span style={{ fontSize: '14px', fontWeight: 700, color: '#ef4444', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Fix These First</span>
                   </div>
-                  {failItems.map(item => (
-                    <div key={item.id} style={{ display: 'flex', gap: '14px', padding: '16px 20px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '14px', marginBottom: '10px' }}>
-                      <div style={{ width: '8px', height: '8px', background: '#ef4444', borderRadius: '50%', flexShrink: 0, marginTop: '7px' }} />
-                      <div>
-                        <div style={{ fontSize: '17px', fontWeight: 700, color: '#111827', marginBottom: '4px' }}>{item.label}</div>
-                        {item.suggestion && <div style={{ fontSize: '15px', color: '#6b7280', lineHeight: 1.6 }}>{item.suggestion}</div>}
+                  {failItems.map(item => {
+                    const isOpen = expandedFix.has(item.id);
+                    const cta = FIX_CTA[item.id];
+                    return (
+                      <div key={item.id} style={{ background: '#fef2f2', border: `1px solid ${isOpen ? '#ef4444' : '#fecaca'}`, borderRadius: '14px', marginBottom: '10px', overflow: 'hidden', transition: 'border-color 0.2s' }}>
+                        {/* Row — always visible */}
+                        <button
+                          onClick={() => toggleFix(item.id)}
+                          style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '14px', padding: '18px 20px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
+                        >
+                          <div style={{ width: '10px', height: '10px', background: '#ef4444', borderRadius: '50%', flexShrink: 0 }} />
+                          <div style={{ flex: 1, fontSize: '17px', fontWeight: 700, color: '#111827' }}>{item.label}</div>
+                          <div style={{ color: '#9ca3af', flexShrink: 0 }}>
+                            {isOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                          </div>
+                        </button>
+                        {/* Expanded detail */}
+                        {isOpen && (
+                          <div style={{ padding: '0 20px 20px 44px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
+                            <p style={{ fontSize: '15px', color: '#6b7280', lineHeight: 1.7, margin: 0, flex: 1 }}>
+                              {item.suggestion || 'Click the button to get started.'}
+                            </p>
+                            {cta && (
+                              <button
+                                onClick={() => scrollToFix(cta.type)}
+                                style={{ flexShrink: 0, background: '#7c3aed', color: 'white', border: 'none', borderRadius: '10px', padding: '10px 20px', fontSize: '14px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                                onMouseEnter={e => (e.currentTarget.style.background = '#6d28d9')}
+                                onMouseLeave={e => (e.currentTarget.style.background = '#7c3aed')}
+                              >
+                                {cta.label}
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
 
@@ -1005,15 +1066,41 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
                     <AlertTriangle size={16} style={{ color: '#d97706' }} />
                     <span style={{ fontSize: '14px', fontWeight: 700, color: '#d97706', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Worth Improving</span>
                   </div>
-                  {warnItems.map(item => (
-                    <div key={item.id} style={{ display: 'flex', gap: '14px', padding: '16px 20px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '14px', marginBottom: '10px' }}>
-                      <div style={{ width: '8px', height: '8px', background: '#d97706', borderRadius: '50%', flexShrink: 0, marginTop: '7px' }} />
-                      <div>
-                        <div style={{ fontSize: '17px', fontWeight: 700, color: '#111827', marginBottom: '4px' }}>{item.label}</div>
-                        {item.suggestion && <div style={{ fontSize: '15px', color: '#6b7280', lineHeight: 1.6 }}>{item.suggestion}</div>}
+                  {warnItems.map(item => {
+                    const isOpen = expandedFix.has(item.id);
+                    const cta = FIX_CTA[item.id];
+                    return (
+                      <div key={item.id} style={{ background: '#fffbeb', border: `1px solid ${isOpen ? '#d97706' : '#fde68a'}`, borderRadius: '14px', marginBottom: '10px', overflow: 'hidden', transition: 'border-color 0.2s' }}>
+                        <button
+                          onClick={() => toggleFix(item.id)}
+                          style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '14px', padding: '18px 20px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
+                        >
+                          <div style={{ width: '10px', height: '10px', background: '#d97706', borderRadius: '50%', flexShrink: 0 }} />
+                          <div style={{ flex: 1, fontSize: '17px', fontWeight: 700, color: '#111827' }}>{item.label}</div>
+                          <div style={{ color: '#9ca3af', flexShrink: 0 }}>
+                            {isOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                          </div>
+                        </button>
+                        {isOpen && (
+                          <div style={{ padding: '0 20px 20px 44px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
+                            <p style={{ fontSize: '15px', color: '#6b7280', lineHeight: 1.7, margin: 0, flex: 1 }}>
+                              {item.suggestion || 'Click the button to get started.'}
+                            </p>
+                            {cta && (
+                              <button
+                                onClick={() => scrollToFix(cta.type)}
+                                style={{ flexShrink: 0, background: '#d97706', color: 'white', border: 'none', borderRadius: '10px', padding: '10px 20px', fontSize: '14px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                                onMouseEnter={e => (e.currentTarget.style.background = '#b45309')}
+                                onMouseLeave={e => (e.currentTarget.style.background = '#d97706')}
+                              >
+                                {cta.label}
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
 
