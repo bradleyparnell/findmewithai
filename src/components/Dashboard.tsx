@@ -602,17 +602,17 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
           </div>
 
           {/* ── AI SIGNAL STRENGTH (leads — most valuable data) ── */}
-          {latestScan?.result?.ai_market_data && (() => {
-            const amd = latestScan.result.ai_market_data as AiMarketData;
-            const isGrowing   = amd.trend_direction === 'growing';
-            const isDeclining = amd.trend_direction === 'declining';
+          {latestScan && (() => {
+            const amd = (latestScan.result?.ai_market_data ?? null) as AiMarketData | null;
+            const isGrowing   = amd?.trend_direction === 'growing';
+            const isDeclining = amd?.trend_direction === 'declining';
             const trendIcon  = isGrowing ? '📈' : isDeclining ? '📉' : '📊';
             const trendColor = isGrowing ? '#059669' : isDeclining ? '#ef4444' : '#6b7280';
             const trendBg    = isGrowing ? '#f0fdf4' : isDeclining ? '#fef2f2' : '#f9fafb';
             const trendText  = isGrowing
-              ? `Growing +${amd.trend_pct}% — the window to get found is right now`
+              ? `Growing +${amd?.trend_pct}% — the window to get found is right now`
               : isDeclining
-              ? `Down ${amd.trend_pct}% recently — act before competitors pull further ahead`
+              ? `Down ${amd?.trend_pct}% recently — act before competitors pull further ahead`
               : 'Steady volume — consistent improvements keep you visible';
             const score = latestScan.score;
             const isVisible = score >= 70;
@@ -635,7 +635,7 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
                     </div>
                     <div style={{ background: '#fdf4ff', border: '2px solid #e9d5ff', borderRadius: '20px', padding: '24px 36px', textAlign: 'center', minWidth: '180px' }}>
                       <div style={{ fontSize: '72px', fontWeight: 900, color: '#f59e0b', lineHeight: 1 }}>
-                        {(amd.total_volume + customKeywords.reduce((s, k) => s + k.volume, 0)).toLocaleString()}
+                        {amd ? (amd.total_volume + customKeywords.reduce((s, k) => s + k.volume, 0)).toLocaleString() : '—'}
                       </div>
                       <div style={{ fontSize: '15px', color: '#7c3aed', fontWeight: 700, marginTop: '8px' }}>AI searches / mo</div>
                     </div>
@@ -663,13 +663,18 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
                       }
                     };
 
-                    const allKeywords = [...amd.keywords, ...customKeywords];
+                    const allKeywords = [...(amd?.keywords ?? []), ...customKeywords];
 
                     return (
                       <div style={{ marginBottom: '20px' }}>
                         <div style={{ fontSize: '13px', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '16px' }}>
                           What people are searching
                         </div>
+                        {allKeywords.length === 0 && (
+                          <div style={{ padding: '20px', background: '#f9fafb', borderRadius: '12px', color: '#6b7280', fontSize: '15px', textAlign: 'center' }}>
+                            ⏳ Scan your site to see which searches you could be found in. Use the "Check volume" box below to look up any term right now.
+                          </div>
+                        )}
                         {allKeywords.map((kw, i) => (
                           <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 0', borderBottom: i < allKeywords.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -716,10 +721,12 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
                   })()}
 
                   {/* Trend */}
-                  <div style={{ background: trendBg, borderRadius: '12px', padding: '14px 18px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span style={{ fontSize: '20px' }}>{trendIcon}</span>
-                    <span style={{ fontSize: '15px', fontWeight: 600, color: trendColor }}>{trendText}</span>
-                  </div>
+                  {amd && (
+                    <div style={{ background: trendBg, borderRadius: '12px', padding: '14px 18px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <span style={{ fontSize: '20px' }}>{trendIcon}</span>
+                      <span style={{ fontSize: '15px', fontWeight: 600, color: trendColor }}>{trendText}</span>
+                    </div>
+                  )}
 
                   {/* Visibility hook */}
                   {isVisible ? (
@@ -735,7 +742,7 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
                       <span style={{ fontSize: '24px' }}>⚡</span>
                       <div>
                         <div style={{ fontSize: '16px', fontWeight: 800, color: '#dc2626' }}>
-                          You're currently missing these {(amd.total_volume + customKeywords.reduce((s, k) => s + k.volume, 0)).toLocaleString()} searches
+                          {amd ? `You're currently missing these ${(amd.total_volume + customKeywords.reduce((s, k) => s + k.volume, 0)).toLocaleString()} searches` : "You're not showing up in AI searches yet"}
                         </div>
                         <div style={{ fontSize: '14px', color: '#ef4444', marginTop: '4px' }}>
                           Your competitors are getting found instead. Fix the items below to change that.
