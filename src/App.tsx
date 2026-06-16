@@ -7,11 +7,12 @@ import { ContentStep } from './components/ContentStep';
 import { CodeStep } from './components/CodeStep';
 import { PricingPage } from './components/PricingPage';
 import { Dashboard } from './components/Dashboard';
+import { AuthPage } from './components/AuthPage';
 import { Nav } from './components/Nav';
 import { supabase } from './lib/supabase';
 import type { AnalysisResult } from './types';
 
-type AppStep = 'home' | 'gate' | 'inbox' | 'score' | 'content' | 'code' | 'pricing' | 'dashboard';
+type AppStep = 'home' | 'gate' | 'inbox' | 'score' | 'content' | 'code' | 'pricing' | 'dashboard' | 'auth';
 
 const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://findmewithai-production.up.railway.app';
 
@@ -158,43 +159,17 @@ const App: React.FC = () => {
     setStep('gate');
   };
 
-  const handleSignIn = async (email: string) => {
-    setUserEmail(email);
-    localStorage.setItem('fmw_email', email);
-    const { error: otpError } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: window.location.origin },
-    });
-    if (otpError) {
-      alert(`Couldn't send the magic link: ${otpError.message}\n\nPlease try again or email hello@genierocket.com for help.`);
-      return;
-    }
-    setStep('inbox');
-  };
-
-  const handleEmailSubmit = async (email: string) => {
+  const handleSignUp = async (email: string, password: string) => {
     setUserEmail(email);
     localStorage.setItem('fmw_email', email);
 
-    // Store scan so it can be shown and saved after they click the magic link
+    // Store scan so it can be saved once the user is authenticated
     if (result) {
       localStorage.setItem('fmw_pending_scan', JSON.stringify({
         url: siteUrl,
         score: result.score,
         result,
       }));
-    }
-
-    // Send magic link — await and surface any error
-    const { error: otpError } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: window.location.origin },
-    });
-
-    if (otpError) {
-      console.error('signInWithOtp error:', otpError);
-      alert(`Couldn't send the magic link: ${otpError.message}\n\nPlease try again or email hello@genierocket.com for help.`);
-      return;
     }
 
     // Persist lead server-side
@@ -204,8 +179,20 @@ const App: React.FC = () => {
       body: JSON.stringify({ email, url: siteUrl, score: result?.score ?? 0 }),
     }).catch(() => {});
 
-    // Show the "check your inbox" screen — results wait until login
-    setStep('inbox');
+    const { data, error: signUpError } = await supabase.auth.signUp({ email, password });
+
+    if (signUpError) {
+      // Surface error to the EmailGate component
+      throw signUpError;
+    }
+
+    if (data.session) {
+      // Email confirmation disabled — user is logged in immediately.
+      // onAuthStateChange SIGNED_IN fires and handles navigation to dashboard.
+    } else {
+      // Email confirmation required — tell user to check inbox.
+      setStep('inbox');
+    }
   };
 
   const handleUpgrade = () => setStep('pricing');
@@ -271,12 +258,20 @@ const App: React.FC = () => {
         <HeroStep
           onAnalyzed={handleAnalyzed}
           user={user}
-          onSignIn={handleSignIn}
           onGoToDashboard={() => setStep('dashboard')}
+          onGoToLogin={() => setStep('auth')}
         />
       )}
+      {step === 'auth' && (
+        <AuthPage onBack={() => setStep('home')} />
+      )}
       {step === 'gate' && result && (
-        <EmailGate score={result.score} siteUrl={siteUrl} onSubmit={handleEmailSubmit} />
+        <EmailGate
+          score={result.score}
+          siteUrl={siteUrl}
+          onSignUp={handleSignUp}
+          onGoToLogin={() => setStep('auth')}
+        />
       )}
       {step === 'inbox' && (
         <InboxStep email={userEmail} siteUrl={siteUrl} score={result?.score ?? 0} linkExpired={linkExpired} onResent={() => setLinkExpired(false)} />

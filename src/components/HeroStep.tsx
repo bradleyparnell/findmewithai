@@ -15,8 +15,8 @@ const EXAMPLE_DOMAINS = [
 interface Props {
   onAnalyzed: (result: AnalysisResult, url: string) => void;
   user?: any;
-  onSignIn?: (email: string) => Promise<void>;
   onGoToDashboard?: () => void;
+  onGoToLogin?: () => void;
 }
 
 const LOADING_MESSAGES = [
@@ -27,15 +27,11 @@ const LOADING_MESSAGES = [
   { text: 'Building your personalized action plan…', fear: 'The good news: most fixes take less than 15 minutes.' },
 ];
 
-export const HeroStep: React.FC<Props> = ({ onAnalyzed, user, onSignIn, onGoToDashboard }) => {
+export const HeroStep: React.FC<Props> = ({ onAnalyzed, user, onGoToDashboard, onGoToLogin }) => {
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingMsg, setLoadingMsg] = useState(0);
   const [error, setError] = useState('');
-  const [showSignIn, setShowSignIn] = useState(false);
-  const [signInEmail, setSignInEmail] = useState('');
-  const [signInLoading, setSignInLoading] = useState(false);
-  const [signInSent, setSignInSent] = useState(false);
 
   // Typewriter placeholder animation
   const [typedDomain, setTypedDomain] = useState('');
@@ -76,14 +72,6 @@ export const HeroStep: React.FC<Props> = ({ onAnalyzed, user, onSignIn, onGoToDa
     }, 2200);
     return () => clearInterval(interval);
   }, [loading]);
-
-  const handleSignInSubmit = async () => {
-    if (!signInEmail.trim() || !onSignIn) return;
-    setSignInLoading(true);
-    await onSignIn(signInEmail.trim());
-    setSignInSent(true);
-    setSignInLoading(false);
-  };
 
   const handleCheck = async () => {
     const trimmed = url.trim();
@@ -329,39 +317,12 @@ export const HeroStep: React.FC<Props> = ({ onAnalyzed, user, onSignIn, onGoToDa
           </div>
         ) : (
           <div style={{ marginTop: '16px' }}>
-            {!showSignIn && !signInSent && (
-              <button
-                onClick={() => setShowSignIn(true)}
-                style={{ background: 'none', border: 'none', color: '#7c3aed', fontSize: '13px', fontWeight: 600, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: '2px' }}
-              >
-                Already a member? Sign in →
-              </button>
-            )}
-            {showSignIn && !signInSent && (
-              <div style={{ display: 'flex', gap: '8px', maxWidth: '400px', margin: '0 auto', alignItems: 'center' }}>
-                <input
-                  type="email"
-                  autoFocus
-                  placeholder="your@email.com"
-                  value={signInEmail}
-                  onChange={e => setSignInEmail(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && !signInLoading && handleSignInSubmit()}
-                  style={{ flex: 1, padding: '10px 14px', border: '1.5px solid #ddd6fe', borderRadius: '10px', fontSize: '14px', outline: 'none' }}
-                />
-                <button
-                  onClick={handleSignInSubmit}
-                  disabled={signInLoading}
-                  style={{ background: '#7c3aed', color: 'white', border: 'none', borderRadius: '10px', padding: '10px 16px', fontSize: '13px', fontWeight: 700, cursor: signInLoading ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', opacity: signInLoading ? 0.7 : 1 }}
-                >
-                  {signInLoading ? 'Sending…' : 'Send link →'}
-                </button>
-              </div>
-            )}
-            {signInSent && (
-              <p style={{ fontSize: '13px', color: '#059669', fontWeight: 600 }}>
-                ✅ Magic link sent! Check your inbox and click it to sign in.
-              </p>
-            )}
+            <button
+              onClick={onGoToLogin}
+              style={{ background: 'none', border: 'none', color: '#7c3aed', fontSize: '13px', fontWeight: 600, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: '2px' }}
+            >
+              Already a member? Log in →
+            </button>
           </div>
         )}
 

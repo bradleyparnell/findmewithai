@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Mail, Lock, Search } from 'lucide-react';
+import { Lock, Search, Eye, EyeOff } from 'lucide-react';
 
 interface Props {
   score: number;
   siteUrl: string;
-  onSubmit: (email: string) => void;
+  onSignUp: (email: string, password: string) => Promise<void>;
+  onGoToLogin: () => void;
 }
 
 const PREVIEW_ROWS = [
@@ -15,38 +16,66 @@ const PREVIEW_ROWS = [
 ];
 
 function getScoreColor(score: number) {
-  if (score >= 80) return '#7c3aed';
-  if (score >= 60) return '#6d28d9';
-  if (score >= 40) return '#d97706';
-  return '#ef4444';
+  if (score >= 71) return '#16a34a';
+  if (score >= 41) return '#d97706';
+  return '#dc2626';
 }
 
 function getScoreLabel(score: number) {
-  if (score >= 80) return { emoji: '🎉', text: "You're doing great!" };
-  if (score >= 60) return { emoji: '👍', text: 'Room to improve' };
-  if (score >= 40) return { emoji: '🌱', text: 'Some work to do' };
-  return { emoji: '💪', text: 'Lots of opportunity here' };
+  if (score >= 71) return { emoji: '🟢', text: "You're being found!" };
+  if (score >= 41) return { emoji: '🟡', text: 'Getting there — room to grow' };
+  return { emoji: '🔴', text: 'Not found yet — lots of opportunity' };
 }
 
-export const EmailGate: React.FC<Props> = ({ score, siteUrl, onSubmit }) => {
+function getPasswordStrength(pw: string): { label: string; color: string; width: string } {
+  if (pw.length === 0) return { label: '', color: '#e5e7eb', width: '0%' };
+  if (pw.length < 6) return { label: 'Too short', color: '#ef4444', width: '25%' };
+  if (pw.length < 10) return { label: 'Fair', color: '#f59e0b', width: '55%' };
+  if (/[^a-zA-Z0-9]/.test(pw) || /[A-Z]/.test(pw)) return { label: 'Strong', color: '#16a34a', width: '100%' };
+  return { label: 'Good', color: '#7c3aed', width: '75%' };
+}
+
+export const EmailGate: React.FC<Props> = ({ score, siteUrl, onSignUp, onGoToLogin }) => {
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const domain = siteUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
   const { emoji, text } = getScoreLabel(score);
+  const strength = getPasswordStrength(password);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.includes('@') || !email.includes('.')) {
-      setError('Please enter a valid email address');
+      setError('Please enter a valid email address.');
       return;
     }
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters.');
+      return;
+    }
+    setError('');
     setLoading(true);
-    await onSubmit(email);
+    try {
+      await onSignUp(email.trim(), password);
+    } catch (err: any) {
+      setError(err?.message || 'Something went wrong. Please try again.');
+      setLoading(false);
+    }
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(160deg, #ede9fe 0%, #ffffff 55%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+    <div style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(160deg, #ede9fe 0%, #ffffff 55%)',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '24px',
+    }}>
+      {/* Logo */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '36px' }}>
         <div style={{ width: '30px', height: '30px', background: '#7c3aed', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <Search size={15} color="white" />
@@ -55,18 +84,31 @@ export const EmailGate: React.FC<Props> = ({ score, siteUrl, onSubmit }) => {
       </div>
 
       <div style={{ maxWidth: '460px', width: '100%' }}>
-        <div style={{ background: 'white', border: '1px solid #ddd6fe', borderRadius: '24px', padding: '32px', marginBottom: '16px', textAlign: 'center', boxShadow: '0 8px 40px rgba(124, 58, 237, 0.10)' }}>
+
+        {/* Score preview card */}
+        <div style={{
+          background: 'white',
+          border: '1px solid #ddd6fe',
+          borderRadius: '24px',
+          padding: '32px',
+          marginBottom: '16px',
+          textAlign: 'center',
+          boxShadow: '0 8px 40px rgba(124,58,237,0.10)',
+        }}>
           <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: '4px' }}>
             Scan complete for <strong style={{ color: '#111827' }}>{domain}</strong>
           </div>
           <div style={{ fontSize: '72px', fontWeight: 900, color: getScoreColor(score), lineHeight: 1, margin: '8px 0 4px' }}>
             {score}<span style={{ fontSize: '28px', fontWeight: 600 }}>%</span>
           </div>
-          <div style={{ fontSize: '16px', fontWeight: 700, color: '#111827', marginBottom: '4px' }}>{emoji} {text}</div>
+          <div style={{ fontSize: '16px', fontWeight: 700, color: '#111827', marginBottom: '4px' }}>
+            {emoji} {text}
+          </div>
           <div style={{ fontSize: '13px', color: '#6b7280' }}>
             AI search engines know <strong>{score}%</strong> of your business
           </div>
 
+          {/* Blurred preview */}
           <div style={{ marginTop: '20px', position: 'relative', borderRadius: '12px', overflow: 'hidden' }}>
             <div style={{ filter: 'blur(5px)', pointerEvents: 'none', userSelect: 'none', padding: '12px', background: '#f5f3ff' }}>
               {PREVIEW_ROWS.map(row => (
@@ -88,48 +130,106 @@ export const EmailGate: React.FC<Props> = ({ score, siteUrl, onSubmit }) => {
           </div>
         </div>
 
-        <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '20px', padding: '28px', boxShadow: '0 2px 16px rgba(0,0,0,0.04)' }}>
-
-          {/* Social proof bar */}
+        {/* Signup card */}
+        <div style={{
+          background: 'white',
+          border: '1px solid #e5e7eb',
+          borderRadius: '20px',
+          padding: '28px',
+          boxShadow: '0 2px 16px rgba(0,0,0,0.04)',
+        }}>
+          {/* Social proof */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '18px', flexWrap: 'wrap' }}>
-            {/* Avatars */}
             <div style={{ display: 'flex' }}>
-              {['#f59e0b','#7c3aed','#059669','#3b82f6'].map((color, i) => (
+              {['#f59e0b', '#7c3aed', '#059669', '#3b82f6'].map((color, i) => (
                 <div key={i} style={{ width: '28px', height: '28px', borderRadius: '50%', background: color, border: '2px solid white', marginLeft: i > 0 ? '-8px' : '0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', color: 'white', fontWeight: 700 }}>
-                  {['J','M','S','A'][i]}
+                  {['J', 'M', 'S', 'A'][i]}
                 </div>
               ))}
             </div>
             <div style={{ fontSize: '12px', color: '#374151', fontWeight: 600 }}>
-              <strong style={{ color: '#7c3aed' }}>1,200+</strong> business owners already scanned their site
+              <strong style={{ color: '#7c3aed' }}>1,200+</strong> business owners already scanned
             </div>
             <div style={{ display: 'flex', gap: '1px' }}>
-              {[1,2,3,4,5].map(s => (
-                <span key={s} style={{ color: '#f59e0b', fontSize: '13px' }}>★</span>
-              ))}
+              {[1, 2, 3, 4, 5].map(s => <span key={s} style={{ color: '#f59e0b', fontSize: '13px' }}>★</span>)}
             </div>
           </div>
 
-          <h2 style={{ fontSize: '19px', fontWeight: 800, color: '#111827', marginBottom: '6px' }}>Your results are ready — let's show you what to fix</h2>
+          <h2 style={{ fontSize: '19px', fontWeight: 800, color: '#111827', marginBottom: '6px' }}>
+            Create your free account to unlock your results
+          </h2>
           <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '20px', lineHeight: 1.55 }}>
-            Enter your email and we'll unlock your full breakdown — including your #1 priority fix and free tools to start making progress today.
+            No credit card. We'll also check in weekly as your AI visibility score changes.
           </p>
+
+          {error && (
+            <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '10px', padding: '10px 14px', color: '#991b1b', fontSize: '13px', marginBottom: '12px' }}>
+              {error}
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <input
               type="email"
-              style={{ padding: '12px 16px', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontSize: '14px', outline: 'none' }}
+              style={{ padding: '12px 16px', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontSize: '14px', outline: 'none', boxSizing: 'border-box', width: '100%', transition: 'border-color 0.2s' }}
               placeholder="you@yourbusiness.com"
               value={email}
               onChange={e => { setEmail(e.target.value); setError(''); }}
+              onFocus={e => e.currentTarget.style.borderColor = '#7c3aed'}
+              onBlur={e => e.currentTarget.style.borderColor = '#e5e7eb'}
               required
             />
-            {error && <p style={{ color: '#ef4444', fontSize: '13px', margin: 0 }}>{error}</p>}
+
+            <div>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  style={{ padding: '12px 44px 12px 16px', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontSize: '14px', outline: 'none', boxSizing: 'border-box', width: '100%', transition: 'border-color 0.2s' }}
+                  placeholder="Create a password"
+                  value={password}
+                  onChange={e => { setPassword(e.target.value); setError(''); }}
+                  onFocus={e => e.currentTarget.style.borderColor = '#7c3aed'}
+                  onBlur={e => e.currentTarget.style.borderColor = '#e5e7eb'}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(v => !v)}
+                  style={{ position: 'absolute', right: '13px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: '0', display: 'flex', alignItems: 'center' }}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+
+              {/* Strength bar */}
+              {password.length > 0 && (
+                <div style={{ marginTop: '6px' }}>
+                  <div style={{ height: '3px', background: '#f3f4f6', borderRadius: '99px', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: strength.width, background: strength.color, borderRadius: '99px', transition: 'width 0.3s, background 0.3s' }} />
+                  </div>
+                  <span style={{ fontSize: '11px', color: strength.color, fontWeight: 600, marginTop: '3px', display: 'block' }}>{strength.label}</span>
+                </div>
+              )}
+            </div>
+
             <button
               type="submit"
               disabled={loading}
-              style={{ background: '#7c3aed', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '15px', height: '48px', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }}
+              style={{
+                background: '#7c3aed',
+                color: 'white',
+                border: 'none',
+                borderRadius: '10px',
+                fontWeight: 700,
+                fontSize: '15px',
+                height: '48px',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                opacity: loading ? 0.7 : 1,
+                boxShadow: '0 2px 12px rgba(124,58,237,0.25)',
+                marginTop: '2px',
+              }}
             >
-              {loading ? 'Loading…' : 'Show Me What to Fix →'}
+              {loading ? 'Creating account…' : 'Show Me What to Fix →'}
             </button>
           </form>
 
@@ -142,8 +242,18 @@ export const EmailGate: React.FC<Props> = ({ score, siteUrl, onSubmit }) => {
           </div>
 
           <p style={{ fontSize: '12px', color: '#9ca3af', marginTop: '14px', lineHeight: 1.5, textAlign: 'center' }}>
-            🔒 Free account. No credit card. No spam. Upgrade to Pro anytime.
+            🔒 Free account. No credit card. No spam.
           </p>
+
+          <div style={{ textAlign: 'center', marginTop: '10px' }}>
+            <span style={{ fontSize: '13px', color: '#6b7280' }}>Already have an account? </span>
+            <button
+              onClick={onGoToLogin}
+              style={{ background: 'none', border: 'none', color: '#7c3aed', fontSize: '13px', fontWeight: 700, cursor: 'pointer', padding: 0 }}
+            >
+              Log in →
+            </button>
+          </div>
         </div>
       </div>
     </div>
