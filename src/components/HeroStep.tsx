@@ -125,28 +125,28 @@ export const HeroStep: React.FC<Props> = ({ onAnalyzed, user, onGoToDashboard, o
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(150deg, #ede9fe 0%, #ffffff 55%, #fef3c7 100%)' }}>
       {/* Logo bar */}
-      <div style={{ padding: '20px 28px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+      <div style={{ padding: isMobile ? '16px 20px' : '20px 28px', display: 'flex', alignItems: 'center', gap: '10px' }}>
         <div style={{ width: '34px', height: '34px', background: '#7c3aed', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <Search size={17} color="white" />
         </div>
         <span style={{ fontWeight: 800, fontSize: '18px', color: '#7c3aed', letterSpacing: '-0.3px' }}>findmewith.ai</span>
       </div>
 
-      <div style={{ maxWidth: '800px', margin: '0 auto', padding: '64px 28px 80px', textAlign: 'center' }}>
+      <div style={{ maxWidth: '800px', margin: '0 auto', padding: isMobile ? '32px 20px 60px' : '64px 28px 80px', textAlign: 'center' }}>
 
         {/* Main headline — big and clean */}
-        <h1 style={{ fontSize: '60px', fontWeight: 900, lineHeight: 1.08, color: '#111827', marginBottom: '22px', letterSpacing: '-2px' }}>
+        <h1 style={{ fontSize: isMobile ? '38px' : '60px', fontWeight: 900, lineHeight: 1.1, color: '#111827', marginBottom: '16px', letterSpacing: isMobile ? '-1px' : '-2px' }}>
           Does AI recommend<br />
           <span style={{ color: '#7c3aed' }}>your business?</span>
         </h1>
 
         {/* One-line subtext only */}
-        <p style={{ fontSize: '20px', color: '#6b7280', marginBottom: '48px', lineHeight: 1.5, fontWeight: 400 }}>
+        <p style={{ fontSize: isMobile ? '16px' : '20px', color: '#6b7280', marginBottom: isMobile ? '28px' : '48px', lineHeight: 1.5, fontWeight: 400 }}>
           Find out in 30 seconds — free, no credit card.
         </p>
 
         {/* SEMrush-style: pill bar + separate pill button */}
-        <div style={{ display: 'flex', gap: '12px', maxWidth: '740px', margin: '0 auto 18px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '10px', maxWidth: '740px', margin: '0 auto 14px', alignItems: 'stretch' }}>
 
           {/* Pill input */}
           <div style={{
@@ -160,7 +160,7 @@ export const HeroStep: React.FC<Props> = ({ onAnalyzed, user, onGoToDashboard, o
             transition: 'box-shadow 0.25s ease',
             display: 'flex',
             alignItems: 'center',
-            height: '68px',
+            height: isMobile ? '58px' : '68px',
           }}>
             <div style={{ paddingLeft: '24px', color: url ? '#7c3aed' : '#9ca3af', flexShrink: 0, display: 'flex', alignItems: 'center', transition: 'color 0.2s' }}>
               <Search size={22} />
@@ -174,14 +174,14 @@ export const HeroStep: React.FC<Props> = ({ onAnalyzed, user, onGoToDashboard, o
                   width: '100%',
                   padding: '0 20px',
                   border: 'none',
-                  fontSize: '19px',
+                  fontSize: isMobile ? '16px' : '19px',
                   outline: 'none',
                   color: '#111827',
                   background: 'transparent',
                   fontWeight: 500,
                   caretColor: '#7c3aed',
                   boxSizing: 'border-box',
-                  height: '68px',
+                  height: isMobile ? '58px' : '68px',
                   borderRadius: '100px',
                 }}
                 placeholder=""
@@ -217,9 +217,9 @@ export const HeroStep: React.FC<Props> = ({ onAnalyzed, user, onGoToDashboard, o
               border: 'none',
               borderRadius: '100px',
               fontWeight: 800,
-              fontSize: '17px',
-              padding: '0 36px',
-              height: '68px',
+              fontSize: isMobile ? '16px' : '17px',
+              padding: isMobile ? '0 24px' : '0 36px',
+              height: isMobile ? '58px' : '68px',
               cursor: loading ? 'not-allowed' : 'pointer',
               whiteSpace: 'nowrap',
               opacity: loading ? 0.75 : 1,

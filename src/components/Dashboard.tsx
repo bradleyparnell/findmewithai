@@ -6,8 +6,18 @@ import {
 import {
   Search, Plus, LogOut, TrendingUp, ExternalLink, Zap, Target,
   AlertTriangle, CheckCircle, ChevronDown, ChevronUp, Trash2,
-  RefreshCw, Award, ArrowRight,
+  RefreshCw, Award, ArrowRight, Menu, X,
 } from 'lucide-react';
+
+function useWindowWidth() {
+  const [w, setW] = React.useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
+  React.useEffect(() => {
+    const handler = () => setW(window.innerWidth);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, []);
+  return w;
+}
 import { supabase } from '../lib/supabase';
 import type { AnalysisResult, AiMarketData } from '../types';
 import { ContentStep } from './ContentStep';
@@ -235,6 +245,9 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan, onUpgrade, onSignOut }) => {
+  const windowWidth = useWindowWidth();
+  const isMobile = windowWidth < 768;
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [scans, setScans] = useState<Scan[]>([]);
   const [competitors, setCompetitors] = useState<Competitor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -483,8 +496,24 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#f4f3f8' }}>
 
+      {/* Mobile backdrop */}
+      {isMobile && sidebarOpen && (
+        <div
+          onClick={() => setSidebarOpen(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 99 }}
+        />
+      )}
+
       {/* ── LEFT SIDEBAR ── */}
-      <aside style={{ position: 'fixed', top: 0, left: 0, width: '240px', height: '100vh', background: '#1e1b4b', display: 'flex', flexDirection: 'column', zIndex: 100, overflowY: 'auto' }}>
+      <aside style={{
+        position: 'fixed', top: 0, left: 0, height: '100vh',
+        width: isMobile ? '280px' : '240px',
+        background: '#1e1b4b', display: 'flex', flexDirection: 'column',
+        zIndex: 100, overflowY: 'auto',
+        transform: isMobile && !sidebarOpen ? 'translateX(-100%)' : 'translateX(0)',
+        transition: 'transform 0.25s ease',
+        boxShadow: isMobile && sidebarOpen ? '4px 0 24px rgba(0,0,0,0.3)' : 'none',
+      }}>
 
         {/* Brand */}
         <div style={{ padding: '22px 20px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
@@ -492,7 +521,12 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
             <div style={{ width: '28px', height: '28px', background: '#7c3aed', borderRadius: '7px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <Search size={13} color="white" />
             </div>
-            <span style={{ fontWeight: 800, fontSize: '14px', color: '#e2e8f0', letterSpacing: '-0.01em' }}>findmewith.ai</span>
+            <span style={{ fontWeight: 800, fontSize: '14px', color: '#e2e8f0', letterSpacing: '-0.01em', flex: 1 }}>findmewith.ai</span>
+            {isMobile && (
+              <button onClick={() => setSidebarOpen(false)} style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center' }}>
+                <X size={18} />
+              </button>
+            )}
           </div>
 
           {/* Site card */}
@@ -537,8 +571,11 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
                 key={id}
                 onClick={() => {
                   setActiveSection(id);
-                  if (ref?.current) ref.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                  else window.scrollTo({ top: 0, behavior: 'smooth' });
+                  if (isMobile) setSidebarOpen(false);
+                  setTimeout(() => {
+                    if (ref?.current) ref.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    else window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }, isMobile ? 280 : 0);
                 }}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '10px',
@@ -596,9 +633,30 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
       </aside>
 
       {/* ── MAIN CONTENT ── */}
-      <div style={{ marginLeft: '240px', flex: 1, padding: '40px 48px 100px', minWidth: 0, overflowX: 'hidden' }}>
+      <div style={{ marginLeft: isMobile ? 0 : '240px', flex: 1, padding: isMobile ? '16px 16px 80px' : '40px 48px 100px', minWidth: 0, overflowX: 'hidden' }}>
+
+        {/* Mobile top bar */}
+        {isMobile && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+            <button
+              onClick={() => setSidebarOpen(true)}
+              style={{ background: '#1e1b4b', border: 'none', borderRadius: '10px', color: 'white', cursor: 'pointer', padding: '10px 12px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: 700, flexShrink: 0 }}
+            >
+              <Menu size={18} />
+            </button>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.1em' }}>AI Visibility Dashboard</div>
+              {latestScan && (
+                <div style={{ fontSize: '15px', fontWeight: 800, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {latestScan.url.replace(/^https?:\/\//, '').replace(/\/$/, '')}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Page header */}
-        {latestScan && (
+        {!isMobile && latestScan && (
           <div style={{ marginBottom: '32px' }}>
             <div style={{ fontSize: '12px', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '6px' }}>AI Visibility Dashboard</div>
             <h1 style={{ margin: 0, fontSize: '26px', fontWeight: 900, color: '#111827', letterSpacing: '-0.02em' }}>
