@@ -950,6 +950,57 @@ app.get('/api/widget/:scanId.js', async (req, res) => {
   }
 });
 
+// ── GET /api/admin/stats — admin dashboard data (brad@genierocket.com only) ───
+app.get('/api/admin/stats', async (req, res) => {
+  if (!supabaseAdmin) return res.status(503).json({ error: 'Server not configured' });
+
+  // Verify the Bearer token is a valid Supabase session and belongs to the admin
+  const token = (req.headers.authorization || '').replace('Bearer ', '').trim();
+  if (!token) return res.status(401).json({ error: 'No token' });
+
+  try {
+    const { data: { user }, error: authErr } = await supabaseAdmin.auth.getUser(token);
+    if (authErr || !user) return res.status(401).json({ error: 'Invalid token' });
+    if (user.email !== 'brad@genierocket.com') return res.status(403).json({ error: 'Forbidden' });
+
+    // Fetch all auth users
+    const { data: { users }, error: usersErr } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
+    if (usersErr) throw usersErr;
+
+    // Fetch all scans (id, user_id, email, url, score, created_at)
+    const { data: scans, error: scansErr } = await supabaseAdmin
+      .from('scans')
+      .select('id, user_id, email, url, score, created_at')
+      .order('created_at', { ascending: false })
+      .limit(1000);
+    if (scansErr) throw scansErr;
+
+    // Build per-user scan counts and latest scan
+    const scansByUser = {};
+    for (const scan of (scans || [])) {
+      const uid = scan.user_id;
+      if (!uid) continue;
+      if (!scansByUser[uid]) scansByUser[uid] = { count: 0, latest: null };
+      scansByUser[uid].count++;
+      if (!scansByUser[uid].latest) scansByUser[uid].latest = scan;
+    }
+
+    const formattedUsers = (users || []).map(u => ({
+      id: u.id,
+      email: u.email,
+      created_at: u.created_at,
+      last_sign_in_at: u.last_sign_in_at,
+      scan_count: (scansByUser[u.id] || {}).count || 0,
+      latest_scan: (scansByUser[u.id] || {}).latest || null,
+    }));
+
+    res.json({ users: formattedUsers, scans: scans || [] });
+  } catch (err) {
+    console.error('[admin/stats]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── SPA fallback ──────────────────────────────────────────────────────────────
 app.get('*', (_req, res) => {
   const index = join(__dirname, '../dist/index.html');
