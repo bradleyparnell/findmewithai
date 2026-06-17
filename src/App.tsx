@@ -8,12 +8,13 @@ import { CodeStep } from './components/CodeStep';
 import { PricingPage } from './components/PricingPage';
 import { Dashboard } from './components/Dashboard';
 import { AuthPage } from './components/AuthPage';
+import { AccountPage } from './components/AccountPage';
 import { Nav } from './components/Nav';
 import { ChatBot } from './components/ChatBot';
 import { supabase } from './lib/supabase';
 import type { AnalysisResult } from './types';
 
-type AppStep = 'home' | 'gate' | 'inbox' | 'score' | 'content' | 'code' | 'pricing' | 'dashboard' | 'auth';
+type AppStep = 'home' | 'gate' | 'inbox' | 'score' | 'content' | 'code' | 'pricing' | 'dashboard' | 'auth' | 'account';
 
 const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://findmewithai-production.up.railway.app';
 
@@ -262,6 +263,19 @@ const App: React.FC = () => {
 
   const showNav = !['home', 'gate', 'inbox', 'pricing', 'dashboard'].includes(step);
 
+  // Account page — full screen, no App shell
+  if (step === 'account' && user) {
+    return (
+      <AccountPage
+        user={user}
+        isPro={isPro}
+        onBack={() => setStep('dashboard')}
+        onUpgrade={handleUpgrade}
+        onSignOut={handleSignOut}
+      />
+    );
+  }
+
   // Dashboard gets its own full-screen layout — render it outside the App shell
   if (step === 'dashboard' && user) {
     return (
@@ -273,6 +287,7 @@ const App: React.FC = () => {
           onNewScan={handleNewCheck}
           onUpgrade={handleUpgrade}
           onSignOut={handleSignOut}
+          onAccount={() => setStep('account')}
         />
         <ChatBot />
       </>

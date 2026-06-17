@@ -244,7 +244,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   );
 };
 
-export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan, onUpgrade, onSignOut }) => {
+export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan, onUpgrade, onSignOut, onAccount }) => {
   const windowWidth = useWindowWidth();
   const isMobile = windowWidth < 768;
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -619,6 +619,20 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
             style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px', width: '100%', background: '#7c3aed', color: 'white', border: 'none', borderRadius: '9px', padding: '10px', fontSize: '14px', fontWeight: 700, cursor: 'pointer' }}
           >
             <Plus size={14} /> New Scan
+          </button>
+        </div>
+
+        {/* My Account */}
+        <div style={{ padding: '0 10px 8px' }}>
+          <button
+            onClick={onAccount}
+            style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '9px 12px', background: 'transparent', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '9px', color: '#94a3b8', fontSize: '14px', fontWeight: 500, cursor: 'pointer', textAlign: 'left', transition: 'all 0.12s' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.06)'; (e.currentTarget as HTMLButtonElement).style.color = '#e2e8f0'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = '#94a3b8'; }}
+          >
+            <span style={{ fontSize: '15px', lineHeight: 1 }}>⚙️</span>
+            My Account
+            {isPro && <span style={{ marginLeft: 'auto', fontSize: '10px', fontWeight: 700, color: '#a78bfa', background: 'rgba(124,58,237,0.2)', borderRadius: '5px', padding: '2px 7px' }}>PRO</span>}
           </button>
         </div>
 
