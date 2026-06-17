@@ -1,28 +1,1436 @@
-{
-  "type": "file",
-  "name": "index.js",
-  "path": "server/index.js",
-  "size": 70646,
-  "sha": "4e9026c5f06e00f19748a228af6e4bd8a46ea385",
-  "content": "import express from 'express';\nimport https from 'https';\nimport http from 'http';\nimport { URL } from 'url';\nimport { fileURLToPath } from 'url';\nimport { dirname, join } from 'path';\nimport fs from 'fs';\nimport Stripe from 'stripe';\nimport cron from 'node-cron';\nimport { createClient } from '@supabase/supabase-js';\n\nconst stripe = process.env.STRIPE_SECRET_KEY\n  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2023-10-16' })\n  : null;\n\nconst PRICE_IDS = {\n  pro_monthly:    process.env.STRIPE_PRO_MONTHLY_PRICE_ID,\n  pro_yearly:     process.env.STRIPE_PRO_YEARLY_PRICE_ID,\n  agency_monthly: process.env.STRIPE_AGENCY_MONTHLY_PRICE_ID,\n  agency_yearly:  process.env.STRIPE_AGENCY_YEARLY_PRICE_ID,\n};\n\nconst APP_URL = process.env.APP_URL || 'https://www.findmewith.ai';\n\n// ── Supabase admin client ─────────────────────────────────────────────────────\nconst supabaseAdmin = (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY)\n  ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)\n  : null;\n\n// ── Resend email sender ───────────────────────────────────────────────────────\nasync function sendEmail({ to, subject, html }) {\n  const apiKey = process.env.RESEND_API_KEY;\n  if (!apiKey) { console.warn('[email] RESEND_API_KEY not set'); return { ok: false, error: 'RESEND_API_KEY not set' }; }\n  const res = await fetch('https://api.resend.com/emails', {\n    method: 'POST',\n    headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },\n    body: JSON.stringify({ from: 'findmewith.ai <hello@findmewith.ai>', to, subject, html }),\n  });\n  const data = await res.json();\n  if (!res.ok) { console.error('[email] Resend error:', data); return { ok: false, error: data }; }\n  console.log(`[email] sent to ${to} — id: ${data.id}`);\n  return { ok: true, id: data.id };\n}\n\n// ── Weekly report email builder ───────────────────────────────────────────────\nfunction buildWeeklyEmailHtml({ email, url, score, previousScore, topFix }) {\n  const delta = previousScore !== null ? score - previousScore : null;\n  const deltaText = delta === null ? '' : delta > 0 ? `▲ ${delta} pts from last week` : delta < 0 ? `▼ ${Math.abs(delta)} pts from last week` : 'No change from last week';\n  const deltaColor = delta > 0 ? '#16a34a' : delta < 0 ? '#dc2626' : '#6b7280';\n  const scoreColor = score >= 70 ? '#16a34a' : score >= 45 ? '#f59e0b' : '#dc2626';\n  const scoreLabel = score >= 70 ? 'Great visibility' : score >= 45 ? 'Getting there' : 'Needs attention';\n\n  return `<!DOCTYPE html>\n<html>\n<head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"></head>\n<body style=\"margin:0;padding:0;background:#f9fafb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;\">\n  <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#f9fafb;padding:40px 20px;\">\n    <tr><td align=\"center\">\n      <table width=\"600\" cellpadding=\"0\" cellspacing=\"0\" style=\"max-width:600px;width:100%;\">\n\n        <!-- Header -->\n        <tr><td style=\"background:linear-gradient(135deg,#7c3aed,#9333ea);border-radius:16px 16px 0 0;padding:32px 40px;text-align:center;\">\n          <div style=\"font-size:22px;font-weight:800;color:white;letter-spacing:-0.5px;\">findmewith.ai</div>\n          <div style=\"font-size:14px;color:rgba(255,255,255,0.8);margin-top:4px;\">Your weekly AI visibility report</div>\n        </td></tr>\n\n        <!-- Score card -->\n        <tr><td style=\"background:white;padding:36px 40px;border-left:1px solid #e5e7eb;border-right:1px solid #e5e7eb;\">\n          <div style=\"text-align:center;margin-bottom:28px;\">\n            <div style=\"font-size:13px;color:#6b7280;margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;\">Your AI Visibility Score</div>\n            <div style=\"font-size:72px;font-weight:900;color:${scoreColor};line-height:1;\">${score}</div>\n            <div style=\"font-size:14px;font-weight:700;color:${scoreColor};margin-top:4px;\">${scoreLabel}</div>\n            ${delta !== null ? `<div style=\"font-size:13px;color:${deltaColor};margin-top:8px;font-weight:600;\">${deltaText}</div>` : ''}\n          </div>\n\n          <div style=\"background:#f3f4f6;border-radius:10px;padding:14px 18px;margin-bottom:24px;font-size:13px;color:#374151;\">\n            <strong>Site scanned:</strong> <a href=\"${url}\" style=\"color:#7c3aed;\">${url}</a>\n          </div>\n\n          <!-- Plain English summary -->\n          <div style=\"background:#fdf4ff;border:1.5px solid #e9d5ff;border-radius:12px;padding:20px 24px;margin-bottom:24px;\">\n            <div style=\"font-size:15px;font-weight:700;color:#111827;margin-bottom:8px;\">What this means for your business</div>\n            <div style=\"font-size:14px;color:#374151;line-height:1.7;\">\n              ${score >= 70\n                ? 'AI tools like ChatGPT and Google AI are finding your business well. Keep it up — stay consistent and consider adding more detailed content.'\n                : score >= 45\n                ? 'You\\'re on the radar for AI search, but there\\'s room to grow. A few targeted improvements could get you recommended significantly more often.'\n                : 'Right now, AI tools would likely miss your business in search results. The good news: most fixes are straightforward and don\\'t require technical expertise.'}\n            </div>\n          </div>\n\n          ${topFix ? `<!-- #1 Priority -->\n          <div style=\"background:linear-gradient(135deg,#f5f3ff,#fff);border:1.5px solid #c4b5fd;border-radius:12px;padding:20px 24px;margin-bottom:28px;\">\n            <div style=\"font-size:11px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;\">⚡ Your #1 priority this week</div>\n            <div style=\"font-size:16px;font-weight:800;color:#111827;margin-bottom:8px;\">${topFix.title}</div>\n            <div style=\"font-size:14px;color:#4b5563;line-height:1.65;\">${topFix.description}</div>\n          </div>` : ''}\n\n          <!-- CTA -->\n          <div style=\"text-align:center;margin-bottom:8px;\">\n            <a href=\"${APP_URL}\" style=\"display:inline-block;background:linear-gradient(135deg,#7c3aed,#9333ea);color:white;text-decoration:none;font-weight:700;font-size:15px;padding:16px 36px;border-radius:12px;\">\n              View My Full Report →\n            </a>\n          </div>\n          <div style=\"text-align:center;font-size:12px;color:#9ca3af;margin-top:10px;\">Scan again any time to see your updated score</div>\n        </td></tr>\n\n        <!-- Footer -->\n        <tr><td style=\"background:#f3f4f6;border-radius:0 0 16px 16px;border:1px solid #e5e7eb;border-top:none;padding:24px 40px;text-align:center;\">\n          <div style=\"font-size:12px;color:#6b7280;line-height:1.7;\">\n            You're receiving this because you scanned your site on findmewith.ai.<br>\n            Questions? <a href=\"mailto:hello@findmewithai.com\" style=\"color:#7c3aed;\">hello@findmewithai.com</a><br>\n            <a href=\"${APP_URL}?unsubscribe=${encodeURIComponent(email)}\" style=\"color:#9ca3af;\">Unsubscribe from weekly reports</a>\n          </div>\n        </td></tr>\n\n      </table>\n    </td></tr>\n  </table>\n</body>\n</html>`;\n}\n\n// ── Run weekly reports ────────────────────────────────────────────────────────\nasync function runWeeklyReports() {\n  if (!supabaseAdmin) { console.warn('[weekly] Supabase admin not configured'); return; }\n  console.log('[weekly] Starting weekly report run…');\n\n  // Get most recent scan per email\n  const { data: scans, error } = await supabaseAdmin\n    .from('scans')\n    .select('email, url, score, created_at')\n    .order('created_at', { ascending: false });\n\n  if (error) { console.error('[weekly] Supabase query error:', error.message); return; }\n\n  // Deduplicate — keep most recent per email\n  const latestByEmail = new Map();\n  for (const scan of scans) {\n    if (scan.email && !latestByEmail.has(scan.email)) {\n      latestByEmail.set(scan.email, scan);\n    }\n  }\n\n  console.log(`[weekly] Found ${latestByEmail.size} users to report on`);\n\n  for (const [email, lastScan] of latestByEmail) {\n    try {\n      // Re-scan their site\n      const newResult = await analyzeUrl(lastScan.url);\n      const newScore = newResult.score;\n      const previousScore = lastScan.score;\n\n      // Save new scan to Supabase\n      await supabaseAdmin.from('scans').insert({\n        email,\n        url: lastScan.url,\n        score: newScore,\n        result: newResult,\n      });\n\n      // Build and send email\n      const topFix = newResult.suggestions?.[0] || null;\n      const html = buildWeeklyEmailHtml({ email, url: lastScan.url, score: newScore, previousScore, topFix });\n      await sendEmail({\n        to: email,\n        subject: `Your AI visibility score this week: ${newScore}/100`,\n        html,\n      });\n\n      // Small delay to avoid rate limits\n      await new Promise(r => setTimeout(r, 1500));\n    } catch (err) {\n      console.error(`[weekly] Failed for ${email}:`, err.message);\n    }\n  }\n\n  console.log('[weekly] Done.');\n}\n\n// ── Schedule: every Monday at 9:00 AM UTC ────────────────────────────────────\ncron.schedule('0 9 * * 1', () => {\n  runWeeklyReports().catch(err => console.error('[weekly cron]', err.message));\n}, { timezone: 'UTC' });\n\n// ── Nurture email HTML builders ───────────────────────────────────────────────\nfunction emailWrapper({ preheader = '', headerTitle = 'findmewith.ai', headerSub = '', body = '', email = '', unsubLabel = 'Unsubscribe from nurture emails' }) {\n  return `<!DOCTYPE html>\n<html>\n<head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n<title>${headerTitle}</title>\n</head>\n<body style=\"margin:0;padding:0;background:#f9fafb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;\">\n${preheader ? `<div style=\"display:none;max-height:0;overflow:hidden;mso-hide:all;\">${preheader}&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;</div>` : ''}\n<table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#f9fafb;padding:40px 20px;\">\n  <tr><td align=\"center\">\n    <table width=\"600\" cellpadding=\"0\" cellspacing=\"0\" style=\"max-width:600px;width:100%;\">\n      <tr><td style=\"background:linear-gradient(135deg,#3b0764,#7c3aed);border-radius:16px 16px 0 0;padding:28px 40px;text-align:center;\">\n        <div style=\"font-size:22px;font-weight:800;color:white;letter-spacing:-0.5px;\">findmewith.ai</div>\n        ${headerSub ? `<div style=\"font-size:13px;color:rgba(255,255,255,0.75);margin-top:4px;\">${headerSub}</div>` : ''}\n      </td></tr>\n      <tr><td style=\"background:white;padding:36px 40px;border-left:1px solid #e5e7eb;border-right:1px solid #e5e7eb;\">\n        ${body}\n      </td></tr>\n      <tr><td style=\"background:#f3f4f6;border-radius:0 0 16px 16px;border:1px solid #e5e7eb;border-top:none;padding:24px 40px;text-align:center;\">\n        <div style=\"font-size:12px;color:#6b7280;line-height:1.8;\">\n          You're receiving this because you scanned your site on findmewith.ai.<br>\n          Questions? <a href=\"mailto:hello@findmewithai.com\" style=\"color:#7c3aed;\">hello@findmewithai.com</a><br>\n          <a href=\"${APP_URL}?unsubscribe=${encodeURIComponent(email)}\" style=\"color:#9ca3af;\">${unsubLabel}</a>\n        </div>\n      </td></tr>\n    </table>\n  </td></tr>\n</table>\n</body>\n</html>`;\n}\n\nfunction buildWelcomeEmailHtml({ email, url, score }) {\n  const domain = url.replace(/^https?:\\/\\//, '').replace(/\\/$/, '');\n  const scoreColor = score >= 70 ? '#16a34a' : score >= 41 ? '#d97706' : '#dc2626';\n  const scoreEmoji = score >= 70 ? '🟢' : score >= 41 ? '🟡' : '🔴';\n  const scoreLabel = score >= 70 ? 'Great start — you\\'re already visible to AI' : score >= 41 ? 'On the radar — room to grow' : 'Not found yet — lots of quick wins ahead';\n  const tip = score >= 70\n    ? 'Add an FAQ section to your site. AI loves structured Q&A content — it pulls from it constantly.'\n    : score >= 41\n    ? 'Make sure your business name, address, and phone number are on every page of your website. This is the #1 signal AI uses to identify local businesses.'\n    : 'Add a clear, plain-English description of what you do and who you serve to your homepage. Right now, AI tools can\\'t confidently describe your business — a short paragraph fixes that.';\n\n  const body = `\n    <h1 style=\"font-size:24px;font-weight:800;color:#111827;margin:0 0 8px;\">Welcome to findmewith.ai 🎯</h1>\n    <p style=\"font-size:15px;color:#6b7280;line-height:1.6;margin:0 0 28px;\">You just scanned <strong style=\"color:#111827;\">${domain}</strong> and got your AI visibility score. Here's what it means.</p>\n\n    <!-- Score card -->\n    <div style=\"background:linear-gradient(135deg,#f5f3ff,#fdf4ff);border:1.5px solid #ddd6fe;border-radius:16px;padding:28px;text-align:center;margin-bottom:28px;\">\n      <div style=\"font-size:13px;color:#6b7280;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;\">Your AI Visibility Score</div>\n      <div style=\"font-size:80px;font-weight:900;color:${scoreColor};line-height:1;\">${score}</div>\n      <div style=\"font-size:16px;font-weight:700;color:${scoreColor};margin-top:6px;\">${scoreEmoji} ${scoreLabel}</div>\n      <div style=\"font-size:13px;color:#6b7280;margin-top:8px;\">out of 100 — based on what AI tools like ChatGPT, Perplexity, and Google AI can find about your business</div>\n    </div>\n\n    <!-- Plain English what this means -->\n    <div style=\"margin-bottom:24px;\">\n      <h2 style=\"font-size:17px;font-weight:800;color:#111827;margin:0 0 10px;\">What does this actually mean?</h2>\n      <p style=\"font-size:14px;color:#374151;line-height:1.75;margin:0;\">\n        When someone types <em>\"best [your service] near me\"</em> into ChatGPT or Google's AI, it searches everything it knows about local businesses. Your score tells you how much useful information about <strong>${domain}</strong> it can actually find. A lower score means it's probably recommending your competitors instead.\n      </p>\n    </div>\n\n    <!-- #1 quick win -->\n    <div style=\"background:#fffbeb;border-left:4px solid #f59e0b;border-radius:0 12px 12px 0;padding:20px 24px;margin-bottom:32px;\">\n      <div style=\"font-size:11px;font-weight:800;color:#92400e;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;\">⚡ One thing to do today</div>\n      <p style=\"font-size:14px;color:#374151;line-height:1.65;margin:0;\">${tip}</p>\n    </div>\n\n    <!-- CTA -->\n    <div style=\"text-align:center;\">\n      <a href=\"${APP_URL}\" style=\"display:inline-block;background:linear-gradient(135deg,#7c3aed,#9333ea);color:white;text-decoration:none;font-weight:700;font-size:15px;padding:16px 40px;border-radius:12px;box-shadow:0 4px 16px rgba(124,58,237,0.3);\">\n        Open My Dashboard →\n      </a>\n      <p style=\"font-size:12px;color:#9ca3af;margin-top:12px;\">Your full report is waiting — see every fix ranked by impact.</p>\n    </div>`;\n\n  return emailWrapper({\n    preheader: `Your AI visibility score for ${domain}: ${score}/100. Here's what it means and what to do first.`,\n    headerSub: 'Welcome — your results are ready',\n    body,\n    email,\n    unsubLabel: 'Unsubscribe from findmewith.ai emails',\n  });\n}\n\nfunction buildNurtureDay2Html({ email, url, score }) {\n  const domain = url.replace(/^https?:\\/\\//, '').replace(/\\/$/, '');\n  const scoreColor = score >= 70 ? '#16a34a' : score >= 41 ? '#d97706' : '#dc2626';\n\n  const body = `\n    <h1 style=\"font-size:22px;font-weight:800;color:#111827;margin:0 0 8px;\">What your ${score}/100 actually means for your business</h1>\n    <p style=\"font-size:15px;color:#6b7280;line-height:1.6;margin:0 0 28px;\">AI search is different from Google — and it's already sending customers somewhere.</p>\n\n    <p style=\"font-size:14px;color:#374151;line-height:1.75;margin:0 0 20px;\">\n      You know how you'd ask a friend, <em>\"know a good accountant near me?\"</em> — and they'd give you one name? That's exactly how AI works now. When someone types a question into ChatGPT or Google's AI, it recommends <strong>one or two businesses</strong>, not a list of 20.\n    </p>\n    <p style=\"font-size:14px;color:#374151;line-height:1.75;margin:0 0 28px;\">\n      Your score of <strong style=\"color:${scoreColor};\">${score}/100</strong> tells you how likely you are to be that recommendation. Businesses in the 70+ range are getting named regularly. Below 40, AI tools either can't find them or don't have enough information to confidently recommend them.\n    </p>\n\n    <!-- The three states -->\n    <div style=\"border:1.5px solid #e5e7eb;border-radius:16px;overflow:hidden;margin-bottom:28px;\">\n      <div style=\"background:#fef2f2;padding:16px 20px;display:flex;align-items:center;\">\n        <div style=\"font-size:22px;margin-right:14px;\">🔴</div>\n        <div>\n          <div style=\"font-size:14px;font-weight:800;color:#991b1b;\">Score 0–40: Not Found</div>\n          <div style=\"font-size:13px;color:#6b7280;margin-top:2px;\">AI tools can't confidently describe or recommend your business</div>\n        </div>\n      </div>\n      <div style=\"background:#fffbeb;padding:16px 20px;border-top:1px solid #e5e7eb;display:flex;align-items:center;\">\n        <div style=\"font-size:22px;margin-right:14px;\">🟡</div>\n        <div>\n          <div style=\"font-size:14px;font-weight:800;color:#92400e;\">Score 41–70: Getting Found</div>\n          <div style=\"font-size:13px;color:#6b7280;margin-top:2px;\">On the radar — shows up in some queries but loses to competitors in others</div>\n        </div>\n      </div>\n      <div style=\"background:#f0fdf4;padding:16px 20px;border-top:1px solid #e5e7eb;display:flex;align-items:center;\">\n        <div style=\"font-size:22px;margin-right:14px;\">🟢</div>\n        <div>\n          <div style=\"font-size:14px;font-weight:800;color:#15803d;\">Score 71–100: Found</div>\n          <div style=\"font-size:13px;color:#6b7280;margin-top:2px;\">Regularly cited and recommended by AI tools — the goal</div>\n        </div>\n      </div>\n    </div>\n\n    <div style=\"background:#f5f3ff;border-radius:12px;padding:20px 24px;margin-bottom:32px;\">\n      <p style=\"font-size:14px;color:#374151;line-height:1.75;margin:0;\">\n        The businesses winning in AI search right now aren't necessarily the biggest — they're the ones whose websites speak clearly to AI. A well-structured, information-rich site with consistent details beats a fancy site every time.\n      </p>\n    </div>\n\n    <div style=\"text-align:center;\">\n      <a href=\"${APP_URL}\" style=\"display:inline-block;background:linear-gradient(135deg,#7c3aed,#9333ea);color:white;text-decoration:none;font-weight:700;font-size:15px;padding:16px 40px;border-radius:12px;box-shadow:0 4px 16px rgba(124,58,237,0.3);\">\n        See My Fix List →\n      </a>\n      <p style=\"font-size:12px;color:#9ca3af;margin-top:12px;\">Each fix in your dashboard is ranked by how much it'll move your score.</p>\n    </div>`;\n\n  return emailWrapper({\n    preheader: `AI recommends one or two businesses — here's where ${domain} stands.`,\n    headerSub: 'Understanding your AI visibility',\n    body,\n    email,\n    unsubLabel: 'Unsubscribe from findmewith.ai emails',\n  });\n}\n\nfunction buildNurtureDay5Html({ email, url, score }) {\n  const domain = url.replace(/^https?:\\/\\//, '').replace(/\\/$/, '');\n\n  const body = `\n    <h1 style=\"font-size:22px;font-weight:800;color:#111827;margin:0 0 8px;\">3 quick wins to improve your AI score this week</h1>\n    <p style=\"font-size:15px;color:#6b7280;line-height:1.6;margin:0 0 28px;\">None of these require a developer. Most take under 15 minutes.</p>\n\n    <!-- Win 1 -->\n    <div style=\"display:flex;gap:16px;margin-bottom:24px;padding:20px;background:#f5f3ff;border-radius:14px;border-left:4px solid #7c3aed;\">\n      <div style=\"font-size:28px;flex-shrink:0;margin-top:2px;\">1️⃣</div>\n      <div>\n        <div style=\"font-size:15px;font-weight:800;color:#111827;margin-bottom:6px;\">Add your NAP to every page</div>\n        <p style=\"font-size:14px;color:#374151;line-height:1.65;margin:0;\">NAP = Name, Address, Phone number. These three things need to be <strong>identical</strong> across your website, Google Business, and social profiles. Even small differences (\"St.\" vs \"Street\") confuse AI tools and lower trust.</p>\n      </div>\n    </div>\n\n    <!-- Win 2 -->\n    <div style=\"display:flex;gap:16px;margin-bottom:24px;padding:20px;background:#fffbeb;border-radius:14px;border-left:4px solid #f59e0b;\">\n      <div style=\"font-size:28px;flex-shrink:0;margin-top:2px;\">2️⃣</div>\n      <div>\n        <div style=\"font-size:15px;font-weight:800;color:#111827;margin-bottom:6px;\">Write a plain-English \"About\" section</div>\n        <p style=\"font-size:14px;color:#374151;line-height:1.65;margin:0;\">AI reads your website like a person would. A clear sentence like <em>\"We're a family-owned plumbing company serving Denver, CO since 2008\"</em> gives it everything it needs to recommend you with confidence. Vague taglines don't cut it.</p>\n      </div>\n    </div>\n\n    <!-- Win 3 -->\n    <div style=\"display:flex;gap:16px;margin-bottom:32px;padding:20px;background:#f0fdf4;border-radius:14px;border-left:4px solid #16a34a;\">\n      <div style=\"font-size:28px;flex-shrink:0;margin-top:2px;\">3️⃣</div>\n      <div>\n        <div style=\"font-size:15px;font-weight:800;color:#111827;margin-bottom:6px;\">Add a simple FAQ section</div>\n        <p style=\"font-size:14px;color:#374151;line-height:1.65;margin:0;\">AI loves questions and answers. Add 5–8 real questions your customers ask, with short direct answers. <em>\"Do you offer free estimates?\" \"What areas do you serve?\" \"How long does a typical job take?\"</em> This directly feeds AI recommendation engines.</p>\n      </div>\n    </div>\n\n    <!-- Bonus: code snippets -->\n    <div style=\"background:#f5f3ff;border:1.5px solid #c4b5fd;border-radius:14px;padding:20px 24px;margin-bottom:32px;\">\n      <div style=\"font-size:11px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;\">💡 Bonus: the fast track</div>\n      <p style=\"font-size:14px;color:#374151;line-height:1.65;margin:0 0 12px;\">\n        Your dashboard includes ready-made code snippets — tiny pieces of structured data that tell AI tools exactly who you are, what you do, and where you're located. You paste them into your site once and they run forever.\n      </p>\n      <a href=\"${APP_URL}\" style=\"font-size:13px;font-weight:700;color:#7c3aed;text-decoration:none;\">See my code snippets →</a>\n    </div>\n\n    <div style=\"text-align:center;\">\n      <a href=\"${APP_URL}\" style=\"display:inline-block;background:linear-gradient(135deg,#7c3aed,#9333ea);color:white;text-decoration:none;font-weight:700;font-size:15px;padding:16px 40px;border-radius:12px;box-shadow:0 4px 16px rgba(124,58,237,0.3);\">\n        Open My Dashboard →\n      </a>\n    </div>`;\n\n  return emailWrapper({\n    preheader: `3 things you can do this week to improve how AI finds ${domain} — no developer needed.`,\n    headerSub: 'Quick wins for your AI visibility',\n    body,\n    email,\n    unsubLabel: 'Unsubscribe from findmewith.ai emails',\n  });\n}\n\nfunction buildNurtureDay10Html({ email, url, score }) {\n  const domain = url.replace(/^https?:\\/\\//, '').replace(/\\/$/, '');\n\n  const body = `\n    <h1 style=\"font-size:22px;font-weight:800;color:#111827;margin:0 0 8px;\">AI is sending customers somewhere right now. Is it you?</h1>\n    <p style=\"font-size:15px;color:#6b7280;line-height:1.6;margin:0 0 24px;\">Every week you're not optimized, someone in your area is getting those referrals instead.</p>\n\n    <p style=\"font-size:14px;color:#374151;line-height:1.75;margin:0 0 28px;\">\n      Your current score for <strong>${domain}</strong> is a starting point — and you've already taken the first step by scanning. Here's the truth about what separates the businesses that get found from those that don't:\n    </p>\n\n    <!-- Comparison -->\n    <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin-bottom:28px;border-radius:14px;overflow:hidden;border:1.5px solid #e5e7eb;\">\n      <tr style=\"background:#f9fafb;\">\n        <td style=\"padding:12px 20px;font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.8px;border-bottom:1px solid #e5e7eb;\">Free Account</td>\n        <td style=\"padding:12px 20px;font-size:12px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:0.8px;border-bottom:1px solid #e5e7eb;border-left:1.5px solid #ddd6fe;background:#f5f3ff;\">Pro Account</td>\n      </tr>\n      <tr style=\"background:white;\">\n        <td style=\"padding:14px 20px;font-size:13px;color:#374151;border-bottom:1px solid #f3f4f6;vertical-align:top;\">\n          ✅ One-time scan & score<br>✅ Top fix recommendations<br>✅ Basic code snippets<br>❌ No monitoring<br>❌ Manual re-scans only<br>❌ No competitor tracking\n        </td>\n        <td style=\"padding:14px 20px;font-size:13px;color:#374151;border-bottom:1px solid #f3f4f6;vertical-align:top;border-left:1.5px solid #ddd6fe;background:#fdfcff;\">\n          ✅ Everything in Free<br>✅ Weekly auto re-scan<br>✅ Score change alerts<br>✅ Competitor AI comparison<br>✅ Full snippet library<br>✅ Site Monitoring badge\n        </td>\n      </tr>\n    </table>\n\n    <div style=\"background:#fffbeb;border-left:4px solid #f59e0b;border-radius:0 12px 12px 0;padding:18px 22px;margin-bottom:32px;\">\n      <p style=\"font-size:14px;color:#374151;line-height:1.65;margin:0;\">\n        <strong>Pro is $29/month.</strong> If it sends you even one extra customer a month — a single haircut, a service call, a consultation — it pays for itself. And it runs quietly in the background so you don't have to think about it.\n      </p>\n    </div>\n\n    <div style=\"text-align:center;margin-bottom:16px;\">\n      <a href=\"${APP_URL}\" style=\"display:inline-block;background:linear-gradient(135deg,#7c3aed,#9333ea);color:white;text-decoration:none;font-weight:700;font-size:15px;padding:16px 40px;border-radius:12px;box-shadow:0 4px 16px rgba(124,58,237,0.3);\">\n        Try Pro Free for 7 Days →\n      </a>\n    </div>\n    <div style=\"text-align:center;\">\n      <a href=\"${APP_URL}\" style=\"font-size:13px;color:#9ca3af;text-decoration:none;\">Or keep using your free account — no pressure.</a>\n    </div>`;\n\n  return emailWrapper({\n    preheader: `AI is recommending businesses in your area every day. Here's how to make sure it's recommending ${domain}.`,\n    headerSub: 'A note from findmewith.ai',\n    body,\n    email,\n    unsubLabel: 'Unsubscribe from findmewith.ai emails',\n  });\n}\n\n// ── Nurture email drip ────────────────────────────────────────────────────────\nasync function runNurtureEmails() {\n  if (!supabaseAdmin) { console.warn('[nurture] Supabase not configured'); return; }\n  console.log('[nurture] Starting drip check...');\n\n  // Get all unique emails + their earliest scan (signup date) + score\n  const { data: scans, error } = await supabaseAdmin\n    .from('scans')\n    .select('email, url, score, created_at')\n    .order('created_at', { ascending: true });\n\n  if (error) { console.error('[nurture] Could not fetch scans:', error.message); return; }\n\n  // Deduplicate — first scan per email\n  const firstByEmail = new Map();\n  for (const s of (scans || [])) {\n    if (s.email && !firstByEmail.has(s.email)) firstByEmail.set(s.email, s);\n  }\n\n  const now = Date.now();\n\n  for (const [email, scan] of firstByEmail) {\n    if (!email) continue;\n    const signupMs = new Date(scan.created_at).getTime();\n    const daysSince = (now - signupMs) / (1000 * 60 * 60 * 24);\n\n    // Check which steps are due\n    const steps = [\n      { step: 2, minDays: 2,  maxDays: 4 },\n      { step: 5, minDays: 5,  maxDays: 8 },\n      { step: 10, minDays: 10, maxDays: 16 },\n    ];\n\n    for (const { step, minDays, maxDays } of steps) {\n      if (daysSince < minDays || daysSince > maxDays) continue;\n\n      // Check if already sent\n      const { data: existing } = await supabaseAdmin\n        .from('nurture_log')\n        .select('id')\n        .eq('email', email)\n        .eq('step', step)\n        .maybeSingle();\n\n      if (existing) continue; // already sent\n\n      // Build and send\n      let html, subject;\n      if (step === 2) {\n        html = buildNurtureDay2Html({ email, url: scan.url, score: scan.score });\n        subject = `What your ${scan.score}/100 AI score means for your business`;\n      } else if (step === 5) {\n        html = buildNurtureDay5Html({ email, url: scan.url, score: scan.score });\n        subject = `3 quick wins to improve your AI visibility this week`;\n      } else {\n        html = buildNurtureDay10Html({ email, url: scan.url, score: scan.score });\n        subject = `AI is sending customers somewhere — is it you?`;\n      }\n\n      const sent = await sendEmail({ to: email, subject, html });\n      if (sent.ok) {\n        // Log it\n        await supabaseAdmin.from('nurture_log').insert({ email, step, url: scan.url });\n        console.log(`[nurture] sent step ${step} to ${email}`);\n      } else {\n        console.error(`[nurture] failed step ${step} to ${email}:`, sent.error);\n      }\n\n      await new Promise(r => setTimeout(r, 800)); // rate-limit\n    }\n  }\n  console.log('[nurture] Done.');\n}\n\n// ── Schedule: daily at 10:00 AM UTC ──────────────────────────────────────────\ncron.schedule('0 10 * * *', () => {\n  runNurtureEmails().catch(err => console.error('[nurture cron]', err.message));\n}, { timezone: 'UTC' });\n\nconst __dirname = dirname(fileURLToPath(import.meta.url));\nconst app = express();\n\n// ── CORS ─────────────────────────────────────────────────────────────────────\napp.use((req, res, next) => {\n  res.header('Access-Control-Allow-Origin', '*');\n  res.header('Access-Control-Allow-Headers', 'Content-Type, stripe-signature, Authorization');\n  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');\n  if (req.method === 'OPTIONS') return res.sendStatus(200);\n  next();\n});\n\n// ── Serve static frontend ────────────────────────────────────────────────────\nconst distPath = join(__dirname, '../dist');\nif (fs.existsSync(distPath)) app.use(express.static(distPath));\n\n// ── Subscription store (in-memory + file backup) ─────────────────────────────\n// Map: email → { customerId, subscriptionId, plan, status, createdAt }\nconst subscriptions = new Map();\nconst SUB_FILE = process.env.DATA_DIR\n  ? join(process.env.DATA_DIR, 'subscriptions.json')\n  : '/tmp/subscriptions.json';\n\nfunction loadSubs() {\n  try {\n    if (fs.existsSync(SUB_FILE)) {\n      const data = JSON.parse(fs.readFileSync(SUB_FILE, 'utf8'));\n      Object.entries(data).forEach(([k, v]) => subscriptions.set(k, v));\n      console.log(`[subs] loaded ${subscriptions.size} subscriptions from disk`);\n    }\n  } catch (e) { console.warn('[subs] could not load:', e.message); }\n}\n\nfunction saveSubs() {\n  try {\n    fs.writeFileSync(SUB_FILE, JSON.stringify(Object.fromEntries(subscriptions), null, 2));\n  } catch (e) { console.warn('[subs] could not save:', e.message); }\n}\n\nloadSubs();\n\n// ── POST /api/webhook (raw body — MUST be before express.json()) ──────────────\napp.post('/api/webhook',\n  express.raw({ type: 'application/json' }),\n  async (req, res) => {\n    if (!stripe) return res.status(500).send('Stripe not configured');\n\n    const sig = req.headers['stripe-signature'];\n    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;\n    let event;\n\n    if (webhookSecret) {\n      try {\n        event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);\n      } catch (err) {\n        console.error('[webhook] signature failed:', err.message);\n        return res.status(400).send(`Webhook Error: ${err.message}`);\n      }\n    } else {\n      // No secret yet — accept unsigned (set STRIPE_WEBHOOK_SECRET to secure)\n      try { event = JSON.parse(req.body.toString()); }\n      catch { return res.status(400).send('Invalid JSON'); }\n    }\n\n    console.log(`[webhook] ${event.type}`);\n\n    if (event.type === 'checkout.session.completed') {\n      const session = event.data.object;\n      const email = (session.customer_details?.email || session.customer_email || '').toLowerCase().trim();\n      if (email) {\n        subscriptions.set(email, {\n          customerId:     session.customer,\n          subscriptionId: session.subscription,\n          plan:           session.metadata?.plan || 'pro',\n          status:         'active',\n          createdAt:      new Date().toISOString(),\n        });\n        saveSubs();\n        console.log(`[webhook] activated: ${email}`);\n        // Also persist to Supabase for cross-process visibility\n        if (supabaseAdmin) {\n          supabaseAdmin.from('pro_upgrades').upsert({\n            email,\n            customer_id: session.customer,\n            subscription_id: session.subscription || null,\n            plan: session.metadata?.plan || 'pro',\n            status: 'active',\n            upgraded_at: new Date().toISOString(),\n          }, { onConflict: 'email' }).then(({ error: sbErr }) => {\n            if (sbErr) console.warn('[webhook] supabase pro_upgrades write failed:', sbErr.message);\n            else console.log(`[webhook] supabase pro_upgrades saved for ${email}`);\n          });\n        }\n      }\n    }\n\n    if (event.type === 'customer.subscription.deleted') {\n      const sub = event.data.object;\n      for (const [email, data] of subscriptions.entries()) {\n        if (data.subscriptionId === sub.id) {\n          subscriptions.set(email, { ...data, status: 'cancelled' });\n          saveSubs();\n          console.log(`[webhook] cancelled: ${email}`);\n          break;\n        }\n      }\n    }\n\n    if (event.type === 'customer.subscription.updated') {\n      const sub = event.data.object;\n      for (const [email, data] of subscriptions.entries()) {\n        if (data.subscriptionId === sub.id) {\n          subscriptions.set(email, { ...data, status: sub.status === 'active' ? 'active' : sub.status });\n          saveSubs();\n          break;\n        }\n      }\n    }\n\n    res.json({ received: true });\n  }\n);\n\n// ── JSON body parser (after webhook route) ────────────────────────────────────\napp.use(express.json());\n\n// ── GET /api/admin/recent-upgrades ───────────────────────────────────────────\n// Used by Tasklet trigger to check for new Pro upgrades every 15 minutes\napp.get('/api/admin/recent-upgrades', (req, res) => {\n  const secret = req.query.secret;\n  const adminSecret = process.env.ADMIN_SECRET || 'fmw-admin-2024';\n  if (secret !== adminSecret) return res.status(401).json({ error: 'unauthorized' });\n  const since = req.query.since ? new Date(req.query.since) : new Date(Date.now() - 60 * 60 * 1000);\n  const recent = [];\n  for (const [email, data] of subscriptions.entries()) {\n    if (data.status === 'active' && data.createdAt && new Date(data.createdAt) > since) {\n      recent.push({ email, plan: data.plan, createdAt: data.createdAt });\n    }\n  }\n  res.json(recent);\n});\n\n// ── GET /api/admin/recent-signups ────────────────────────────────────────────
-// Used by Tasklet trigger to check for new signups every 15 minutes
-app.get('/api/admin/recent-signups', async (req, res) => {
+import express from 'express';
+import https from 'https';
+import http from 'http';
+import { URL } from 'url';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import fs from 'fs';
+import Stripe from 'stripe';
+import cron from 'node-cron';
+import { createClient } from '@supabase/supabase-js';
+
+const stripe = process.env.STRIPE_SECRET_KEY
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2023-10-16' })
+  : null;
+
+const PRICE_IDS = {
+  pro_monthly:    process.env.STRIPE_PRO_MONTHLY_PRICE_ID,
+  pro_yearly:     process.env.STRIPE_PRO_YEARLY_PRICE_ID,
+  agency_monthly: process.env.STRIPE_AGENCY_MONTHLY_PRICE_ID,
+  agency_yearly:  process.env.STRIPE_AGENCY_YEARLY_PRICE_ID,
+};
+
+const APP_URL = process.env.APP_URL || 'https://www.findmewith.ai';
+
+// ── Supabase admin client ─────────────────────────────────────────────────────
+const supabaseAdmin = (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY)
+  ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
+  : null;
+
+// ── Resend email sender ───────────────────────────────────────────────────────
+async function sendEmail({ to, subject, html }) {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) { console.warn('[email] RESEND_API_KEY not set'); return { ok: false, error: 'RESEND_API_KEY not set' }; }
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ from: 'findmewith.ai <hello@findmewith.ai>', to, subject, html }),
+  });
+  const data = await res.json();
+  if (!res.ok) { console.error('[email] Resend error:', data); return { ok: false, error: data }; }
+  console.log(`[email] sent to ${to} — id: ${data.id}`);
+  return { ok: true, id: data.id };
+}
+
+// ── Weekly report email builder ───────────────────────────────────────────────
+function buildWeeklyEmailHtml({ email, url, score, previousScore, topFix }) {
+  const delta = previousScore !== null ? score - previousScore : null;
+  const deltaText = delta === null ? '' : delta > 0 ? `▲ ${delta} pts from last week` : delta < 0 ? `▼ ${Math.abs(delta)} pts from last week` : 'No change from last week';
+  const deltaColor = delta > 0 ? '#16a34a' : delta < 0 ? '#dc2626' : '#6b7280';
+  const scoreColor = score >= 70 ? '#16a34a' : score >= 45 ? '#f59e0b' : '#dc2626';
+  const scoreLabel = score >= 70 ? 'Great visibility' : score >= 45 ? 'Getting there' : 'Needs attention';
+
+  return `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f9fafb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;padding:40px 20px;">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
+
+        <!-- Header -->
+        <tr><td style="background:linear-gradient(135deg,#7c3aed,#9333ea);border-radius:16px 16px 0 0;padding:32px 40px;text-align:center;">
+          <div style="font-size:22px;font-weight:800;color:white;letter-spacing:-0.5px;">findmewith.ai</div>
+          <div style="font-size:14px;color:rgba(255,255,255,0.8);margin-top:4px;">Your weekly AI visibility report</div>
+        </td></tr>
+
+        <!-- Score card -->
+        <tr><td style="background:white;padding:36px 40px;border-left:1px solid #e5e7eb;border-right:1px solid #e5e7eb;">
+          <div style="text-align:center;margin-bottom:28px;">
+            <div style="font-size:13px;color:#6b7280;margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;">Your AI Visibility Score</div>
+            <div style="font-size:72px;font-weight:900;color:${scoreColor};line-height:1;">${score}</div>
+            <div style="font-size:14px;font-weight:700;color:${scoreColor};margin-top:4px;">${scoreLabel}</div>
+            ${delta !== null ? `<div style="font-size:13px;color:${deltaColor};margin-top:8px;font-weight:600;">${deltaText}</div>` : ''}
+          </div>
+
+          <div style="background:#f3f4f6;border-radius:10px;padding:14px 18px;margin-bottom:24px;font-size:13px;color:#374151;">
+            <strong>Site scanned:</strong> <a href="${url}" style="color:#7c3aed;">${url}</a>
+          </div>
+
+          <!-- Plain English summary -->
+          <div style="background:#fdf4ff;border:1.5px solid #e9d5ff;border-radius:12px;padding:20px 24px;margin-bottom:24px;">
+            <div style="font-size:15px;font-weight:700;color:#111827;margin-bottom:8px;">What this means for your business</div>
+            <div style="font-size:14px;color:#374151;line-height:1.7;">
+              ${score >= 70
+                ? 'AI tools like ChatGPT and Google AI are finding your business well. Keep it up — stay consistent and consider adding more detailed content.'
+                : score >= 45
+                ? 'You\'re on the radar for AI search, but there\'s room to grow. A few targeted improvements could get you recommended significantly more often.'
+                : 'Right now, AI tools would likely miss your business in search results. The good news: most fixes are straightforward and don\'t require technical expertise.'}
+            </div>
+          </div>
+
+          ${topFix ? `<!-- #1 Priority -->
+          <div style="background:linear-gradient(135deg,#f5f3ff,#fff);border:1.5px solid #c4b5fd;border-radius:12px;padding:20px 24px;margin-bottom:28px;">
+            <div style="font-size:11px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">⚡ Your #1 priority this week</div>
+            <div style="font-size:16px;font-weight:800;color:#111827;margin-bottom:8px;">${topFix.title}</div>
+            <div style="font-size:14px;color:#4b5563;line-height:1.65;">${topFix.description}</div>
+          </div>` : ''}
+
+          <!-- CTA -->
+          <div style="text-align:center;margin-bottom:8px;">
+            <a href="${APP_URL}" style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#9333ea);color:white;text-decoration:none;font-weight:700;font-size:15px;padding:16px 36px;border-radius:12px;">
+              View My Full Report →
+            </a>
+          </div>
+          <div style="text-align:center;font-size:12px;color:#9ca3af;margin-top:10px;">Scan again any time to see your updated score</div>
+        </td></tr>
+
+        <!-- Footer -->
+        <tr><td style="background:#f3f4f6;border-radius:0 0 16px 16px;border:1px solid #e5e7eb;border-top:none;padding:24px 40px;text-align:center;">
+          <div style="font-size:12px;color:#6b7280;line-height:1.7;">
+            You're receiving this because you scanned your site on findmewith.ai.<br>
+            Questions? <a href="mailto:hello@findmewithai.com" style="color:#7c3aed;">hello@findmewithai.com</a><br>
+            <a href="${APP_URL}?unsubscribe=${encodeURIComponent(email)}" style="color:#9ca3af;">Unsubscribe from weekly reports</a>
+          </div>
+        </td></tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
+// ── Run weekly reports ────────────────────────────────────────────────────────
+async function runWeeklyReports() {
+  if (!supabaseAdmin) { console.warn('[weekly] Supabase admin not configured'); return; }
+  console.log('[weekly] Starting weekly report run…');
+
+  // Get most recent scan per email
+  const { data: scans, error } = await supabaseAdmin
+    .from('scans')
+    .select('email, url, score, created_at')
+    .order('created_at', { ascending: false });
+
+  if (error) { console.error('[weekly] Supabase query error:', error.message); return; }
+
+  // Deduplicate — keep most recent per email
+  const latestByEmail = new Map();
+  for (const scan of scans) {
+    if (scan.email && !latestByEmail.has(scan.email)) {
+      latestByEmail.set(scan.email, scan);
+    }
+  }
+
+  console.log(`[weekly] Found ${latestByEmail.size} users to report on`);
+
+  for (const [email, lastScan] of latestByEmail) {
+    try {
+      // Re-scan their site
+      const newResult = await analyzeUrl(lastScan.url);
+      const newScore = newResult.score;
+      const previousScore = lastScan.score;
+
+      // Save new scan to Supabase
+      await supabaseAdmin.from('scans').insert({
+        email,
+        url: lastScan.url,
+        score: newScore,
+        result: newResult,
+      });
+
+      // Build and send email
+      const topFix = newResult.suggestions?.[0] || null;
+      const html = buildWeeklyEmailHtml({ email, url: lastScan.url, score: newScore, previousScore, topFix });
+      await sendEmail({
+        to: email,
+        subject: `Your AI visibility score this week: ${newScore}/100`,
+        html,
+      });
+
+      // Small delay to avoid rate limits
+      await new Promise(r => setTimeout(r, 1500));
+    } catch (err) {
+      console.error(`[weekly] Failed for ${email}:`, err.message);
+    }
+  }
+
+  console.log('[weekly] Done.');
+}
+
+// ── Schedule: every Monday at 9:00 AM UTC ────────────────────────────────────
+cron.schedule('0 9 * * 1', () => {
+  runWeeklyReports().catch(err => console.error('[weekly cron]', err.message));
+}, { timezone: 'UTC' });
+
+// ── Nurture email HTML builders ───────────────────────────────────────────────
+function emailWrapper({ preheader = '', headerTitle = 'findmewith.ai', headerSub = '', body = '', email = '', unsubLabel = 'Unsubscribe from nurture emails' }) {
+  return `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${headerTitle}</title>
+</head>
+<body style="margin:0;padding:0;background:#f9fafb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+${preheader ? `<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">${preheader}&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;</div>` : ''}
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;padding:40px 20px;">
+  <tr><td align="center">
+    <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
+      <tr><td style="background:linear-gradient(135deg,#3b0764,#7c3aed);border-radius:16px 16px 0 0;padding:28px 40px;text-align:center;">
+        <div style="font-size:22px;font-weight:800;color:white;letter-spacing:-0.5px;">findmewith.ai</div>
+        ${headerSub ? `<div style="font-size:13px;color:rgba(255,255,255,0.75);margin-top:4px;">${headerSub}</div>` : ''}
+      </td></tr>
+      <tr><td style="background:white;padding:36px 40px;border-left:1px solid #e5e7eb;border-right:1px solid #e5e7eb;">
+        ${body}
+      </td></tr>
+      <tr><td style="background:#f3f4f6;border-radius:0 0 16px 16px;border:1px solid #e5e7eb;border-top:none;padding:24px 40px;text-align:center;">
+        <div style="font-size:12px;color:#6b7280;line-height:1.8;">
+          You're receiving this because you scanned your site on findmewith.ai.<br>
+          Questions? <a href="mailto:hello@findmewithai.com" style="color:#7c3aed;">hello@findmewithai.com</a><br>
+          <a href="${APP_URL}?unsubscribe=${encodeURIComponent(email)}" style="color:#9ca3af;">${unsubLabel}</a>
+        </div>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body>
+</html>`;
+}
+
+function buildWelcomeEmailHtml({ email, url, score }) {
+  const domain = url.replace(/^https?:\/\//, '').replace(/\/$/, '');
+  const scoreColor = score >= 70 ? '#16a34a' : score >= 41 ? '#d97706' : '#dc2626';
+  const scoreEmoji = score >= 70 ? '🟢' : score >= 41 ? '🟡' : '🔴';
+  const scoreLabel = score >= 70 ? 'Great start — you\'re already visible to AI' : score >= 41 ? 'On the radar — room to grow' : 'Not found yet — lots of quick wins ahead';
+  const tip = score >= 70
+    ? 'Add an FAQ section to your site. AI loves structured Q&A content — it pulls from it constantly.'
+    : score >= 41
+    ? 'Make sure your business name, address, and phone number are on every page of your website. This is the #1 signal AI uses to identify local businesses.'
+    : 'Add a clear, plain-English description of what you do and who you serve to your homepage. Right now, AI tools can\'t confidently describe your business — a short paragraph fixes that.';
+
+  const body = `
+    <h1 style="font-size:24px;font-weight:800;color:#111827;margin:0 0 8px;">Welcome to findmewith.ai 🎯</h1>
+    <p style="font-size:15px;color:#6b7280;line-height:1.6;margin:0 0 28px;">You just scanned <strong style="color:#111827;">${domain}</strong> and got your AI visibility score. Here's what it means.</p>
+
+    <!-- Score card -->
+    <div style="background:linear-gradient(135deg,#f5f3ff,#fdf4ff);border:1.5px solid #ddd6fe;border-radius:16px;padding:28px;text-align:center;margin-bottom:28px;">
+      <div style="font-size:13px;color:#6b7280;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Your AI Visibility Score</div>
+      <div style="font-size:80px;font-weight:900;color:${scoreColor};line-height:1;">${score}</div>
+      <div style="font-size:16px;font-weight:700;color:${scoreColor};margin-top:6px;">${scoreEmoji} ${scoreLabel}</div>
+      <div style="font-size:13px;color:#6b7280;margin-top:8px;">out of 100 — based on what AI tools like ChatGPT, Perplexity, and Google AI can find about your business</div>
+    </div>
+
+    <!-- Plain English what this means -->
+    <div style="margin-bottom:24px;">
+      <h2 style="font-size:17px;font-weight:800;color:#111827;margin:0 0 10px;">What does this actually mean?</h2>
+      <p style="font-size:14px;color:#374151;line-height:1.75;margin:0;">
+        When someone types <em>"best [your service] near me"</em> into ChatGPT or Google's AI, it searches everything it knows about local businesses. Your score tells you how much useful information about <strong>${domain}</strong> it can actually find. A lower score means it's probably recommending your competitors instead.
+      </p>
+    </div>
+
+    <!-- #1 quick win -->
+    <div style="background:#fffbeb;border-left:4px solid #f59e0b;border-radius:0 12px 12px 0;padding:20px 24px;margin-bottom:32px;">
+      <div style="font-size:11px;font-weight:800;color:#92400e;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">⚡ One thing to do today</div>
+      <p style="font-size:14px;color:#374151;line-height:1.65;margin:0;">${tip}</p>
+    </div>
+
+    <!-- CTA -->
+    <div style="text-align:center;">
+      <a href="${APP_URL}" style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#9333ea);color:white;text-decoration:none;font-weight:700;font-size:15px;padding:16px 40px;border-radius:12px;box-shadow:0 4px 16px rgba(124,58,237,0.3);">
+        Open My Dashboard →
+      </a>
+      <p style="font-size:12px;color:#9ca3af;margin-top:12px;">Your full report is waiting — see every fix ranked by impact.</p>
+    </div>`;
+
+  return emailWrapper({
+    preheader: `Your AI visibility score for ${domain}: ${score}/100. Here's what it means and what to do first.`,
+    headerSub: 'Welcome — your results are ready',
+    body,
+    email,
+    unsubLabel: 'Unsubscribe from findmewith.ai emails',
+  });
+}
+
+function buildNurtureDay2Html({ email, url, score }) {
+  const domain = url.replace(/^https?:\/\//, '').replace(/\/$/, '');
+  const scoreColor = score >= 70 ? '#16a34a' : score >= 41 ? '#d97706' : '#dc2626';
+
+  const body = `
+    <h1 style="font-size:22px;font-weight:800;color:#111827;margin:0 0 8px;">What your ${score}/100 actually means for your business</h1>
+    <p style="font-size:15px;color:#6b7280;line-height:1.6;margin:0 0 28px;">AI search is different from Google — and it's already sending customers somewhere.</p>
+
+    <p style="font-size:14px;color:#374151;line-height:1.75;margin:0 0 20px;">
+      You know how you'd ask a friend, <em>"know a good accountant near me?"</em> — and they'd give you one name? That's exactly how AI works now. When someone types a question into ChatGPT or Google's AI, it recommends <strong>one or two businesses</strong>, not a list of 20.
+    </p>
+    <p style="font-size:14px;color:#374151;line-height:1.75;margin:0 0 28px;">
+      Your score of <strong style="color:${scoreColor};">${score}/100</strong> tells you how likely you are to be that recommendation. Businesses in the 70+ range are getting named regularly. Below 40, AI tools either can't find them or don't have enough information to confidently recommend them.
+    </p>
+
+    <!-- The three states -->
+    <div style="border:1.5px solid #e5e7eb;border-radius:16px;overflow:hidden;margin-bottom:28px;">
+      <div style="background:#fef2f2;padding:16px 20px;display:flex;align-items:center;">
+        <div style="font-size:22px;margin-right:14px;">🔴</div>
+        <div>
+          <div style="font-size:14px;font-weight:800;color:#991b1b;">Score 0–40: Not Found</div>
+          <div style="font-size:13px;color:#6b7280;margin-top:2px;">AI tools can't confidently describe or recommend your business</div>
+        </div>
+      </div>
+      <div style="background:#fffbeb;padding:16px 20px;border-top:1px solid #e5e7eb;display:flex;align-items:center;">
+        <div style="font-size:22px;margin-right:14px;">🟡</div>
+        <div>
+          <div style="font-size:14px;font-weight:800;color:#92400e;">Score 41–70: Getting Found</div>
+          <div style="font-size:13px;color:#6b7280;margin-top:2px;">On the radar — shows up in some queries but loses to competitors in others</div>
+        </div>
+      </div>
+      <div style="background:#f0fdf4;padding:16px 20px;border-top:1px solid #e5e7eb;display:flex;align-items:center;">
+        <div style="font-size:22px;margin-right:14px;">🟢</div>
+        <div>
+          <div style="font-size:14px;font-weight:800;color:#15803d;">Score 71–100: Found</div>
+          <div style="font-size:13px;color:#6b7280;margin-top:2px;">Regularly cited and recommended by AI tools — the goal</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="background:#f5f3ff;border-radius:12px;padding:20px 24px;margin-bottom:32px;">
+      <p style="font-size:14px;color:#374151;line-height:1.75;margin:0;">
+        The businesses winning in AI search right now aren't necessarily the biggest — they're the ones whose websites speak clearly to AI. A well-structured, information-rich site with consistent details beats a fancy site every time.
+      </p>
+    </div>
+
+    <div style="text-align:center;">
+      <a href="${APP_URL}" style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#9333ea);color:white;text-decoration:none;font-weight:700;font-size:15px;padding:16px 40px;border-radius:12px;box-shadow:0 4px 16px rgba(124,58,237,0.3);">
+        See My Fix List →
+      </a>
+      <p style="font-size:12px;color:#9ca3af;margin-top:12px;">Each fix in your dashboard is ranked by how much it'll move your score.</p>
+    </div>`;
+
+  return emailWrapper({
+    preheader: `AI recommends one or two businesses — here's where ${domain} stands.`,
+    headerSub: 'Understanding your AI visibility',
+    body,
+    email,
+    unsubLabel: 'Unsubscribe from findmewith.ai emails',
+  });
+}
+
+function buildNurtureDay5Html({ email, url, score }) {
+  const domain = url.replace(/^https?:\/\//, '').replace(/\/$/, '');
+
+  const body = `
+    <h1 style="font-size:22px;font-weight:800;color:#111827;margin:0 0 8px;">3 quick wins to improve your AI score this week</h1>
+    <p style="font-size:15px;color:#6b7280;line-height:1.6;margin:0 0 28px;">None of these require a developer. Most take under 15 minutes.</p>
+
+    <!-- Win 1 -->
+    <div style="display:flex;gap:16px;margin-bottom:24px;padding:20px;background:#f5f3ff;border-radius:14px;border-left:4px solid #7c3aed;">
+      <div style="font-size:28px;flex-shrink:0;margin-top:2px;">1️⃣</div>
+      <div>
+        <div style="font-size:15px;font-weight:800;color:#111827;margin-bottom:6px;">Add your NAP to every page</div>
+        <p style="font-size:14px;color:#374151;line-height:1.65;margin:0;">NAP = Name, Address, Phone number. These three things need to be <strong>identical</strong> across your website, Google Business, and social profiles. Even small differences ("St." vs "Street") confuse AI tools and lower trust.</p>
+      </div>
+    </div>
+
+    <!-- Win 2 -->
+    <div style="display:flex;gap:16px;margin-bottom:24px;padding:20px;background:#fffbeb;border-radius:14px;border-left:4px solid #f59e0b;">
+      <div style="font-size:28px;flex-shrink:0;margin-top:2px;">2️⃣</div>
+      <div>
+        <div style="font-size:15px;font-weight:800;color:#111827;margin-bottom:6px;">Write a plain-English "About" section</div>
+        <p style="font-size:14px;color:#374151;line-height:1.65;margin:0;">AI reads your website like a person would. A clear sentence like <em>"We're a family-owned plumbing company serving Denver, CO since 2008"</em> gives it everything it needs to recommend you with confidence. Vague taglines don't cut it.</p>
+      </div>
+    </div>
+
+    <!-- Win 3 -->
+    <div style="display:flex;gap:16px;margin-bottom:32px;padding:20px;background:#f0fdf4;border-radius:14px;border-left:4px solid #16a34a;">
+      <div style="font-size:28px;flex-shrink:0;margin-top:2px;">3️⃣</div>
+      <div>
+        <div style="font-size:15px;font-weight:800;color:#111827;margin-bottom:6px;">Add a simple FAQ section</div>
+        <p style="font-size:14px;color:#374151;line-height:1.65;margin:0;">AI loves questions and answers. Add 5–8 real questions your customers ask, with short direct answers. <em>"Do you offer free estimates?" "What areas do you serve?" "How long does a typical job take?"</em> This directly feeds AI recommendation engines.</p>
+      </div>
+    </div>
+
+    <!-- Bonus: code snippets -->
+    <div style="background:#f5f3ff;border:1.5px solid #c4b5fd;border-radius:14px;padding:20px 24px;margin-bottom:32px;">
+      <div style="font-size:11px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">💡 Bonus: the fast track</div>
+      <p style="font-size:14px;color:#374151;line-height:1.65;margin:0 0 12px;">
+        Your dashboard includes ready-made code snippets — tiny pieces of structured data that tell AI tools exactly who you are, what you do, and where you're located. You paste them into your site once and they run forever.
+      </p>
+      <a href="${APP_URL}" style="font-size:13px;font-weight:700;color:#7c3aed;text-decoration:none;">See my code snippets →</a>
+    </div>
+
+    <div style="text-align:center;">
+      <a href="${APP_URL}" style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#9333ea);color:white;text-decoration:none;font-weight:700;font-size:15px;padding:16px 40px;border-radius:12px;box-shadow:0 4px 16px rgba(124,58,237,0.3);">
+        Open My Dashboard →
+      </a>
+    </div>`;
+
+  return emailWrapper({
+    preheader: `3 things you can do this week to improve how AI finds ${domain} — no developer needed.`,
+    headerSub: 'Quick wins for your AI visibility',
+    body,
+    email,
+    unsubLabel: 'Unsubscribe from findmewith.ai emails',
+  });
+}
+
+function buildNurtureDay10Html({ email, url, score }) {
+  const domain = url.replace(/^https?:\/\//, '').replace(/\/$/, '');
+
+  const body = `
+    <h1 style="font-size:22px;font-weight:800;color:#111827;margin:0 0 8px;">AI is sending customers somewhere right now. Is it you?</h1>
+    <p style="font-size:15px;color:#6b7280;line-height:1.6;margin:0 0 24px;">Every week you're not optimized, someone in your area is getting those referrals instead.</p>
+
+    <p style="font-size:14px;color:#374151;line-height:1.75;margin:0 0 28px;">
+      Your current score for <strong>${domain}</strong> is a starting point — and you've already taken the first step by scanning. Here's the truth about what separates the businesses that get found from those that don't:
+    </p>
+
+    <!-- Comparison -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;border-radius:14px;overflow:hidden;border:1.5px solid #e5e7eb;">
+      <tr style="background:#f9fafb;">
+        <td style="padding:12px 20px;font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.8px;border-bottom:1px solid #e5e7eb;">Free Account</td>
+        <td style="padding:12px 20px;font-size:12px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:0.8px;border-bottom:1px solid #e5e7eb;border-left:1.5px solid #ddd6fe;background:#f5f3ff;">Pro Account</td>
+      </tr>
+      <tr style="background:white;">
+        <td style="padding:14px 20px;font-size:13px;color:#374151;border-bottom:1px solid #f3f4f6;vertical-align:top;">
+          ✅ One-time scan & score<br>✅ Top fix recommendations<br>✅ Basic code snippets<br>❌ No monitoring<br>❌ Manual re-scans only<br>❌ No competitor tracking
+        </td>
+        <td style="padding:14px 20px;font-size:13px;color:#374151;border-bottom:1px solid #f3f4f6;vertical-align:top;border-left:1.5px solid #ddd6fe;background:#fdfcff;">
+          ✅ Everything in Free<br>✅ Weekly auto re-scan<br>✅ Score change alerts<br>✅ Competitor AI comparison<br>✅ Full snippet library<br>✅ Site Monitoring badge
+        </td>
+      </tr>
+    </table>
+
+    <div style="background:#fffbeb;border-left:4px solid #f59e0b;border-radius:0 12px 12px 0;padding:18px 22px;margin-bottom:32px;">
+      <p style="font-size:14px;color:#374151;line-height:1.65;margin:0;">
+        <strong>Pro is $29/month.</strong> If it sends you even one extra customer a month — a single haircut, a service call, a consultation — it pays for itself. And it runs quietly in the background so you don't have to think about it.
+      </p>
+    </div>
+
+    <div style="text-align:center;margin-bottom:16px;">
+      <a href="${APP_URL}" style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#9333ea);color:white;text-decoration:none;font-weight:700;font-size:15px;padding:16px 40px;border-radius:12px;box-shadow:0 4px 16px rgba(124,58,237,0.3);">
+        Try Pro Free for 7 Days →
+      </a>
+    </div>
+    <div style="text-align:center;">
+      <a href="${APP_URL}" style="font-size:13px;color:#9ca3af;text-decoration:none;">Or keep using your free account — no pressure.</a>
+    </div>`;
+
+  return emailWrapper({
+    preheader: `AI is recommending businesses in your area every day. Here's how to make sure it's recommending ${domain}.`,
+    headerSub: 'A note from findmewith.ai',
+    body,
+    email,
+    unsubLabel: 'Unsubscribe from findmewith.ai emails',
+  });
+}
+
+// ── Nurture email drip ────────────────────────────────────────────────────────
+async function runNurtureEmails() {
+  if (!supabaseAdmin) { console.warn('[nurture] Supabase not configured'); return; }
+  console.log('[nurture] Starting drip check...');
+
+  // Get all unique emails + their earliest scan (signup date) + score
+  const { data: scans, error } = await supabaseAdmin
+    .from('scans')
+    .select('email, url, score, created_at')
+    .order('created_at', { ascending: true });
+
+  if (error) { console.error('[nurture] Could not fetch scans:', error.message); return; }
+
+  // Deduplicate — first scan per email
+  const firstByEmail = new Map();
+  for (const s of (scans || [])) {
+    if (s.email && !firstByEmail.has(s.email)) firstByEmail.set(s.email, s);
+  }
+
+  const now = Date.now();
+
+  for (const [email, scan] of firstByEmail) {
+    if (!email) continue;
+    const signupMs = new Date(scan.created_at).getTime();
+    const daysSince = (now - signupMs) / (1000 * 60 * 60 * 24);
+
+    // Check which steps are due
+    const steps = [
+      { step: 2, minDays: 2,  maxDays: 4 },
+      { step: 5, minDays: 5,  maxDays: 8 },
+      { step: 10, minDays: 10, maxDays: 16 },
+    ];
+
+    for (const { step, minDays, maxDays } of steps) {
+      if (daysSince < minDays || daysSince > maxDays) continue;
+
+      // Check if already sent
+      const { data: existing } = await supabaseAdmin
+        .from('nurture_log')
+        .select('id')
+        .eq('email', email)
+        .eq('step', step)
+        .maybeSingle();
+
+      if (existing) continue; // already sent
+
+      // Build and send
+      let html, subject;
+      if (step === 2) {
+        html = buildNurtureDay2Html({ email, url: scan.url, score: scan.score });
+        subject = `What your ${scan.score}/100 AI score means for your business`;
+      } else if (step === 5) {
+        html = buildNurtureDay5Html({ email, url: scan.url, score: scan.score });
+        subject = `3 quick wins to improve your AI visibility this week`;
+      } else {
+        html = buildNurtureDay10Html({ email, url: scan.url, score: scan.score });
+        subject = `AI is sending customers somewhere — is it you?`;
+      }
+
+      const sent = await sendEmail({ to: email, subject, html });
+      if (sent.ok) {
+        // Log it
+        await supabaseAdmin.from('nurture_log').insert({ email, step, url: scan.url });
+        console.log(`[nurture] sent step ${step} to ${email}`);
+      } else {
+        console.error(`[nurture] failed step ${step} to ${email}:`, sent.error);
+      }
+
+      await new Promise(r => setTimeout(r, 800)); // rate-limit
+    }
+  }
+  console.log('[nurture] Done.');
+}
+
+// ── Schedule: daily at 10:00 AM UTC ──────────────────────────────────────────
+cron.schedule('0 10 * * *', () => {
+  runNurtureEmails().catch(err => console.error('[nurture cron]', err.message));
+}, { timezone: 'UTC' });
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const app = express();
+
+// ── CORS ─────────────────────────────────────────────────────────────────────
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, stripe-signature, Authorization');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  if (req.method === 'OPTIONS') return res.sendStatus(200);
+  next();
+});
+
+// ── Serve static frontend ────────────────────────────────────────────────────
+const distPath = join(__dirname, '../dist');
+if (fs.existsSync(distPath)) app.use(express.static(distPath));
+
+// ── Subscription store (in-memory + file backup) ─────────────────────────────
+// Map: email → { customerId, subscriptionId, plan, status, createdAt }
+const subscriptions = new Map();
+const SUB_FILE = process.env.DATA_DIR
+  ? join(process.env.DATA_DIR, 'subscriptions.json')
+  : '/tmp/subscriptions.json';
+
+function loadSubs() {
+  try {
+    if (fs.existsSync(SUB_FILE)) {
+      const data = JSON.parse(fs.readFileSync(SUB_FILE, 'utf8'));
+      Object.entries(data).forEach(([k, v]) => subscriptions.set(k, v));
+      console.log(`[subs] loaded ${subscriptions.size} subscriptions from disk`);
+    }
+  } catch (e) { console.warn('[subs] could not load:', e.message); }
+}
+
+function saveSubs() {
+  try {
+    fs.writeFileSync(SUB_FILE, JSON.stringify(Object.fromEntries(subscriptions), null, 2));
+  } catch (e) { console.warn('[subs] could not save:', e.message); }
+}
+
+loadSubs();
+
+// ── POST /api/webhook (raw body — MUST be before express.json()) ──────────────
+app.post('/api/webhook',
+  express.raw({ type: 'application/json' }),
+  async (req, res) => {
+    if (!stripe) return res.status(500).send('Stripe not configured');
+
+    const sig = req.headers['stripe-signature'];
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    let event;
+
+    if (webhookSecret) {
+      try {
+        event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+      } catch (err) {
+        console.error('[webhook] signature failed:', err.message);
+        return res.status(400).send(`Webhook Error: ${err.message}`);
+      }
+    } else {
+      // No secret yet — accept unsigned (set STRIPE_WEBHOOK_SECRET to secure)
+      try { event = JSON.parse(req.body.toString()); }
+      catch { return res.status(400).send('Invalid JSON'); }
+    }
+
+    console.log(`[webhook] ${event.type}`);
+
+    if (event.type === 'checkout.session.completed') {
+      const session = event.data.object;
+      const email = (session.customer_details?.email || session.customer_email || '').toLowerCase().trim();
+      if (email) {
+        subscriptions.set(email, {
+          customerId:     session.customer,
+          subscriptionId: session.subscription,
+          plan:           session.metadata?.plan || 'pro',
+          status:         'active',
+          createdAt:      new Date().toISOString(),
+        });
+        saveSubs();
+        console.log(`[webhook] activated: ${email}`);
+        // Also persist to Supabase for cross-process visibility
+        if (supabaseAdmin) {
+          supabaseAdmin.from('pro_upgrades').upsert({
+            email,
+            customer_id: session.customer,
+            subscription_id: session.subscription || null,
+            plan: session.metadata?.plan || 'pro',
+            status: 'active',
+            upgraded_at: new Date().toISOString(),
+          }, { onConflict: 'email' }).then(({ error: sbErr }) => {
+            if (sbErr) console.warn('[webhook] supabase pro_upgrades write failed:', sbErr.message);
+            else console.log(`[webhook] supabase pro_upgrades saved for ${email}`);
+          });
+        }
+      }
+    }
+
+    if (event.type === 'customer.subscription.deleted') {
+      const sub = event.data.object;
+      for (const [email, data] of subscriptions.entries()) {
+        if (data.subscriptionId === sub.id) {
+          subscriptions.set(email, { ...data, status: 'cancelled' });
+          saveSubs();
+          console.log(`[webhook] cancelled: ${email}`);
+          break;
+        }
+      }
+    }
+
+    if (event.type === 'customer.subscription.updated') {
+      const sub = event.data.object;
+      for (const [email, data] of subscriptions.entries()) {
+        if (data.subscriptionId === sub.id) {
+          subscriptions.set(email, { ...data, status: sub.status === 'active' ? 'active' : sub.status });
+          saveSubs();
+          break;
+        }
+      }
+    }
+
+    res.json({ received: true });
+  }
+);
+
+// ── JSON body parser (after webhook route) ────────────────────────────────────
+app.use(express.json());
+
+// ── GET /api/admin/recent-upgrades ───────────────────────────────────────────
+// Used by Tasklet trigger to check for new Pro upgrades every 15 minutes
+app.get('/api/admin/recent-upgrades', (req, res) => {
   const secret = req.query.secret;
   const adminSecret = process.env.ADMIN_SECRET || 'fmw-admin-2024';
   if (secret !== adminSecret) return res.status(401).json({ error: 'unauthorized' });
-  if (!supabaseAdmin) return res.status(503).json({ error: 'supabase not configured' });
-  const since = req.query.since ? new Date(req.query.since).toISOString() : new Date(Date.now() - 60 * 60 * 1000).toISOString();
-  const { data, error } = await supabaseAdmin
-    .from('scans')
-    .select('email, url, score, created_at')
-    .not('email', 'is', null)
-    .gt('created_at', since)
-    .order('created_at', { ascending: true });
-  if (error) return res.status(500).json({ error: error.message });
-  res.json(data || []);
+  const since = req.query.since ? new Date(req.query.since) : new Date(Date.now() - 60 * 60 * 1000);
+  const recent = [];
+  for (const [email, data] of subscriptions.entries()) {
+    if (data.status === 'active' && data.createdAt && new Date(data.createdAt) > since) {
+      recent.push({ email, plan: data.plan, createdAt: data.createdAt });
+    }
+  }
+  res.json(recent);
 });
 
-// ── In-memory lead store ──────────────────────────────────────────────────────\nconst leads = [];\n\n// ── Analyzer (pure Node.js) ───────────────────────────────────────────────────\n\nconst SCORE_WEIGHTS = {\n  has_schema_org: 12, has_organization_schema: 10, has_person_schema: 5,\n  has_faq_schema: 5, has_article_schema: 3,\n  has_meta_description: 6, has_h1: 5, content_length: 8, has_og_tags: 6,\n  has_contact_info: 7, has_about_page: 7, has_social_links: 6,\n  https_enabled: 5, has_title_tag: 5, has_robots_txt: 3, has_sitemap: 2,\n  has_llms_txt: 5,\n};\n\nconst CATEGORIES = {\n  structured_data:  ['has_schema_org','has_organization_schema','has_person_schema','has_faq_schema','has_article_schema'],\n  content_quality:  ['has_meta_description','has_h1','content_length','has_og_tags'],\n  entity_authority: ['has_contact_info','has_about_page','has_social_links'],\n  technical_seo:    ['https_enabled','has_title_tag','has_robots_txt','has_sitemap'],\n  ai_bonus:         ['has_llms_txt'],\n};\n\nconst LABELS = {\n  has_schema_org: 'Website tells AI who it is',\n  has_organization_schema: 'Business details are machine-readable',\n  has_person_schema: 'Owner / author is identified for AI',\n  has_faq_schema: 'FAQ answers are AI-readable',\n  has_article_schema: 'Blog posts are labeled for AI',\n  has_meta_description: 'One-sentence site summary exists',\n  has_h1: 'Pages have clear main headings',\n  content_length: 'Enough content for AI to read',\n  has_og_tags: 'Site looks good when shared online',\n  has_contact_info: 'Contact info is visible',\n  has_about_page: 'About page detected',\n  has_social_links: 'Social media profiles linked',\n  https_enabled: 'Website is secure (https)',\n  has_title_tag: 'Page has a clear title',\n  has_robots_txt: 'Navigation file for AI bots exists',\n  has_sitemap: 'Sitemap detected',\n  has_llms_txt: 'AI introduction file (llms.txt) found',\n};\n\nconst SUGGESTIONS = {\n  has_llms_txt:            ['critical',     'Add an llms.txt file',             \"This tells ChatGPT and Perplexity exactly who you are. It's the single most impactful change you can make.\",    'high'],\n  has_organization_schema: ['critical',     'Add your business details code',   'A small code snippet that tells AI your name, address, phone, and what you do.',                                 'high'],\n  has_schema_org:          ['critical',     'Add structured data to your site', 'AI needs machine-readable data to confidently recommend you. Use the Schema Builder to generate your snippet.',   'high'],\n  has_faq_schema:          ['important',    'Add a Q&A section AI can read',    'FAQ schema is one of the best ways to get AI to include you in direct answers.',                                  'high'],\n  has_meta_description:    ['important',    'Write a one-sentence summary',     \"Every page should have a short description — it's how AI decides what your site is about.\",                      'medium'],\n  content_length:          ['important',    'Add more content to your pages',   'AI needs enough text to understand what you offer. Aim for at least 300 words per page.',                       'medium'],\n  has_h1:                  ['important',    'Add a main heading to each page',  'A clear H1 heading helps AI understand the topic of each page.',                                                  'medium'],\n  has_about_page:          ['important',    'Create an About page',             'AI looks for an About page to confirm who you are and what you do.',                                              'medium'],\n  has_contact_info:        ['important',    'Make your contact info visible',   'AI needs to see your phone, email, or address to trust and cite your business.',                                 'medium'],\n  has_og_tags:             ['nice-to-have', 'Add social sharing tags',          'Open Graph tags make your site look great when shared — and give AI extra context.',                             'low'],\n  has_robots_txt:          ['nice-to-have', 'Add a robots.txt file',            'Tells AI bots how to navigate your site.',                                                                        'low'],\n  has_sitemap:             ['nice-to-have', 'Add an XML sitemap',               'Helps AI discover all your pages.',                                                                               'low'],\n  has_article_schema:      ['nice-to-have', 'Label your blog posts for AI',     'Article schema helps AI identify and cite your content.',                                                        'low'],\n  has_person_schema:       ['nice-to-have', 'Add author / person schema',       'Especially useful for personal brands, consultants, and professionals.',                                         'low'],\n  has_social_links:        ['nice-to-have', 'Link your social profiles',        'Linking to your social accounts helps AI confirm your online identity.',                                         'low'],\n};\n\n// ── DataForSEO AI Keyword Volume ──────────────────────────────────────────────\nconst DATAFORSEO_AUTH = 'Basic ' + Buffer.from(\n  (process.env.DATAFORSEO_LOGIN || 'brad@genierocket.com') + ':' +\n  (process.env.DATAFORSEO_PASSWORD || '4af0536485267057')\n).toString('base64');\n\nasync function fetchAiKeywordVolume(keywords) {\n  try {\n    const res = await fetch(\n      'https://api.dataforseo.com/v3/ai_optimization/ai_keyword_data/keywords_search_volume/live',\n      {\n        method: 'POST',\n        headers: { 'Authorization': DATAFORSEO_AUTH, 'Content-Type': 'application/json' },\n        body: JSON.stringify([{ keywords: keywords.slice(0, 12), location_code: 2840, language_code: 'en' }]),\n        signal: AbortSignal.timeout(12000),\n      }\n    );\n    const data = await res.json();\n    if (!res.ok || data.status_code !== 20000) {\n      console.warn('[dataforseo] API error:', data?.status_message);\n      return null;\n    }\n    return data?.tasks?.[0]?.result?.[0]?.items || null;\n  } catch (err) {\n    console.warn('[dataforseo] fetch error:', err.message);\n    return null;\n  }\n}\n\nfunction generateKeywordsFromSite({ title, metaDesc, h1Texts, url }) {\n  const stopWords = new Set([\n    'the','a','an','and','or','but','in','on','at','to','for','of','with','by','from',\n    'is','are','we','our','your','this','that','all','any','get','find','how',\n    'best','top','near','local','home','homes','welcome','page','click','here',\n    'read','more','learn','about','us','contact','services','service','team',\n    'website','site','online','free','new','now','today','great','good',\n    'world','life','love','time','work','place','make','take','also','just',\n    'can','will','you','have','has','been','was','were','they','them',\n  ]);\n\n  function cleanPhrase(raw, maxWords = 5) {\n    if (!raw) return '';\n    return raw\n      .split(/[\\-\\|–—:,\\.!?]/)[0]\n      .trim()\n      .toLowerCase()\n      .replace(/[^a-z0-9\\s]/g, '')\n      .split(/\\s+/)\n      .filter(w => w.length > 2 && !stopWords.has(w))\n      .slice(0, maxWords)\n      .join(' ')\n      .trim();\n  }\n\n  // Extract multiple distinct phrases from meta description by splitting on connectors\n  function metaPhrases(meta) {\n    if (!meta) return [];\n    const segments = meta.split(/[,\\.\\-–—\\|!]/).map(s => s.trim()).filter(s => s.length > 8);\n    return segments.map(s => cleanPhrase(s, 4)).filter(s => s.length > 3);\n  }\n\n  const coreTitle = cleanPhrase(title);\n  const allH1s    = h1Texts.map(h => cleanPhrase(h, 4)).filter(h => h.length > 3);\n  const coreMeta  = cleanPhrase(metaDesc);\n  const extraMeta = metaPhrases(metaDesc);\n\n  // Collect all candidate core phrases, deduped\n  const candidates = [...new Set([coreTitle, ...allH1s, coreMeta, ...extraMeta])].filter(c => c.length > 3);\n\n  // Use the longest as the primary anchor\n  const primary = candidates.sort((a, b) => b.split(' ').length - a.split(' ').length)[0] || '';\n\n  const keywords = new Set();\n\n  // From each unique candidate, add base + variations\n  candidates.slice(0, 4).forEach(phrase => {\n    keywords.add(phrase);\n  });\n\n  // AI-style question formats off the primary\n  if (primary) {\n    keywords.add(`best ${primary}`);\n    keywords.add(`${primary} near me`);\n    keywords.add(`top ${primary}`);\n    keywords.add(`where to find ${primary}`);\n    keywords.add(`${primary} recommendations`);\n    keywords.add(`who has the best ${primary}`);\n    keywords.add(`affordable ${primary}`);\n  }\n\n  // Secondary phrase variations\n  if (allH1s[0] && allH1s[0] !== primary) {\n    keywords.add(`best ${allH1s[0]}`);\n    keywords.add(`${allH1s[0]} near me`);\n  }\n\n  return [...keywords]\n    .filter(k => {\n      const words = k.split(' ');\n      return words.length >= 1 && words.length <= 7 && k.length > 3;\n    })\n    .slice(0, 12);\n}\n\nfunction fetchUrl(urlStr, redirectCount = 0) {\n  return new Promise((resolve, reject) => {\n    if (redirectCount > 5) return reject(new Error('Too many redirects'));\n    let parsed;\n    try { parsed = new URL(urlStr); } catch { return reject(new Error('Invalid URL')); }\n\n    const lib = parsed.protocol === 'https:' ? https : http;\n    const options = {\n      hostname: parsed.hostname,\n      port: parsed.port || (parsed.protocol === 'https:' ? 443 : 80),\n      path: (parsed.pathname || '/') + (parsed.search || ''),\n      method: 'GET',\n      headers: {\n        'User-Agent': 'Mozilla/5.0 (compatible; findmewith-bot/1.0; +https://findmewith.ai)',\n        'Accept': 'text/html,application/xhtml+xml',\n        'Accept-Language': 'en-US,en;q=0.9',\n      },\n      rejectUnauthorized: false,\n      timeout: 15000,\n    };\n\n    const req = lib.request(options, (res) => {\n      if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location) {\n        const next = res.headers.location.startsWith('http')\n          ? res.headers.location\n          : `${parsed.origin}${res.headers.location}`;\n        res.resume();\n        return fetchUrl(next, redirectCount + 1).then(resolve).catch(reject);\n      }\n      if (res.statusCode >= 400) {\n        res.resume();\n        return reject(new Error(`HTTP ${res.statusCode}`));\n      }\n      const chunks = [];\n      res.on('data', c => chunks.push(c));\n      res.on('end', () => resolve({ html: Buffer.concat(chunks).toString('utf8', 0, 500000), finalUrl: urlStr }));\n    });\n\n    req.on('error', reject);\n    req.on('timeout', () => { req.destroy(); reject(new Error('Request timed out')); });\n    req.end();\n  });\n}\n\nfunction checkUrlExists(urlStr) {\n  return new Promise((resolve) => {\n    try {\n      const parsed = new URL(urlStr);\n      const lib = parsed.protocol === 'https:' ? https : http;\n      const req = lib.request({\n        method: 'HEAD',\n        hostname: parsed.hostname,\n        port: parsed.port || (parsed.protocol === 'https:' ? 443 : 80),\n        path: parsed.pathname,\n        rejectUnauthorized: false,\n        timeout: 6000,\n        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; findmewith-bot/1.0)' },\n      }, (res) => { res.resume(); resolve(res.statusCode < 400); });\n      req.on('error', () => resolve(false));\n      req.on('timeout', () => { req.destroy(); resolve(false); });\n      req.end();\n    } catch { resolve(false); }\n  });\n}\n\nasync function analyzeUrl(url) {\n  const { html, finalUrl } = await fetchUrl(url);\n  const htmlLower = html.toLowerCase();\n\n  const parsed = new URL(finalUrl);\n  const origin = `${parsed.protocol}//${parsed.host}`;\n  const isHttps = parsed.protocol === 'https:';\n\n  const titleMatch = html.match(/<title[^>]*>([\\s\\S]*?)<\\/title>/i);\n  const title = titleMatch ? titleMatch[1].replace(/<[^>]+>/g, '').trim() : '';\n\n  const metaDescMatch = html.match(/<meta[^>]+name=[\"']description[\"'][^>]+content=[\"']([^\"']*)[\"']/i) ||\n                         html.match(/<meta[^>]+content=[\"']([^\"']*)[\"'][^>]+name=[\"']description[\"']/i);\n  const metaDesc = metaDescMatch ? metaDescMatch[1].trim() : '';\n\n  const hasOgTitle = /<meta[^>]+property=[\"']og:title[\"']/i.test(html);\n  const hasOgDesc  = /<meta[^>]+property=[\"']og:description[\"']/i.test(html);\n\n  const h1Matches = html.match(/<h1[^>]*>([\\s\\S]*?)<\\/h1>/gi) || [];\n  const h1Texts = h1Matches.map(h => h.replace(/<[^>]+>/g, '').trim()).filter(Boolean);\n\n  const jsonLdMatches = html.match(/<script[^>]+type=[\"']application\\/ld\\+json[\"'][^>]*>([\\s\\S]*?)<\\/script>/gi) || [];\n  const ldTypes = [];\n  for (const block of jsonLdMatches) {\n    const content = block.replace(/<script[^>]*>/i, '').replace(/<\\/script>/i, '').trim();\n    try {\n      const obj = JSON.parse(content);\n      const addType = (t) => { if (t) ldTypes.push(String(t).toLowerCase()); };\n      if (obj['@type']) { Array.isArray(obj['@type']) ? obj['@type'].forEach(addType) : addType(obj['@type']); }\n      if (obj['@graph']) obj['@graph'].forEach(item => item['@type'] && addType(item['@type']));\n    } catch {}\n  }\n\n  const bodyText = html\n    .replace(/<script[\\s\\S]*?<\\/script>/gi, ' ')\n    .replace(/<style[\\s\\S]*?<\\/style>/gi, ' ')\n    .replace(/<[^>]+>/g, ' ')\n    .replace(/&nbsp;/g, ' ')\n    .replace(/\\s+/g, ' ')\n    .trim();\n  const wordCount = bodyText.split(/\\s+/).filter(w => w.length > 2).length;\n\n  const hasContactInfo = /(\\+?1?[\\s.\\-]?\\(?\\d{3}\\)?[\\s.\\-]?\\d{3}[\\s.\\-]?\\d{4}|[\\w.+\\-]+@[\\w\\-]+\\.\\w+)/.test(bodyText);\n\n  const [hasRobots, hasSitemap, hasLlms] = await Promise.all([\n    checkUrlExists(`${origin}/robots.txt`),\n    checkUrlExists(`${origin}/sitemap.xml`),\n    checkUrlExists(`${origin}/llms.txt`),\n  ]);\n\n  const checks = {\n    https_enabled:           isHttps,\n    has_title_tag:           !!title,\n    has_meta_description:    !!metaDesc,\n    has_h1:                  h1Texts.length > 0,\n    has_og_tags:             hasOgTitle || hasOgDesc,\n    content_length:          wordCount >= 250,\n    has_schema_org:          jsonLdMatches.length > 0,\n    has_organization_schema: ldTypes.some(t => t.includes('organization') || t.includes('localbusiness')),\n    has_person_schema:       ldTypes.some(t => t.includes('person')),\n    has_faq_schema:          ldTypes.some(t => t.includes('faqpage')),\n    has_article_schema:      ldTypes.some(t => t.includes('article') || t.includes('blogposting')),\n    has_contact_info:        hasContactInfo,\n    has_about_page:          /href=[\"'][^\"']*\\babout\\b[^\"']*[\"']/.test(htmlLower),\n    has_social_links:        /href=[\"'][^\"']*(?:facebook\\.com|twitter\\.com|x\\.com|linkedin\\.com|instagram\\.com|youtube\\.com)[^\"']*[\"']/.test(htmlLower),\n    has_robots_txt:          hasRobots,\n    has_sitemap:             hasSitemap || htmlLower.includes('sitemap.xml'),\n    has_llms_txt:            hasLlms,\n  };\n\n  const categoryScores = {};\n  for (const [cat, keys] of Object.entries(CATEGORIES)) {\n    categoryScores[cat] = keys.reduce((sum, k) => sum + (checks[k] ? (SCORE_WEIGHTS[k] || 0) : 0), 0);\n  }\n  const overall = Object.values(categoryScores).reduce((a, b) => a + b, 0);\n\n  const findings = Object.entries(checks).map(([id, passed]) => ({\n    id, label: LABELS[id] || id, status: passed ? 'pass' : 'fail',\n    ...((!passed && SUGGESTIONS[id]) ? { suggestion: SUGGESTIONS[id][2] } : {}),\n  }));\n\n  const impactOrder = { high: 0, medium: 1, low: 2 };\n  const catOrder = { critical: 0, important: 1, 'nice-to-have': 2 };\n  const suggestions = Object.entries(checks)\n    .filter(([k, v]) => !v && SUGGESTIONS[k])\n    .map(([k]) => {\n      const [category, title, description, impact] = SUGGESTIONS[k];\n      return { category, title, description, impact };\n    })\n    .sort((a, b) =>\n      (catOrder[a.category] ?? 3) - (catOrder[b.category] ?? 3) ||\n      (impactOrder[a.impact] ?? 3) - (impactOrder[b.impact] ?? 3)\n    );\n\n  // ── DataForSEO AI Market Data ────────────────────────────────────────────\n  let ai_market_data = null;\n  try {\n    const kwList = generateKeywordsFromSite({ title, metaDesc, h1Texts, url: finalUrl });\n    if (kwList.length > 0) {\n      const rawItems = await fetchAiKeywordVolume(kwList);\n      if (rawItems && rawItems.length > 0) {\n        const processed = rawItems\n          .filter(item => (item.ai_search_volume || 0) > 0)\n          .map(item => ({\n            keyword: item.keyword,\n            volume: item.ai_search_volume || 0,\n            monthly: (item.monthly_searches || []).slice(-6).map(m => ({\n              month: new Date(m.year, m.month - 1).toLocaleDateString('en-US', { month: 'short' }),\n              volume: m.search_volume || 0,\n            })),\n          }))\n          .sort((a, b) => b.volume - a.volume);\n\n        if (processed.length > 0) {\n          const totalVolume = processed.reduce((sum, k) => sum + k.volume, 0);\n          const topKw = processed[0];\n          let trendDirection = 'stable', trendPct = 0;\n          if (topKw.monthly.length >= 4) {\n            const recent = topKw.monthly.slice(-3).reduce((s, m) => s + m.volume, 0);\n            const older  = topKw.monthly.slice(0, 3).reduce((s, m) => s + m.volume, 0);\n            if (older > 0) {\n              trendPct = Math.round(((recent - older) / older) * 100);\n              trendDirection = trendPct > 5 ? 'growing' : trendPct < -5 ? 'declining' : 'stable';\n            }\n          }\n          ai_market_data = {\n            keywords: processed.slice(0, 10),\n            total_volume: totalVolume,\n            top_keyword: topKw.keyword,\n            top_volume: topKw.volume,\n            trend_direction: trendDirection,\n            trend_pct: Math.abs(trendPct),\n          };\n        }\n      }\n    }\n  } catch (err) {\n    console.warn('[dataforseo] ai_market_data skipped:', err.message);\n  }\n\n  return { url: finalUrl, score: overall, categories: categoryScores, findings, suggestions, ai_market_data, site_info: { title, metaDesc, h1: h1Texts[0] || '' } };\n}\n\n// ── POST /api/analyze ─────────────────────────────────────────────────────────\napp.post('/api/analyze', async (req, res) => {\n  const { url } = req.body;\n  if (!url) return res.status(400).json({ error: 'URL is required' });\n  try {\n    const result = await analyzeUrl(url.startsWith('http') ? url : 'https://' + url);\n    res.json(result);\n  } catch (err) {\n    console.error('[analyze error]', err.message);\n    res.status(500).json({ error: err.message || 'Analysis failed' });\n  }\n});\n\n// ── POST /api/keyword-volume ──────────────────────────────────────────────────\napp.post('/api/keyword-volume', async (req, res) => {\n  const { keywords } = req.body;\n  if (!keywords || !Array.isArray(keywords) || keywords.length === 0) {\n    return res.status(400).json({ error: 'keywords array required' });\n  }\n  try {\n    const rawItems = await fetchAiKeywordVolume(keywords.slice(0, 12));\n    if (!rawItems) return res.json({ keywords: [] });\n    const processed = rawItems.map(item => ({\n      keyword: item.keyword,\n      volume: item.ai_search_volume || 0,\n    }));\n    res.json({ keywords: processed });\n  } catch (err) {\n    console.warn('[keyword-volume] error:', err.message);\n    res.status(500).json({ error: 'Failed to fetch keyword volume' });\n  }\n});\n\n// ── POST /api/leads ───────────────────────────────────────────────────────────\napp.post('/api/leads', (req, res) => {\n  const { email, url, score } = req.body;\n  if (!email) return res.status(400).json({ error: 'Email required' });\n  leads.push({ email, url, score, createdAt: new Date().toISOString() });\n  console.log(`[lead] ${email} | ${url} | score: ${score}`);\n  res.json({ ok: true });\n});\n\n// ── GET /api/debug-email (temp) ───────────────────────────────────────────────\napp.get('/api/debug-email', async (req, res) => {\n  const apiKey = process.env.RESEND_API_KEY;\n  if (!apiKey) return res.json({ error: 'RESEND_API_KEY not set' });\n  const result = await fetch('https://api.resend.com/emails', {\n    method: 'POST',\n    headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },\n    body: JSON.stringify({\n      from: 'findmewith.ai <hello@findmewith.ai>',\n      to: 'hello@genierocket.com',\n      subject: 'findmewith.ai debug test',\n      html: '<p>This is a debug test from findmewith.ai. If you see this, Resend is working!</p>',\n    }),\n  });\n  const data = await result.json();\n  res.json({ status: result.status, ok: result.ok, data, keyPrefix: apiKey.slice(0, 8) + '...' });\n});\n\n// ── POST /api/welcome-email ───────────────────────────────────────────────────\napp.post('/api/welcome-email', async (req, res) => {\n  const { email, url, score } = req.body;\n  if (!email) return res.status(400).json({ error: 'Email required' });\n\n  // Idempotent: skip if already sent (logged in nurture_log as step 1)\n  if (supabaseAdmin) {\n    const { data: existing } = await supabaseAdmin\n      .from('nurture_log')\n      .select('id')\n      .eq('email', email)\n      .eq('step', 1)\n      .maybeSingle();\n    if (existing) {\n      console.log(`[welcome] already sent to ${email}, skipping`);\n      return res.json({ ok: true, skipped: true });\n    }\n  }\n\n  const html = buildWelcomeEmailHtml({ email, url: url || 'your site', score: score || 0 });\n  const sent = await sendEmail({\n    to: email,\n    subject: `Welcome to findmewith.ai — your score is ${score || 0}/100`,\n    html,\n  });\n\n  if (sent.ok && supabaseAdmin) {\n    await supabaseAdmin.from('nurture_log').insert({ email, step: 1, url: url || null });\n    console.log(`[welcome] email sent to ${email} — id: ${sent.id}`);\n    return res.json({ ok: true, id: sent.id });\n  }\n\n  console.error(`[welcome] failed to send to ${email}:`, sent.error);\n  res.json({ ok: false, error: sent.error });\n});\n\n// ── POST /api/create-checkout-session ─────────────────────────────────────────\napp.post('/api/create-checkout-session', async (req, res) => {\n  if (!stripe) return res.status(500).json({ error: 'Payments not configured — STRIPE_SECRET_KEY missing' });\n  const { plan, email } = req.body;\n  const priceId = PRICE_IDS[plan];\n  if (!priceId) return res.status(400).json({ error: `Unknown plan: ${plan}` });\n  try {\n    const session = await stripe.checkout.sessions.create({\n      mode: 'subscription',\n      payment_method_types: ['card'],\n      line_items: [{ price: priceId, quantity: 1 }],\n      // {CHECKOUT_SESSION_ID} is replaced by Stripe automatically\n      success_url: `${APP_URL}/?payment=success&session_id={CHECKOUT_SESSION_ID}`,\n      cancel_url:  `${APP_URL}/?payment=cancelled`,\n      metadata: { plan },\n      subscription_data: {\n        trial_period_days: 7,\n        metadata: { plan },\n      },\n      ...(email ? { customer_email: email } : {}),\n    });\n    res.json({ url: session.url });\n  } catch (err) {\n    console.error('[stripe error]', err.message);\n    res.status(500).json({ error: err.message });\n  }\n});\n\n// ── GET /api/verify-session — called after Stripe redirect ────────────────────\napp.get('/api/verify-session', async (req, res) => {\n  if (!stripe) return res.status(500).json({ error: 'Stripe not configured' });\n  const { session_id } = req.query;\n  if (!session_id) return res.status(400).json({ error: 'Missing session_id' });\n  try {\n    const session = await stripe.checkout.sessions.retrieve(session_id);\n    const paid = session.payment_status === 'paid' || session.status === 'complete';\n    // Trial: status is 'complete' but payment_status is 'no_payment_required'\n    const ok = paid || session.status === 'complete';\n    if (ok) {\n      const email = (session.customer_details?.email || session.customer_email || '').toLowerCase().trim();\n      if (email) {\n        subscriptions.set(email, {\n          customerId:     session.customer,\n          subscriptionId: session.subscription,\n          plan:           session.metadata?.plan || 'pro',\n          status:         'active',\n          createdAt:      new Date().toISOString(),\n        });\n        saveSubs();\n      }\n      return res.json({ ok: true, email, plan: session.metadata?.plan || 'pro' });\n    }\n    res.json({ ok: false, status: session.status });\n  } catch (err) {\n    console.error('[verify-session]', err.message);\n    res.status(500).json({ error: err.message });\n  }\n});\n\n// ── GET /api/check-subscription — verify email has active subscription ────────\napp.get('/api/check-subscription', async (req, res) => {\n  const email = (req.query.email || '').toLowerCase().trim();\n  if (!email) return res.status(400).json({ error: 'Email required' });\n\n  // Admin account always gets free Pro\n  if (email === 'hello@genierocket.com') return res.json({ active: true, plan: 'pro' });\n\n  // Check in-memory store first\n  const cached = subscriptions.get(email);\n  if (cached && cached.status === 'active') {\n    return res.json({ active: true, plan: cached.plan });\n  }\n\n  // Fall back to querying Stripe directly (handles server restarts)\n  if (stripe) {\n    try {\n      const customers = await stripe.customers.list({ email, limit: 1 });\n      if (customers.data.length > 0) {\n        const customerId = customers.data[0].id;\n        const subs = await stripe.subscriptions.list({ customer: customerId, status: 'active', limit: 1 });\n        if (subs.data.length > 0) {\n          const activeSub = subs.data[0];\n          const plan = activeSub.metadata?.plan || 'pro';\n          subscriptions.set(email, { customerId, subscriptionId: activeSub.id, plan, status: 'active' });\n          saveSubs();\n          return res.json({ active: true, plan });\n        }\n      }\n    } catch (e) { console.warn('[check-subscription]', e.message); }\n  }\n\n  res.json({ active: false });\n});\n\n// ── POST /api/create-portal-session — Stripe Customer Portal ─────────────────\napp.post('/api/create-portal-session', async (req, res) => {\n  if (!stripe) return res.status(500).json({ error: 'Stripe not configured' });\n  const email = (req.body.email || '').toLowerCase().trim();\n  if (!email) return res.status(400).json({ error: 'Email required' });\n\n  let customerId = subscriptions.get(email)?.customerId;\n\n  // Look up in Stripe if not cached\n  if (!customerId) {\n    try {\n      const customers = await stripe.customers.list({ email, limit: 1 });\n      if (customers.data.length > 0) customerId = customers.data[0].id;\n    } catch (e) { console.warn('[portal]', e.message); }\n  }\n\n  if (!customerId) {\n    return res.status(404).json({ error: 'No subscription found for this email' });\n  }\n\n  try {\n    const portalSession = await stripe.billingPortal.sessions.create({\n      customer: customerId,\n      return_url: APP_URL,\n    });\n    res.json({ url: portalSession.url });\n  } catch (err) {\n    console.error('[portal error]', err.message);\n    res.status(500).json({ error: err.message });\n  }\n});\n\n// ── POST /api/send-weekly-reports (admin trigger for testing) ─────────────────\napp.post('/api/send-weekly-reports', async (req, res) => {\n  if (req.headers['x-admin-key'] !== process.env.ADMIN_KEY)\n    return res.status(401).json({ error: 'Unauthorized' });\n  res.json({ ok: true, message: 'Weekly reports started — check server logs' });\n  runWeeklyReports().catch(err => console.error('[weekly manual]', err.message));\n});\n\n// ── GET /api/leads (admin) ────────────────────────────────────────────────────\napp.get('/api/leads', (req, res) => {\n  if (req.headers['x-admin-key'] !== process.env.ADMIN_KEY)\n    return res.status(401).json({ error: 'Unauthorized' });\n  res.json(leads);\n});\n\n// ── GET /api/check-widget — detect if widget script is installed on a site ────\napp.get('/api/check-widget', async (req, res) => {\n  const { url } = req.query;\n  if (!url) return res.json({ installed: false });\n  try {\n    const response = await fetch(url, {\n      headers: { 'User-Agent': 'findmewith.ai/1.0 (compatibility check)' },\n      signal: AbortSignal.timeout(8000),\n    });\n    const html = await response.text();\n    const installed =\n      html.includes('findmewithai-production.up.railway.app/api/widget') ||\n      html.includes('findmewith.ai/api/widget') ||\n      html.includes('__fmwai');\n    res.json({ installed });\n  } catch (err) {\n    res.json({ installed: false, error: 'Could not reach site' });\n  }\n});\n\n// ── GET /api/widget/:scanId.js — hosted AEO widget ───────────────────────────\napp.get('/api/widget/:scanId.js', async (req, res) => {\n  const { scanId } = req.params;\n\n  const err = (msg) => res.status(404).type('application/javascript')\n    .send(`/* findmewith.ai widget: ${msg} */`);\n\n  if (!supabaseAdmin) return err('server not configured');\n\n  try {\n    const { data: scan, error } = await supabaseAdmin\n      .from('scans')\n      .select('result, url')\n      .eq('id', scanId)\n      .single();\n\n    if (error || !scan) return err('scan not found');\n\n    const result = scan.result || {};\n    const url = scan.url || '';\n    const domain = url.replace(/^https?:\\/\\//, '').replace(/\\/$/, '');\n    const si = result.site_info || {};\n    const businessName = si.h1 || (si.title || '').replace(/\\s*[\\|\\-–—:].*/g, '').trim() || domain;\n    const businessDesc = si.metaDesc || '';\n\n    const schemas = [\n      {\n        '@context': 'https://schema.org',\n        '@type': 'Organization',\n        name: businessName,\n        description: businessDesc,\n        url,\n      },\n      {\n        '@context': 'https://schema.org',\n        '@type': 'WebSite',\n        name: businessName,\n        url,\n        description: businessDesc,\n      },\n    ];\n\n    // Inject FAQ if scan has passing FAQ findings\n    const hasFaq = (result.findings || []).some(f => f.id === 'has_faq_schema' && f.status === 'pass');\n    if (!hasFaq) {\n      schemas.push({\n        '@context': 'https://schema.org',\n        '@type': 'FAQPage',\n        mainEntity: [\n          {\n            '@type': 'Question',\n            name: `What does ${businessName} do?`,\n            acceptedAnswer: { '@type': 'Answer', text: businessDesc || `${businessName} provides professional services. Visit ${url} to learn more.` },\n          },\n        ],\n      });\n    }\n\n    const js = `/* findmewith.ai Managed AEO Widget | ${domain} | ${new Date().toISOString().slice(0, 10)} */\n(function(){\n  if(window.__fmwai)return;window.__fmwai=1;\n  var schemas=${JSON.stringify(schemas)};\n  function inject(){\n    schemas.forEach(function(s){\n      var el=document.createElement('script');\n      el.type='application/ld+json';\n      el.text=JSON.stringify(s);\n      document.head.appendChild(el);\n    });\n  }\n  if(document.head){inject();}else{document.addEventListener('DOMContentLoaded',inject);}\n})();`;\n\n    res.set('Content-Type', 'application/javascript; charset=utf-8');\n    res.set('Cache-Control', 'public, max-age=3600');\n    res.set('Access-Control-Allow-Origin', '*');\n    res.send(js);\n  } catch (err) {\n    console.error('[widget]', err.message);\n    res.status(500).type('application/javascript').send('/* findmewith.ai widget: error */');\n  }\n});\n\n// ── GET /api/admin/stats — admin dashboard data (brad@genierocket.com only) ───\napp.get('/api/admin/stats', async (req, res) => {\n  if (!supabaseAdmin) return res.status(503).json({ error: 'Server not configured' });\n\n  // Verify the Bearer token is a valid Supabase session and belongs to the admin\n  const token = (req.headers.authorization || '').replace('Bearer ', '').trim();\n  if (!token) return res.status(401).json({ error: 'No token' });\n\n  try {\n    const { data: { user }, error: authErr } = await supabaseAdmin.auth.getUser(token);\n    if (authErr || !user) return res.status(401).json({ error: 'Invalid token' });\n    if (user.email !== 'hello@genierocket.com') return res.status(403).json({ error: 'Forbidden' });\n\n    // Fetch all auth users\n    const { data: { users }, error: usersErr } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });\n    if (usersErr) throw usersErr;\n\n    // Fetch all scans (id, user_id, email, url, score, created_at)\n    const { data: scans, error: scansErr } = await supabaseAdmin\n      .from('scans')\n      .select('id, user_id, email, url, score, created_at')\n      .order('created_at', { ascending: false })\n      .limit(1000);\n    if (scansErr) throw scansErr;\n\n    // Build per-user scan counts and latest scan\n    const scansByUser = {};\n    for (const scan of (scans || [])) {\n      const uid = scan.user_id;\n      if (!uid) continue;\n      if (!scansByUser[uid]) scansByUser[uid] = { count: 0, latest: null };\n      scansByUser[uid].count++;\n      if (!scansByUser[uid].latest) scansByUser[uid].latest = scan;\n    }\n\n    const formattedUsers = (users || []).map(u => ({\n      id: u.id,\n      email: u.email,\n      created_at: u.created_at,\n      last_sign_in_at: u.last_sign_in_at,\n      scan_count: (scansByUser[u.id] || {}).count || 0,\n      latest_scan: (scansByUser[u.id] || {}).latest || null,\n    }));\n\n    res.json({ users: formattedUsers, scans: scans || [] });\n  } catch (err) {\n    console.error('[admin/stats]', err.message);\n    res.status(500).json({ error: err.message });\n  }\n});\n\n// ── SPA fallback ──────────────────────────────────────────────────────────────\napp.get('*', (_req, res) => {\n  const index = join(__dirname, '../dist/index.html');\n  if (fs.existsSync(index)) return res.sendFile(index);\n  res.send('findmewith.ai API server is running ✓');\n});\n\nconst PORT = process.env.PORT || 3001;\napp.listen(PORT, () => console.log(`findmewith.ai server running on port ${PORT}`));\n",
-  "encoding": "base64",
-  "downloadUrl": "https://raw.githubusercontent.com/bradleyparnell/findmewithai/main/server/index.js"
+// ── In-memory lead store ──────────────────────────────────────────────────────
+const leads = [];
+
+// ── Analyzer (pure Node.js) ───────────────────────────────────────────────────
+
+const SCORE_WEIGHTS = {
+  has_schema_org: 12, has_organization_schema: 10, has_person_schema: 5,
+  has_faq_schema: 5, has_article_schema: 3,
+  has_meta_description: 6, has_h1: 5, content_length: 8, has_og_tags: 6,
+  has_contact_info: 7, has_about_page: 7, has_social_links: 6,
+  https_enabled: 5, has_title_tag: 5, has_robots_txt: 3, has_sitemap: 2,
+  has_llms_txt: 5,
+};
+
+const CATEGORIES = {
+  structured_data:  ['has_schema_org','has_organization_schema','has_person_schema','has_faq_schema','has_article_schema'],
+  content_quality:  ['has_meta_description','has_h1','content_length','has_og_tags'],
+  entity_authority: ['has_contact_info','has_about_page','has_social_links'],
+  technical_seo:    ['https_enabled','has_title_tag','has_robots_txt','has_sitemap'],
+  ai_bonus:         ['has_llms_txt'],
+};
+
+const LABELS = {
+  has_schema_org: 'Website tells AI who it is',
+  has_organization_schema: 'Business details are machine-readable',
+  has_person_schema: 'Owner / author is identified for AI',
+  has_faq_schema: 'FAQ answers are AI-readable',
+  has_article_schema: 'Blog posts are labeled for AI',
+  has_meta_description: 'One-sentence site summary exists',
+  has_h1: 'Pages have clear main headings',
+  content_length: 'Enough content for AI to read',
+  has_og_tags: 'Site looks good when shared online',
+  has_contact_info: 'Contact info is visible',
+  has_about_page: 'About page detected',
+  has_social_links: 'Social media profiles linked',
+  https_enabled: 'Website is secure (https)',
+  has_title_tag: 'Page has a clear title',
+  has_robots_txt: 'Navigation file for AI bots exists',
+  has_sitemap: 'Sitemap detected',
+  has_llms_txt: 'AI introduction file (llms.txt) found',
+};
+
+const SUGGESTIONS = {
+  has_llms_txt:            ['critical',     'Add an llms.txt file',             "This tells ChatGPT and Perplexity exactly who you are. It's the single most impactful change you can make.",    'high'],
+  has_organization_schema: ['critical',     'Add your business details code',   'A small code snippet that tells AI your name, address, phone, and what you do.',                                 'high'],
+  has_schema_org:          ['critical',     'Add structured data to your site', 'AI needs machine-readable data to confidently recommend you. Use the Schema Builder to generate your snippet.',   'high'],
+  has_faq_schema:          ['important',    'Add a Q&A section AI can read',    'FAQ schema is one of the best ways to get AI to include you in direct answers.',                                  'high'],
+  has_meta_description:    ['important',    'Write a one-sentence summary',     "Every page should have a short description — it's how AI decides what your site is about.",                      'medium'],
+  content_length:          ['important',    'Add more content to your pages',   'AI needs enough text to understand what you offer. Aim for at least 300 words per page.',                       'medium'],
+  has_h1:                  ['important',    'Add a main heading to each page',  'A clear H1 heading helps AI understand the topic of each page.',                                                  'medium'],
+  has_about_page:          ['important',    'Create an About page',             'AI looks for an About page to confirm who you are and what you do.',                                              'medium'],
+  has_contact_info:        ['important',    'Make your contact info visible',   'AI needs to see your phone, email, or address to trust and cite your business.',                                 'medium'],
+  has_og_tags:             ['nice-to-have', 'Add social sharing tags',          'Open Graph tags make your site look great when shared — and give AI extra context.',                             'low'],
+  has_robots_txt:          ['nice-to-have', 'Add a robots.txt file',            'Tells AI bots how to navigate your site.',                                                                        'low'],
+  has_sitemap:             ['nice-to-have', 'Add an XML sitemap',               'Helps AI discover all your pages.',                                                                               'low'],
+  has_article_schema:      ['nice-to-have', 'Label your blog posts for AI',     'Article schema helps AI identify and cite your content.',                                                        'low'],
+  has_person_schema:       ['nice-to-have', 'Add author / person schema',       'Especially useful for personal brands, consultants, and professionals.',                                         'low'],
+  has_social_links:        ['nice-to-have', 'Link your social profiles',        'Linking to your social accounts helps AI confirm your online identity.',                                         'low'],
+};
+
+// ── DataForSEO AI Keyword Volume ──────────────────────────────────────────────
+const DATAFORSEO_AUTH = 'Basic ' + Buffer.from(
+  (process.env.DATAFORSEO_LOGIN || 'brad@genierocket.com') + ':' +
+  (process.env.DATAFORSEO_PASSWORD || '4af0536485267057')
+).toString('base64');
+
+async function fetchAiKeywordVolume(keywords) {
+  try {
+    const res = await fetch(
+      'https://api.dataforseo.com/v3/ai_optimization/ai_keyword_data/keywords_search_volume/live',
+      {
+        method: 'POST',
+        headers: { 'Authorization': DATAFORSEO_AUTH, 'Content-Type': 'application/json' },
+        body: JSON.stringify([{ keywords: keywords.slice(0, 12), location_code: 2840, language_code: 'en' }]),
+        signal: AbortSignal.timeout(12000),
+      }
+    );
+    const data = await res.json();
+    if (!res.ok || data.status_code !== 20000) {
+      console.warn('[dataforseo] API error:', data?.status_message);
+      return null;
+    }
+    return data?.tasks?.[0]?.result?.[0]?.items || null;
+  } catch (err) {
+    console.warn('[dataforseo] fetch error:', err.message);
+    return null;
+  }
 }
+
+function generateKeywordsFromSite({ title, metaDesc, h1Texts, url }) {
+  const stopWords = new Set([
+    'the','a','an','and','or','but','in','on','at','to','for','of','with','by','from',
+    'is','are','we','our','your','this','that','all','any','get','find','how',
+    'best','top','near','local','home','homes','welcome','page','click','here',
+    'read','more','learn','about','us','contact','services','service','team',
+    'website','site','online','free','new','now','today','great','good',
+    'world','life','love','time','work','place','make','take','also','just',
+    'can','will','you','have','has','been','was','were','they','them',
+  ]);
+
+  function cleanPhrase(raw, maxWords = 5) {
+    if (!raw) return '';
+    return raw
+      .split(/[\-\|–—:,\.!?]/)[0]
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, '')
+      .split(/\s+/)
+      .filter(w => w.length > 2 && !stopWords.has(w))
+      .slice(0, maxWords)
+      .join(' ')
+      .trim();
+  }
+
+  // Extract multiple distinct phrases from meta description by splitting on connectors
+  function metaPhrases(meta) {
+    if (!meta) return [];
+    const segments = meta.split(/[,\.\-–—\|!]/).map(s => s.trim()).filter(s => s.length > 8);
+    return segments.map(s => cleanPhrase(s, 4)).filter(s => s.length > 3);
+  }
+
+  const coreTitle = cleanPhrase(title);
+  const allH1s    = h1Texts.map(h => cleanPhrase(h, 4)).filter(h => h.length > 3);
+  const coreMeta  = cleanPhrase(metaDesc);
+  const extraMeta = metaPhrases(metaDesc);
+
+  // Collect all candidate core phrases, deduped
+  const candidates = [...new Set([coreTitle, ...allH1s, coreMeta, ...extraMeta])].filter(c => c.length > 3);
+
+  // Use the longest as the primary anchor
+  const primary = candidates.sort((a, b) => b.split(' ').length - a.split(' ').length)[0] || '';
+
+  const keywords = new Set();
+
+  // From each unique candidate, add base + variations
+  candidates.slice(0, 4).forEach(phrase => {
+    keywords.add(phrase);
+  });
+
+  // AI-style question formats off the primary
+  if (primary) {
+    keywords.add(`best ${primary}`);
+    keywords.add(`${primary} near me`);
+    keywords.add(`top ${primary}`);
+    keywords.add(`where to find ${primary}`);
+    keywords.add(`${primary} recommendations`);
+    keywords.add(`who has the best ${primary}`);
+    keywords.add(`affordable ${primary}`);
+  }
+
+  // Secondary phrase variations
+  if (allH1s[0] && allH1s[0] !== primary) {
+    keywords.add(`best ${allH1s[0]}`);
+    keywords.add(`${allH1s[0]} near me`);
+  }
+
+  return [...keywords]
+    .filter(k => {
+      const words = k.split(' ');
+      return words.length >= 1 && words.length <= 7 && k.length > 3;
+    })
+    .slice(0, 12);
+}
+
+function fetchUrl(urlStr, redirectCount = 0) {
+  return new Promise((resolve, reject) => {
+    if (redirectCount > 5) return reject(new Error('Too many redirects'));
+    let parsed;
+    try { parsed = new URL(urlStr); } catch { return reject(new Error('Invalid URL')); }
+
+    const lib = parsed.protocol === 'https:' ? https : http;
+    const options = {
+      hostname: parsed.hostname,
+      port: parsed.port || (parsed.protocol === 'https:' ? 443 : 80),
+      path: (parsed.pathname || '/') + (parsed.search || ''),
+      method: 'GET',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; findmewith-bot/1.0; +https://findmewith.ai)',
+        'Accept': 'text/html,application/xhtml+xml',
+        'Accept-Language': 'en-US,en;q=0.9',
+      },
+      rejectUnauthorized: false,
+      timeout: 15000,
+    };
+
+    const req = lib.request(options, (res) => {
+      if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location) {
+        const next = res.headers.location.startsWith('http')
+          ? res.headers.location
+          : `${parsed.origin}${res.headers.location}`;
+        res.resume();
+        return fetchUrl(next, redirectCount + 1).then(resolve).catch(reject);
+      }
+      if (res.statusCode >= 400) {
+        res.resume();
+        return reject(new Error(`HTTP ${res.statusCode}`));
+      }
+      const chunks = [];
+      res.on('data', c => chunks.push(c));
+      res.on('end', () => resolve({ html: Buffer.concat(chunks).toString('utf8', 0, 500000), finalUrl: urlStr }));
+    });
+
+    req.on('error', reject);
+    req.on('timeout', () => { req.destroy(); reject(new Error('Request timed out')); });
+    req.end();
+  });
+}
+
+function checkUrlExists(urlStr) {
+  return new Promise((resolve) => {
+    try {
+      const parsed = new URL(urlStr);
+      const lib = parsed.protocol === 'https:' ? https : http;
+      const req = lib.request({
+        method: 'HEAD',
+        hostname: parsed.hostname,
+        port: parsed.port || (parsed.protocol === 'https:' ? 443 : 80),
+        path: parsed.pathname,
+        rejectUnauthorized: false,
+        timeout: 6000,
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; findmewith-bot/1.0)' },
+      }, (res) => { res.resume(); resolve(res.statusCode < 400); });
+      req.on('error', () => resolve(false));
+      req.on('timeout', () => { req.destroy(); resolve(false); });
+      req.end();
+    } catch { resolve(false); }
+  });
+}
+
+async function analyzeUrl(url) {
+  const { html, finalUrl } = await fetchUrl(url);
+  const htmlLower = html.toLowerCase();
+
+  const parsed = new URL(finalUrl);
+  const origin = `${parsed.protocol}//${parsed.host}`;
+  const isHttps = parsed.protocol === 'https:';
+
+  const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+  const title = titleMatch ? titleMatch[1].replace(/<[^>]+>/g, '').trim() : '';
+
+  const metaDescMatch = html.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']*)["']/i) ||
+                         html.match(/<meta[^>]+content=["']([^"']*)["'][^>]+name=["']description["']/i);
+  const metaDesc = metaDescMatch ? metaDescMatch[1].trim() : '';
+
+  const hasOgTitle = /<meta[^>]+property=["']og:title["']/i.test(html);
+  const hasOgDesc  = /<meta[^>]+property=["']og:description["']/i.test(html);
+
+  const h1Matches = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/gi) || [];
+  const h1Texts = h1Matches.map(h => h.replace(/<[^>]+>/g, '').trim()).filter(Boolean);
+
+  const jsonLdMatches = html.match(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi) || [];
+  const ldTypes = [];
+  for (const block of jsonLdMatches) {
+    const content = block.replace(/<script[^>]*>/i, '').replace(/<\/script>/i, '').trim();
+    try {
+      const obj = JSON.parse(content);
+      const addType = (t) => { if (t) ldTypes.push(String(t).toLowerCase()); };
+      if (obj['@type']) { Array.isArray(obj['@type']) ? obj['@type'].forEach(addType) : addType(obj['@type']); }
+      if (obj['@graph']) obj['@graph'].forEach(item => item['@type'] && addType(item['@type']));
+    } catch {}
+  }
+
+  const bodyText = html
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const wordCount = bodyText.split(/\s+/).filter(w => w.length > 2).length;
+
+  const hasContactInfo = /(\+?1?[\s.\-]?\(?\d{3}\)?[\s.\-]?\d{3}[\s.\-]?\d{4}|[\w.+\-]+@[\w\-]+\.\w+)/.test(bodyText);
+
+  const [hasRobots, hasSitemap, hasLlms] = await Promise.all([
+    checkUrlExists(`${origin}/robots.txt`),
+    checkUrlExists(`${origin}/sitemap.xml`),
+    checkUrlExists(`${origin}/llms.txt`),
+  ]);
+
+  const checks = {
+    https_enabled:           isHttps,
+    has_title_tag:           !!title,
+    has_meta_description:    !!metaDesc,
+    has_h1:                  h1Texts.length > 0,
+    has_og_tags:             hasOgTitle || hasOgDesc,
+    content_length:          wordCount >= 250,
+    has_schema_org:          jsonLdMatches.length > 0,
+    has_organization_schema: ldTypes.some(t => t.includes('organization') || t.includes('localbusiness')),
+    has_person_schema:       ldTypes.some(t => t.includes('person')),
+    has_faq_schema:          ldTypes.some(t => t.includes('faqpage')),
+    has_article_schema:      ldTypes.some(t => t.includes('article') || t.includes('blogposting')),
+    has_contact_info:        hasContactInfo,
+    has_about_page:          /href=["'][^"']*\babout\b[^"']*["']/.test(htmlLower),
+    has_social_links:        /href=["'][^"']*(?:facebook\.com|twitter\.com|x\.com|linkedin\.com|instagram\.com|youtube\.com)[^"']*["']/.test(htmlLower),
+    has_robots_txt:          hasRobots,
+    has_sitemap:             hasSitemap || htmlLower.includes('sitemap.xml'),
+    has_llms_txt:            hasLlms,
+  };
+
+  const categoryScores = {};
+  for (const [cat, keys] of Object.entries(CATEGORIES)) {
+    categoryScores[cat] = keys.reduce((sum, k) => sum + (checks[k] ? (SCORE_WEIGHTS[k] || 0) : 0), 0);
+  }
+  const overall = Object.values(categoryScores).reduce((a, b) => a + b, 0);
+
+  const findings = Object.entries(checks).map(([id, passed]) => ({
+    id, label: LABELS[id] || id, status: passed ? 'pass' : 'fail',
+    ...((!passed && SUGGESTIONS[id]) ? { suggestion: SUGGESTIONS[id][2] } : {}),
+  }));
+
+  const impactOrder = { high: 0, medium: 1, low: 2 };
+  const catOrder = { critical: 0, important: 1, 'nice-to-have': 2 };
+  const suggestions = Object.entries(checks)
+    .filter(([k, v]) => !v && SUGGESTIONS[k])
+    .map(([k]) => {
+      const [category, title, description, impact] = SUGGESTIONS[k];
+      return { category, title, description, impact };
+    })
+    .sort((a, b) =>
+      (catOrder[a.category] ?? 3) - (catOrder[b.category] ?? 3) ||
+      (impactOrder[a.impact] ?? 3) - (impactOrder[b.impact] ?? 3)
+    );
+
+  // ── DataForSEO AI Market Data ────────────────────────────────────────────
+  let ai_market_data = null;
+  try {
+    const kwList = generateKeywordsFromSite({ title, metaDesc, h1Texts, url: finalUrl });
+    if (kwList.length > 0) {
+      const rawItems = await fetchAiKeywordVolume(kwList);
+      if (rawItems && rawItems.length > 0) {
+        const processed = rawItems
+          .filter(item => (item.ai_search_volume || 0) > 0)
+          .map(item => ({
+            keyword: item.keyword,
+            volume: item.ai_search_volume || 0,
+            monthly: (item.monthly_searches || []).slice(-6).map(m => ({
+              month: new Date(m.year, m.month - 1).toLocaleDateString('en-US', { month: 'short' }),
+              volume: m.search_volume || 0,
+            })),
+          }))
+          .sort((a, b) => b.volume - a.volume);
+
+        if (processed.length > 0) {
+          const totalVolume = processed.reduce((sum, k) => sum + k.volume, 0);
+          const topKw = processed[0];
+          let trendDirection = 'stable', trendPct = 0;
+          if (topKw.monthly.length >= 4) {
+            const recent = topKw.monthly.slice(-3).reduce((s, m) => s + m.volume, 0);
+            const older  = topKw.monthly.slice(0, 3).reduce((s, m) => s + m.volume, 0);
+            if (older > 0) {
+              trendPct = Math.round(((recent - older) / older) * 100);
+              trendDirection = trendPct > 5 ? 'growing' : trendPct < -5 ? 'declining' : 'stable';
+            }
+          }
+          ai_market_data = {
+            keywords: processed.slice(0, 10),
+            total_volume: totalVolume,
+            top_keyword: topKw.keyword,
+            top_volume: topKw.volume,
+            trend_direction: trendDirection,
+            trend_pct: Math.abs(trendPct),
+          };
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[dataforseo] ai_market_data skipped:', err.message);
+  }
+
+  return { url: finalUrl, score: overall, categories: categoryScores, findings, suggestions, ai_market_data, site_info: { title, metaDesc, h1: h1Texts[0] || '' } };
+}
+
+// ── POST /api/analyze ─────────────────────────────────────────────────────────
+app.post('/api/analyze', async (req, res) => {
+  const { url } = req.body;
+  if (!url) return res.status(400).json({ error: 'URL is required' });
+  try {
+    const result = await analyzeUrl(url.startsWith('http') ? url : 'https://' + url);
+    res.json(result);
+  } catch (err) {
+    console.error('[analyze error]', err.message);
+    res.status(500).json({ error: err.message || 'Analysis failed' });
+  }
+});
+
+// ── POST /api/keyword-volume ──────────────────────────────────────────────────
+app.post('/api/keyword-volume', async (req, res) => {
+  const { keywords } = req.body;
+  if (!keywords || !Array.isArray(keywords) || keywords.length === 0) {
+    return res.status(400).json({ error: 'keywords array required' });
+  }
+  try {
+    const rawItems = await fetchAiKeywordVolume(keywords.slice(0, 12));
+    if (!rawItems) return res.json({ keywords: [] });
+    const processed = rawItems.map(item => ({
+      keyword: item.keyword,
+      volume: item.ai_search_volume || 0,
+    }));
+    res.json({ keywords: processed });
+  } catch (err) {
+    console.warn('[keyword-volume] error:', err.message);
+    res.status(500).json({ error: 'Failed to fetch keyword volume' });
+  }
+});
+
+// ── POST /api/leads ───────────────────────────────────────────────────────────
+app.post('/api/leads', (req, res) => {
+  const { email, url, score } = req.body;
+  if (!email) return res.status(400).json({ error: 'Email required' });
+  leads.push({ email, url, score, createdAt: new Date().toISOString() });
+  console.log(`[lead] ${email} | ${url} | score: ${score}`);
+  res.json({ ok: true });
+});
+
+// ── GET /api/debug-email (temp) ───────────────────────────────────────────────
+app.get('/api/debug-email', async (req, res) => {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return res.json({ error: 'RESEND_API_KEY not set' });
+  const result = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      from: 'findmewith.ai <hello@findmewith.ai>',
+      to: 'hello@genierocket.com',
+      subject: 'findmewith.ai debug test',
+      html: '<p>This is a debug test from findmewith.ai. If you see this, Resend is working!</p>',
+    }),
+  });
+  const data = await result.json();
+  res.json({ status: result.status, ok: result.ok, data, keyPrefix: apiKey.slice(0, 8) + '...' });
+});
+
+// ── POST /api/welcome-email ───────────────────────────────────────────────────
+app.post('/api/welcome-email', async (req, res) => {
+  const { email, url, score } = req.body;
+  if (!email) return res.status(400).json({ error: 'Email required' });
+
+  // Idempotent: skip if already sent (logged in nurture_log as step 1)
+  if (supabaseAdmin) {
+    const { data: existing } = await supabaseAdmin
+      .from('nurture_log')
+      .select('id')
+      .eq('email', email)
+      .eq('step', 1)
+      .maybeSingle();
+    if (existing) {
+      console.log(`[welcome] already sent to ${email}, skipping`);
+      return res.json({ ok: true, skipped: true });
+    }
+  }
+
+  const html = buildWelcomeEmailHtml({ email, url: url || 'your site', score: score || 0 });
+  const sent = await sendEmail({
+    to: email,
+    subject: `Welcome to findmewith.ai — your score is ${score || 0}/100`,
+    html,
+  });
+
+  if (sent.ok && supabaseAdmin) {
+    await supabaseAdmin.from('nurture_log').insert({ email, step: 1, url: url || null });
+    console.log(`[welcome] email sent to ${email} — id: ${sent.id}`);
+    return res.json({ ok: true, id: sent.id });
+  }
+
+  console.error(`[welcome] failed to send to ${email}:`, sent.error);
+  res.json({ ok: false, error: sent.error });
+});
+
+// ── POST /api/create-checkout-session ─────────────────────────────────────────
+app.post('/api/create-checkout-session', async (req, res) => {
+  if (!stripe) return res.status(500).json({ error: 'Payments not configured — STRIPE_SECRET_KEY missing' });
+  const { plan, email } = req.body;
+  const priceId = PRICE_IDS[plan];
+  if (!priceId) return res.status(400).json({ error: `Unknown plan: ${plan}` });
+  try {
+    const session = await stripe.checkout.sessions.create({
+      mode: 'subscription',
+      payment_method_types: ['card'],
+      line_items: [{ price: priceId, quantity: 1 }],
+      // {CHECKOUT_SESSION_ID} is replaced by Stripe automatically
+      success_url: `${APP_URL}/?payment=success&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url:  `${APP_URL}/?payment=cancelled`,
+      metadata: { plan },
+      subscription_data: {
+        trial_period_days: 7,
+        metadata: { plan },
+      },
+      ...(email ? { customer_email: email } : {}),
+    });
+    res.json({ url: session.url });
+  } catch (err) {
+    console.error('[stripe error]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── GET /api/verify-session — called after Stripe redirect ────────────────────
+app.get('/api/verify-session', async (req, res) => {
+  if (!stripe) return res.status(500).json({ error: 'Stripe not configured' });
+  const { session_id } = req.query;
+  if (!session_id) return res.status(400).json({ error: 'Missing session_id' });
+  try {
+    const session = await stripe.checkout.sessions.retrieve(session_id);
+    const paid = session.payment_status === 'paid' || session.status === 'complete';
+    // Trial: status is 'complete' but payment_status is 'no_payment_required'
+    const ok = paid || session.status === 'complete';
+    if (ok) {
+      const email = (session.customer_details?.email || session.customer_email || '').toLowerCase().trim();
+      if (email) {
+        subscriptions.set(email, {
+          customerId:     session.customer,
+          subscriptionId: session.subscription,
+          plan:           session.metadata?.plan || 'pro',
+          status:         'active',
+          createdAt:      new Date().toISOString(),
+        });
+        saveSubs();
+      }
+      return res.json({ ok: true, email, plan: session.metadata?.plan || 'pro' });
+    }
+    res.json({ ok: false, status: session.status });
+  } catch (err) {
+    console.error('[verify-session]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── GET /api/check-subscription — verify email has active subscription ────────
+app.get('/api/check-subscription', async (req, res) => {
+  const email = (req.query.email || '').toLowerCase().trim();
+  if (!email) return res.status(400).json({ error: 'Email required' });
+
+  // Admin account always gets free Pro
+  if (email === 'hello@genierocket.com') return res.json({ active: true, plan: 'pro' });
+
+  // Check in-memory store first
+  const cached = subscriptions.get(email);
+  if (cached && cached.status === 'active') {
+    return res.json({ active: true, plan: cached.plan });
+  }
+
+  // Fall back to querying Stripe directly (handles server restarts)
+  if (stripe) {
+    try {
+      const customers = await stripe.customers.list({ email, limit: 1 });
+      if (customers.data.length > 0) {
+        const customerId = customers.data[0].id;
+        const subs = await stripe.subscriptions.list({ customer: customerId, status: 'active', limit: 1 });
+        if (subs.data.length > 0) {
+          const activeSub = subs.data[0];
+          const plan = activeSub.metadata?.plan || 'pro';
+          subscriptions.set(email, { customerId, subscriptionId: activeSub.id, plan, status: 'active' });
+          saveSubs();
+          return res.json({ active: true, plan });
+        }
+      }
+    } catch (e) { console.warn('[check-subscription]', e.message); }
+  }
+
+  res.json({ active: false });
+});
+
+// ── POST /api/create-portal-session — Stripe Customer Portal ─────────────────
+app.post('/api/create-portal-session', async (req, res) => {
+  if (!stripe) return res.status(500).json({ error: 'Stripe not configured' });
+  const email = (req.body.email || '').toLowerCase().trim();
+  if (!email) return res.status(400).json({ error: 'Email required' });
+
+  let customerId = subscriptions.get(email)?.customerId;
+
+  // Look up in Stripe if not cached
+  if (!customerId) {
+    try {
+      const customers = await stripe.customers.list({ email, limit: 1 });
+      if (customers.data.length > 0) customerId = customers.data[0].id;
+    } catch (e) { console.warn('[portal]', e.message); }
+  }
+
+  if (!customerId) {
+    return res.status(404).json({ error: 'No subscription found for this email' });
+  }
+
+  try {
+    const portalSession = await stripe.billingPortal.sessions.create({
+      customer: customerId,
+      return_url: APP_URL,
+    });
+    res.json({ url: portalSession.url });
+  } catch (err) {
+    console.error('[portal error]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── POST /api/send-weekly-reports (admin trigger for testing) ─────────────────
+app.post('/api/send-weekly-reports', async (req, res) => {
+  if (req.headers['x-admin-key'] !== process.env.ADMIN_KEY)
+    return res.status(401).json({ error: 'Unauthorized' });
+  res.json({ ok: true, message: 'Weekly reports started — check server logs' });
+  runWeeklyReports().catch(err => console.error('[weekly manual]', err.message));
+});
+
+// ── GET /api/leads (admin) ────────────────────────────────────────────────────
+app.get('/api/leads', (req, res) => {
+  if (req.headers['x-admin-key'] !== process.env.ADMIN_KEY)
+    return res.status(401).json({ error: 'Unauthorized' });
+  res.json(leads);
+});
+
+// ── GET /api/check-widget — detect if widget script is installed on a site ────
+app.get('/api/check-widget', async (req, res) => {
+  const { url } = req.query;
+  if (!url) return res.json({ installed: false });
+  try {
+    const response = await fetch(url, {
+      headers: { 'User-Agent': 'findmewith.ai/1.0 (compatibility check)' },
+      signal: AbortSignal.timeout(8000),
+    });
+    const html = await response.text();
+    const installed =
+      html.includes('findmewithai-production.up.railway.app/api/widget') ||
+      html.includes('findmewith.ai/api/widget') ||
+      html.includes('__fmwai');
+    res.json({ installed });
+  } catch (err) {
+    res.json({ installed: false, error: 'Could not reach site' });
+  }
+});
+
+// ── GET /api/widget/:scanId.js — hosted AEO widget ───────────────────────────
+app.get('/api/widget/:scanId.js', async (req, res) => {
+  const { scanId } = req.params;
+
+  const err = (msg) => res.status(404).type('application/javascript')
+    .send(`/* findmewith.ai widget: ${msg} */`);
+
+  if (!supabaseAdmin) return err('server not configured');
+
+  try {
+    const { data: scan, error } = await supabaseAdmin
+      .from('scans')
+      .select('result, url')
+      .eq('id', scanId)
+      .single();
+
+    if (error || !scan) return err('scan not found');
+
+    const result = scan.result || {};
+    const url = scan.url || '';
+    const domain = url.replace(/^https?:\/\//, '').replace(/\/$/, '');
+    const si = result.site_info || {};
+    const businessName = si.h1 || (si.title || '').replace(/\s*[\|\-–—:].*/g, '').trim() || domain;
+    const businessDesc = si.metaDesc || '';
+
+    const schemas = [
+      {
+        '@context': 'https://schema.org',
+        '@type': 'Organization',
+        name: businessName,
+        description: businessDesc,
+        url,
+      },
+      {
+        '@context': 'https://schema.org',
+        '@type': 'WebSite',
+        name: businessName,
+        url,
+        description: businessDesc,
+      },
+    ];
+
+    // Inject FAQ if scan has passing FAQ findings
+    const hasFaq = (result.findings || []).some(f => f.id === 'has_faq_schema' && f.status === 'pass');
+    if (!hasFaq) {
+      schemas.push({
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: [
+          {
+            '@type': 'Question',
+            name: `What does ${businessName} do?`,
+            acceptedAnswer: { '@type': 'Answer', text: businessDesc || `${businessName} provides professional services. Visit ${url} to learn more.` },
+          },
+        ],
+      });
+    }
+
+    const js = `/* findmewith.ai Managed AEO Widget | ${domain} | ${new Date().toISOString().slice(0, 10)} */
+(function(){
+  if(window.__fmwai)return;window.__fmwai=1;
+  var schemas=${JSON.stringify(schemas)};
+  function inject(){
+    schemas.forEach(function(s){
+      var el=document.createElement('script');
+      el.type='application/ld+json';
+      el.text=JSON.stringify(s);
+      document.head.appendChild(el);
+    });
+  }
+  if(document.head){inject();}else{document.addEventListener('DOMContentLoaded',inject);}
+})();`;
+
+    res.set('Content-Type', 'application/javascript; charset=utf-8');
+    res.set('Cache-Control', 'public, max-age=3600');
+    res.set('Access-Control-Allow-Origin', '*');
+    res.send(js);
+  } catch (err) {
+    console.error('[widget]', err.message);
+    res.status(500).type('application/javascript').send('/* findmewith.ai widget: error */');
+  }
+});
+
+// ── GET /api/admin/stats — admin dashboard data (brad@genierocket.com only) ───
+app.get('/api/admin/stats', async (req, res) => {
+  if (!supabaseAdmin) return res.status(503).json({ error: 'Server not configured' });
+
+  // Verify the Bearer token is a valid Supabase session and belongs to the admin
+  const token = (req.headers.authorization || '').replace('Bearer ', '').trim();
+  if (!token) return res.status(401).json({ error: 'No token' });
+
+  try {
+    const { data: { user }, error: authErr } = await supabaseAdmin.auth.getUser(token);
+    if (authErr || !user) return res.status(401).json({ error: 'Invalid token' });
+    if (user.email !== 'hello@genierocket.com') return res.status(403).json({ error: 'Forbidden' });
+
+    // Fetch all auth users
+    const { data: { users }, error: usersErr } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
+    if (usersErr) throw usersErr;
+
+    // Fetch all scans (id, user_id, email, url, score, created_at)
+    const { data: scans, error: scansErr } = await supabaseAdmin
+      .from('scans')
+      .select('id, user_id, email, url, score, created_at')
+      .order('created_at', { ascending: false })
+      .limit(1000);
+    if (scansErr) throw scansErr;
+
+    // Build per-user scan counts and latest scan
+    const scansByUser = {};
+    for (const scan of (scans || [])) {
+      const uid = scan.user_id;
+      if (!uid) continue;
+      if (!scansByUser[uid]) scansByUser[uid] = { count: 0, latest: null };
+      scansByUser[uid].count++;
+      if (!scansByUser[uid].latest) scansByUser[uid].latest = scan;
+    }
+
+    const formattedUsers = (users || []).map(u => ({
+      id: u.id,
+      email: u.email,
+      created_at: u.created_at,
+      last_sign_in_at: u.last_sign_in_at,
+      scan_count: (scansByUser[u.id] || {}).count || 0,
+      latest_scan: (scansByUser[u.id] || {}).latest || null,
+    }));
+
+    res.json({ users: formattedUsers, scans: scans || [] });
+  } catch (err) {
+    console.error('[admin/stats]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── SPA fallback ──────────────────────────────────────────────────────────────
+app.get('*', (_req, res) => {
+  const index = join(__dirname, '../dist/index.html');
+  if (fs.existsSync(index)) return res.sendFile(index);
+  res.send('findmewith.ai API server is running ✓');
+});
+
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => console.log(`findmewith.ai server running on port ${PORT}`));
