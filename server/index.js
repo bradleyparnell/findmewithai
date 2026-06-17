@@ -646,6 +646,26 @@ app.post('/api/webhook',
 // ── JSON body parser (after webhook route) ────────────────────────────────────
 app.use(express.json());
 
+// ── GET /api/admin/recent-signups ────────────────────────────────────────────
+// Used by Tasklet trigger to check for new signups every 15 minutes
+app.get('/api/admin/recent-signups', async (req, res) => {
+  const secret = req.query.secret;
+  const adminSecret = process.env.ADMIN_SECRET || 'fmw-admin-2024';
+  if (secret !== adminSecret) return res.status(401).json({ error: 'unauthorized' });
+  const since = req.query.since ? new Date(req.query.since) : new Date(Date.now() - 60 * 60 * 1000);
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('scans')
+      .select('email, url, score, created_at')
+      .gte('created_at', since.toISOString())
+      .order('created_at', { ascending: false });
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data || []);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── GET /api/admin/recent-upgrades ───────────────────────────────────────────
 // Used by Tasklet trigger to check for new Pro upgrades every 15 minutes
 app.get('/api/admin/recent-upgrades', (req, res) => {
