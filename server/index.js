@@ -18,7 +18,7 @@ const PRICE_IDS = {
   pro_yearly:     process.env.STRIPE_PRO_YEARLY_PRICE_ID,
   agency_monthly: process.env.STRIPE_AGENCY_MONTHLY_PRICE_ID,
   agency_yearly:  process.env.STRIPE_AGENCY_YEARLY_PRICE_ID,
-  lifetime:       process.env.STRIPE_LIFETIME_PRICE_ID,
+  lifetime:       process.env.STRIPE_LIFETIME_PRICE_ID || 'price_1TjgumCNXRaRPz1uPqfh3uXF',
 };
 
 const APP_URL = process.env.APP_URL || 'https://www.findmewith.ai';
