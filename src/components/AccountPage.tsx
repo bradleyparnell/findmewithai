@@ -7,6 +7,8 @@ const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://findmewithai-produc
 interface Props {
   user: { id?: string; email?: string };
   isPro: boolean;
+  previewFree?: boolean;
+  setPreviewFree?: (v: boolean) => void;
   onBack: () => void;
   onUpgrade: () => void;
   onSignOut: () => void;
@@ -92,9 +94,28 @@ export const AccountPage: React.FC<Props> = ({ user, isPro, onBack, onUpgrade, o
 
         {/* Page heading */}
         <div style={{ marginBottom: '32px' }}>
-          <h1 style={{ margin: '0 0 6px', fontSize: '30px', fontWeight: 900, color: '#111827', letterSpacing: '-0.02em' }}>
-            My Account
-          </h1>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+            <h1 style={{ margin: '0 0 6px', fontSize: '30px', fontWeight: 900, color: '#111827', letterSpacing: '-0.02em' }}>
+              My Account
+            </h1>
+            {isAdmin && setPreviewFree && (
+              <button
+                onClick={() => setPreviewFree(!previewFree)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '7px',
+                  background: previewFree ? '#fef3c7' : '#f3f4f6',
+                  border: `1.5px solid ${previewFree ? '#f59e0b' : '#d1d5db'}`,
+                  borderRadius: '999px', padding: '5px 14px',
+                  fontSize: '12px', fontWeight: 700,
+                  color: previewFree ? '#92400e' : '#6b7280',
+                  cursor: 'pointer', transition: 'all 0.2s',
+                }}
+              >
+                <span style={{ fontSize: '14px' }}>{previewFree ? '👁️' : '🔒'}</span>
+                {previewFree ? 'Previewing as free user — click to exit' : 'Preview as free user'}
+              </button>
+            )}
+          </div>
           <p style={{ margin: 0, fontSize: '15px', color: '#6b7280' }}>
             Manage your plan, password, and account settings.
           </p>

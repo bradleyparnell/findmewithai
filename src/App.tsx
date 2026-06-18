@@ -23,7 +23,9 @@ const App: React.FC = () => {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [siteUrl, setSiteUrl] = useState('');
   const [isPro, setIsPro] = useState(() => localStorage.getItem('fmw_pro') === 'true');
+  const [previewFree, setPreviewFree] = useState(false);
   const [userEmail, setUserEmail] = useState(() => localStorage.getItem('fmw_email') || '');
+  const effectiveIsPro = previewFree ? false : isPro;
   const [user, setUser] = useState<any>(null);
   const [linkExpired, setLinkExpired] = useState(false);
 
@@ -268,7 +270,9 @@ const App: React.FC = () => {
     return (
       <AccountPage
         user={user}
-        isPro={isPro}
+        isPro={effectiveIsPro}
+        previewFree={previewFree}
+        setPreviewFree={setPreviewFree}
         onBack={() => setStep('dashboard')}
         onUpgrade={handleUpgrade}
         onSignOut={handleSignOut}
@@ -282,7 +286,7 @@ const App: React.FC = () => {
       <>
         <Dashboard
           user={user}
-          isPro={isPro}
+          isPro={effectiveIsPro}
           onViewScan={handleViewScan}
           onNewScan={handleNewCheck}
           onUpgrade={handleUpgrade}
@@ -299,7 +303,7 @@ const App: React.FC = () => {
       {showNav && (
         <Nav
           step={step}
-          isPro={isPro}
+          isPro={effectiveIsPro}
           siteUrl={siteUrl}
           user={user}
           onNavigate={(s) => setStep(s as AppStep)}
@@ -337,7 +341,7 @@ const App: React.FC = () => {
           onFixContent={() => setStep('content')}
           onGetCode={() => setStep('code')}
           onUpgrade={handleUpgrade}
-          isPro={isPro}
+          isPro={effectiveIsPro}
           isAuthenticated={!!user}
         />
       )}
@@ -345,7 +349,7 @@ const App: React.FC = () => {
         <ContentStep
           siteUrl={siteUrl}
           result={result}
-          isPro={isPro}
+          isPro={effectiveIsPro}
           onUpgrade={handleUpgrade}
           onNext={() => setStep('code')}
         />
@@ -354,7 +358,7 @@ const App: React.FC = () => {
         <CodeStep
           siteUrl={siteUrl}
           result={result}
-          isPro={isPro}
+          isPro={effectiveIsPro}
           onUpgrade={handleUpgrade}
           onNewCheck={handleNewCheck}
         />
@@ -364,7 +368,7 @@ const App: React.FC = () => {
           onBack={() => setStep(result ? 'score' : 'home')}
           onProActivated={handleProActivated}
           userEmail={userEmail}
-          isPro={isPro}
+          isPro={effectiveIsPro}
           onManageSubscription={handleManageSubscription}
         />
       )}
