@@ -1300,6 +1300,34 @@ app.post('/api/create-portal-session', async (req, res) => {
   }
 });
 
+// ── GET /api/founding-members-count ──────────────────────────────────────────
+app.get('/api/founding-members-count', async (req, res) => {
+  if (!stripe) return res.json({ count: 0, spotsLeft: 50 });
+  try {
+    const sessions = await stripe.checkout.sessions.list({
+      limit: 100,
+      status: 'complete',
+    });
+    const lifetimePriceId = PRICE_IDS.lifetime;
+    let count = 0;
+    for (const s of sessions.data) {
+      if (s.amount_total === 24900 || (s.metadata && s.metadata.plan === 'lifetime')) {
+        count++;
+      } else {
+        // Check line items if needed
+        try {
+          const lineItems = await stripe.checkout.sessions.listLineItems(s.id, { limit: 5 });
+          if (lineItems.data.some(li => li.price && li.price.id === lifetimePriceId)) count++;
+        } catch (_) {}
+      }
+    }
+    res.json({ count, spotsLeft: Math.max(0, 50 - count) });
+  } catch (err) {
+    console.error('[founding-members-count]', err.message);
+    res.json({ count: 0, spotsLeft: 50 });
+  }
+});
+
 // ── POST /api/send-weekly-reports (admin trigger for testing) ─────────────────
 app.post('/api/send-weekly-reports', async (req, res) => {
   if (req.headers['x-admin-key'] !== process.env.ADMIN_KEY)

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Check, ArrowLeft, Search, Star, Zap, Building2, Settings } from 'lucide-react';
+import { Check, ArrowLeft, Search, Star, Zap, Building2, Settings, Flame } from 'lucide-react';
 
 function useWindowWidth() {
   const [w, setW] = useState(typeof window !== 'undefined' ? window.innerWidth : 1024);
@@ -24,6 +24,15 @@ interface Props {
 export const PricingPage: React.FC<Props> = ({ onBack, onProActivated, userEmail, isPro, onManageSubscription }) => {
   const [annual, setAnnual] = useState(false);
   const [activating, setActivating] = useState<string | null>(null);
+  const [spotsLeft, setSpotsLeft] = useState<number>(50);
+  const [spotsLoaded, setSpotsLoaded] = useState(false);
+
+  useEffect(() => {
+    fetch(`${BACKEND}/api/founding-members-count`)
+      .then(r => r.json())
+      .then(d => { setSpotsLeft(d.spotsLeft ?? 50); setSpotsLoaded(true); })
+      .catch(() => { setSpotsLeft(50); setSpotsLoaded(true); });
+  }, []);
 
   const handleCheckout = async (planKey: string) => {
     setActivating(planKey);
@@ -41,6 +50,9 @@ export const PricingPage: React.FC<Props> = ({ onBack, onProActivated, userEmail
       alert('Payment setup failed. Please try again or email hello@findmewith.ai');
     }
   };
+
+  const spotsFilled = 50 - spotsLeft;
+  const fillPct = Math.min(100, Math.round((spotsFilled / 50) * 100));
 
   const plans = [
     {
@@ -103,8 +115,10 @@ export const PricingPage: React.FC<Props> = ({ onBack, onProActivated, userEmail
   ];
 
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(160deg, #f5f3ff 0%, #ffffff 50%)', padding: '0 0 60px' }}>
+    <div style={{ minHeight: '100vh', background: 'linear-gradient(160deg, #f5f3ff 0%, #ffffff 50%)', padding: '0 0 80px' }}>
       <div style={{ maxWidth: '860px', margin: '0 auto', padding: '24px 24px 0' }}>
+
+        {/* Top nav */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
           <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', color: '#6b7280', fontSize: '14px', cursor: 'pointer', padding: 0 }}>
             <ArrowLeft size={16} /> Back
@@ -119,6 +133,7 @@ export const PricingPage: React.FC<Props> = ({ onBack, onProActivated, userEmail
           )}
         </div>
 
+        {/* Logo */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center', marginBottom: '20px' }}>
           <div style={{ width: '30px', height: '30px', background: '#7c3aed', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Search size={15} color="white" />
@@ -126,10 +141,84 @@ export const PricingPage: React.FC<Props> = ({ onBack, onProActivated, userEmail
           <span style={{ fontWeight: 800, fontSize: '16px', color: '#7c3aed' }}>findmewith.ai</span>
         </div>
 
-        <h1 style={{ fontSize: '34px', fontWeight: 900, color: '#111827', textAlign: 'center', marginBottom: '10px', letterSpacing: '-0.4px' }}>Simple, honest pricing</h1>
-        <p style={{ textAlign: 'center', color: '#6b7280', fontSize: '16px', marginBottom: '28px' }}>Start free. Upgrade when you're ready. Cancel any time.</p>
+        {/* ── FOUNDING MEMBER HERO ─────────────────────────────────────────── */}
+        {!isPro && (
+          <div style={{ background: 'linear-gradient(135deg, #1c0533 0%, #4c1d95 60%, #78350f 100%)', borderRadius: '24px', padding: '44px 40px', marginBottom: '48px', boxShadow: '0 16px 60px rgba(124,58,237,0.3)', position: 'relative', overflow: 'hidden' }}>
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginBottom: '40px' }}>
+            {/* Background glow */}
+            <div style={{ position: 'absolute', top: '-60px', right: '-60px', width: '300px', height: '300px', background: 'radial-gradient(circle, rgba(245,158,11,0.15) 0%, transparent 70%)', pointerEvents: 'none' }} />
+            <div style={{ position: 'absolute', bottom: '-80px', left: '-40px', width: '250px', height: '250px', background: 'radial-gradient(circle, rgba(124,58,237,0.2) 0%, transparent 70%)', pointerEvents: 'none' }} />
+
+            {/* Badge row */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px', flexWrap: 'wrap' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: 'rgba(245,158,11,0.2)', border: '1px solid rgba(245,158,11,0.4)', color: '#fbbf24', borderRadius: '100px', padding: '4px 14px', fontSize: '11px', fontWeight: 800, letterSpacing: '0.6px' }}>
+                <Flame size={11} /> FOUNDING MEMBER · LIMITED OFFER
+              </span>
+              {spotsLoaded && spotsLeft <= 10 && (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: 'rgba(239,68,68,0.2)', border: '1px solid rgba(239,68,68,0.4)', color: '#fca5a5', borderRadius: '100px', padding: '4px 14px', fontSize: '11px', fontWeight: 800, letterSpacing: '0.6px' }}>
+                  🔥 Almost gone
+                </span>
+              )}
+            </div>
+
+            {/* Headline */}
+            <h2 style={{ color: 'white', fontSize: '36px', fontWeight: 900, margin: '0 0 10px', letterSpacing: '-0.5px', lineHeight: 1.1 }}>
+              Get Pro access forever.<br />
+              <span style={{ color: '#fbbf24' }}>One payment. $249.</span>
+            </h2>
+            <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '16px', margin: '0 0 28px', lineHeight: 1.6, maxWidth: '520px' }}>
+              No monthly bills. No renewals. Lock in everything Pro includes right now, before the price changes. Founding members only.
+            </p>
+
+            {/* Features row */}
+            <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', marginBottom: '32px' }}>
+              {['All Pro features', 'Weekly AI monitoring', 'All content generators', 'All code snippets', '7-day refund guarantee'].map(f => (
+                <span key={f} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'rgba(255,255,255,0.88)', fontWeight: 600 }}>
+                  <Check size={13} color="#fbbf24" /> {f}
+                </span>
+              ))}
+            </div>
+
+            {/* Spots progress bar */}
+            <div style={{ marginBottom: '28px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '8px' }}>
+                <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '12px', fontWeight: 600 }}>
+                  {spotsFilled} of 50 spots claimed
+                </span>
+                <span style={{ color: '#fbbf24', fontSize: '15px', fontWeight: 800 }}>
+                  {spotsLoaded ? `${spotsLeft} spot${spotsLeft === 1 ? '' : 's'} left` : 'Loading…'}
+                </span>
+              </div>
+              <div style={{ background: 'rgba(255,255,255,0.1)', borderRadius: '99px', height: '8px', overflow: 'hidden' }}>
+                <div style={{ width: `${fillPct}%`, height: '100%', background: 'linear-gradient(90deg, #f59e0b, #fbbf24)', borderRadius: '99px', transition: 'width 0.8s ease' }} />
+              </div>
+            </div>
+
+            {/* CTA */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+              <button
+                onClick={() => handleCheckout('lifetime')}
+                disabled={!!activating || spotsLeft === 0}
+                style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: 'white', border: 'none', borderRadius: '14px', padding: '16px 36px', fontSize: '16px', fontWeight: 800, cursor: activating || spotsLeft === 0 ? 'wait' : 'pointer', whiteSpace: 'nowrap', opacity: activating ? 0.8 : 1, boxShadow: '0 4px 20px rgba(245,158,11,0.4)', letterSpacing: '-0.2px' }}
+              >
+                {activating === 'lifetime' ? 'Redirecting…' : spotsLeft === 0 ? 'Sold out' : 'Claim your founding member spot →'}
+              </button>
+              <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px' }}>
+                One payment · yours forever · 7-day refund guarantee
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* ── Divider before regular plans ─────────────────────────────────── */}
+        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+          <p style={{ fontSize: '13px', color: '#9ca3af', margin: 0 }}>
+            {!isPro ? 'Prefer a monthly plan? Choose below.' : 'Simple, honest pricing'}
+          </p>
+        </div>
+
+        {/* Monthly/Annual toggle */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginBottom: '32px' }}>
           <span style={{ fontSize: '14px', fontWeight: annual ? 400 : 600, color: annual ? '#6b7280' : '#111827' }}>Monthly</span>
           <input type="checkbox" checked={annual} onChange={e => setAnnual(e.target.checked)} style={{ width: '40px', height: '22px', cursor: 'pointer', accentColor: '#7c3aed' }} />
           <span style={{ fontSize: '14px', fontWeight: annual ? 600 : 400, color: annual ? '#111827' : '#6b7280' }}>
@@ -138,36 +227,7 @@ export const PricingPage: React.FC<Props> = ({ onBack, onProActivated, userEmail
           </span>
         </div>
 
-        {/* ── Founding Member Banner ─────────────────────────────────────── */}
-        {!isPro && (
-          <div style={{ background: 'linear-gradient(135deg, #78350f 0%, #d97706 100%)', borderRadius: '20px', padding: '28px 32px', marginBottom: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '24px', flexWrap: 'wrap', boxShadow: '0 8px 40px rgba(217,119,6,0.25)' }}>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
-                <span style={{ background: 'rgba(255,255,255,0.2)', color: 'white', borderRadius: '100px', padding: '3px 12px', fontSize: '11px', fontWeight: 800, letterSpacing: '0.5px' }}>⚡ LIMITED — 50 SPOTS ONLY</span>
-              </div>
-              <h3 style={{ color: 'white', fontSize: '22px', fontWeight: 900, margin: '0 0 4px', letterSpacing: '-0.3px' }}>Founding Member — $249 one time</h3>
-              <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: '14px', margin: 0, lineHeight: 1.5 }}>Lock in everything Pro includes — forever, no monthly bill, no renewals. Early supporters only.</p>
-              <div style={{ display: 'flex', gap: '16px', marginTop: '12px', flexWrap: 'wrap' }}>
-                {['All Pro features, forever', 'Weekly AI score monitoring', 'All content generators', 'All code snippets'].map(f => (
-                  <span key={f} style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', color: 'rgba(255,255,255,0.9)', fontWeight: 600 }}>
-                    <Check size={12} color="white" /> {f}
-                  </span>
-                ))}
-              </div>
-            </div>
-            <div style={{ textAlign: 'center', flexShrink: 0 }}>
-              <button
-                onClick={() => handleCheckout('lifetime')}
-                disabled={!!activating}
-                style={{ background: 'white', color: '#92400e', border: 'none', borderRadius: '12px', padding: '14px 28px', fontSize: '15px', fontWeight: 800, cursor: activating ? 'wait' : 'pointer', whiteSpace: 'nowrap', opacity: activating ? 0.8 : 1 }}
-              >
-                {activating === 'lifetime' ? 'Redirecting…' : 'Get Founding Member Access →'}
-              </button>
-              <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '11px', marginTop: '8px' }}>One payment · yours forever · 7-day refund guarantee</p>
-            </div>
-          </div>
-        )}
-
+        {/* Plans grid */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', alignItems: 'start' }}>
           {plans.map(plan => (
             <div key={plan.name} style={{ background: 'white', border: plan.highlight ? '2px solid #7c3aed' : '1px solid #e5e7eb', borderRadius: '20px', overflow: 'hidden', boxShadow: plan.highlight ? '0 8px 40px rgba(124, 58, 237, 0.15)' : '0 2px 12px rgba(0,0,0,0.04)' }}>
@@ -247,6 +307,7 @@ export const PricingPage: React.FC<Props> = ({ onBack, onProActivated, userEmail
         <div style={{ maxWidth: '600px', margin: '48px auto 0' }}>
           <h2 style={{ textAlign: 'center', fontSize: '22px', fontWeight: 800, color: '#111827', marginBottom: '24px' }}>Questions we get asked a lot</h2>
           {[
+            { q: 'What exactly is a Founding Member?', a: "You're one of the first 50 people to lock in full Pro access for a single one-time payment. When the 50 spots are gone, this offer disappears permanently. Your access never expires and never bills you again." },
             { q: 'Is the free plan really free?', a: 'Yes, completely. No credit card, no trial period — just a free account that stays free forever. You get your AI visibility score, a full breakdown of what\'s missing, and tools to start fixing it.' },
             { q: 'What happens after my 7-day Pro trial?', a: "If you don't cancel, you'll be charged the plan rate. If you do cancel, your account drops back to the free plan — your scan history and results stay right where you left them." },
             { q: 'Can I cancel any time?', a: 'Yes. No questions asked, no cancellation fees. Cancel from your account settings any time and you keep Pro access until the end of your billing period.' },
@@ -264,7 +325,6 @@ export const PricingPage: React.FC<Props> = ({ onBack, onProActivated, userEmail
           <p style={{ fontSize: '13px', color: '#6b7280', marginTop: '6px' }}>
             Questions? Email <a href="mailto:hello@findmewith.ai" style={{ color: '#7c3aed', fontWeight: 600 }}>hello@findmewith.ai</a>
           </p>
-          {/* Stripe trust badge */}
           <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginTop: '20px', padding: '12px 24px', background: '#f9fafb', borderRadius: '12px', border: '1px solid #e5e7eb' }}>
             <svg width="44" height="18" viewBox="0 0 44 18" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Stripe">
               <path d="M4.9 6.8c0-.6.5-1 1.4-1 1.2 0 2.5.4 3.5 1l.6-3.6C9.3 2.7 7.9 2.3 6.3 2.3 3 2.3 .8 4 .8 6.9c0 4.5 5.4 3.8 5.4 5.8 0 .7-.6 1.1-1.6 1.1-1.3 0-2.9-.5-4-1.2l-.6 3.6c1.1.6 3 1 4.6 1 3.4 0 5.7-1.7 5.7-4.7C10.3 7.8 4.9 8.7 4.9 6.8zm13.8-4.3l-3.3.7-.4 1.9c-.6-.7-1.5-1-2.6-1-2.9 0-5.4 2.3-5.4 6.1 0 2.6 1.4 4 3.3 4 1.1 0 2-.5 2.7-1.3l-.2 1.1h3.5l2.4-11.5zm-3.5 7.8c-.3 1.4-1 2.1-1.9 2.1-.8 0-1.3-.6-1.3-1.7 0-1.8.8-3 2-3 .8 0 1.3.5 1.5 1.3l-.3 1.3zm5.1-7.8l-2.5 11.5h3.7l2.5-11.5h-3.7zm4.6 0l-2.5 11.5H26l.4-1.8c.7.8 1.6 1.2 2.7 1.2 2.9 0 5.1-2.5 5.1-6.3 0-2.3-1.3-3.8-3.2-3.8-1.1 0-2 .4-2.7 1.1l.3-1.9h-3.7zm3 8.2c-.8 0-1.4-.5-1.6-1.4l.3-1.4c.3-1.3 1-2 1.9-2 .9 0 1.4.6 1.4 1.7 0 1.7-.9 3.1-2 3.1zm12.1-8.5c-1.1 0-2 .5-2.7 1.4l.3-1.1h-3.5l-2.4 11.5h3.7l1.4-6.6c.3-1.3 1-2 2-2 .5 0 .9.1 1.2.3l.7-3.3c-.3-.2-.5-.2-.7-.2z" fill="#635BFF"/>

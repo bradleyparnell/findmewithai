@@ -248,6 +248,15 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
   const windowWidth = useWindowWidth();
   const isMobile = windowWidth < 768;
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [spotsLeft, setSpotsLeft] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (isPro) return;
+    fetch(`${BACKEND}/api/founding-members-count`)
+      .then(r => r.json())
+      .then(d => setSpotsLeft(d.spotsLeft ?? 50))
+      .catch(() => setSpotsLeft(50));
+  }, [isPro]);
   const [scans, setScans] = useState<Scan[]>([]);
   const [competitors, setCompetitors] = useState<Competitor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -626,6 +635,29 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
               <span style={{ fontSize: '15px', lineHeight: 1 }}>🛡️</span>
               Admin
             </button>
+          </div>
+        )}
+
+        {/* Founding Member sidebar card */}
+        {!isPro && spotsLeft !== null && (
+          <div style={{ margin: '0 10px 10px', background: 'linear-gradient(135deg, #1c0533 0%, #4c1d95 100%)', border: '1px solid rgba(251,191,36,0.3)', borderRadius: '12px', padding: '14px', cursor: 'pointer' }} onClick={onUpgrade}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+              <span style={{ fontSize: '13px' }}>⚡</span>
+              <span style={{ fontSize: '11px', fontWeight: 800, color: '#fbbf24', letterSpacing: '0.4px' }}>FOUNDING MEMBER</span>
+            </div>
+            <p style={{ color: 'white', fontSize: '12px', fontWeight: 700, margin: '0 0 8px', lineHeight: 1.4 }}>Lock in Pro forever — $249 one time</p>
+            <div style={{ marginBottom: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.5)' }}>{50 - spotsLeft} of 50 claimed</span>
+                <span style={{ fontSize: '10px', fontWeight: 800, color: '#fbbf24' }}>{spotsLeft} left</span>
+              </div>
+              <div style={{ background: 'rgba(255,255,255,0.1)', borderRadius: '99px', height: '5px' }}>
+                <div style={{ width: `${Math.min(100, Math.round(((50 - spotsLeft) / 50) * 100))}%`, height: '100%', background: 'linear-gradient(90deg, #f59e0b, #fbbf24)', borderRadius: '99px', transition: 'width 0.8s ease' }} />
+              </div>
+            </div>
+            <div style={{ background: 'rgba(245,158,11,0.9)', borderRadius: '7px', padding: '7px', textAlign: 'center', fontSize: '11px', fontWeight: 800, color: 'white' }}>
+              Claim your spot →
+            </div>
           </div>
         )}
 
