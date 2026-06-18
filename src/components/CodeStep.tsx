@@ -260,21 +260,24 @@ function WidgetHeroCard({ scanId, isPro, onUpgrade, isMobile }: {
 
       {/* Upgrade nudge for free users */}
       {!isPro && (
-        <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', background: 'rgba(245,158,11,0.12)', border: '1.5px solid rgba(245,158,11,0.3)', borderRadius: '12px', padding: '14px 18px' }}>
-          <div style={{ fontSize: '14px', color: 'rgba(255,255,255,0.8)', lineHeight: 1.5 }}>
-            <strong style={{ color: 'white' }}>Want all 6 signals?</strong> Upgrade to Pro and your script auto-upgrades — no new code to paste.
+        <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', background: 'rgba(245,158,11,0.10)', border: '1.5px solid rgba(245,158,11,0.35)', borderRadius: '12px', padding: '14px 18px' }}>
+          <div style={{ lineHeight: 1.5 }}>
+            <div style={{ fontSize: '11px', fontWeight: 800, color: '#fcd34d', letterSpacing: '0.08em', marginBottom: '3px' }}>⚡ FOUNDING MEMBER — 50 SPOTS ONLY</div>
+            <div style={{ fontSize: '14px', color: 'rgba(255,255,255,0.9)' }}>
+              <strong style={{ color: 'white' }}>Want all 6 signals?</strong> Get lifetime Pro access for a one-time <strong style={{ color: '#fcd34d' }}>$249</strong> — or start at $29/mo.
+            </div>
           </div>
           <button
             onClick={onUpgrade}
             style={{
               background: 'linear-gradient(135deg, #f59e0b, #d97706)',
-              color: '#1e1b4b', border: 'none', borderRadius: '10px',
+              color: '#1a0533', border: 'none', borderRadius: '10px',
               padding: '10px 22px', fontWeight: 800, fontSize: '14px',
               cursor: 'pointer', boxShadow: '0 4px 16px rgba(245,158,11,0.4)',
               whiteSpace: 'nowrap',
             }}
           >
-            Upgrade to Pro →
+            Claim Your Spot →
           </button>
         </div>
       )}
