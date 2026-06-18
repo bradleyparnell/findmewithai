@@ -309,6 +309,7 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, previewFree, setPrevie
     else contentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
   const [industryOverride, setIndustryOverride] = useState<string | null>(null);
+  const [gaugeTooltip, setGaugeTooltip] = useState<{ label: string; range: string; desc: string; color: string } | null>(null);
   const scoreRef     = useRef<HTMLDivElement>(null);
   const signalRef    = useRef<HTMLDivElement>(null);
   const fixRef       = useRef<HTMLDivElement>(null);
@@ -863,26 +864,44 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, previewFree, setPrevie
                 const rx2 = (cx + r * -0.309).toFixed(1), ry2 = (cy + r * -0.951).toFixed(1);
                 // Yellow end 306°: cos=0.588 sin=-0.809
                 const yx2 = (cx + r *  0.588).toFixed(1), yy2 = (cy + r * -0.809).toFixed(1);
+                const zoneHover = (label: string, range: string, desc: string, col: string) => ({
+                  onMouseEnter: () => setGaugeTooltip({ label, range, desc, color: col }),
+                  onMouseLeave: () => setGaugeTooltip(null),
+                  style: { cursor: 'default' } as React.CSSProperties,
+                });
                 return (
-                  <svg width="220" height="120" viewBox="0 0 220 120" style={{ overflow: 'visible', marginBottom: '4px' }}>
-                    {/* Zone backgrounds */}
-                    <path d={`M 25 115 A ${r} ${r} 0 0 1 ${rx2} ${ry2}`} fill="none" stroke="#fecaca" strokeWidth="14" strokeLinecap="butt" />
-                    <path d={`M ${rx2} ${ry2} A ${r} ${r} 0 0 1 ${yx2} ${yy2}`} fill="none" stroke="#fde68a" strokeWidth="14" strokeLinecap="butt" />
-                    <path d={`M ${yx2} ${yy2} A ${r} ${r} 0 0 1 195 115`} fill="none" stroke="#bbf7d0" strokeWidth="14" strokeLinecap="butt" />
-                    {/* Progress arc */}
-                    {score > 0 && (
-                      <path d={`M 25 115 A ${r} ${r} 0 0 1 ${ex} ${ey}`} fill="none" stroke={color} strokeWidth="14" strokeLinecap="round" />
+                  <div style={{ position: 'relative', display: 'inline-block' }}>
+                    {/* Tooltip */}
+                    {gaugeTooltip && (
+                      <div style={{ position: 'absolute', top: '-72px', left: '50%', transform: 'translateX(-50%)', background: '#1e1b4b', color: 'white', borderRadius: '10px', padding: '10px 14px', fontSize: '12px', whiteSpace: 'nowrap', pointerEvents: 'none', zIndex: 10, boxShadow: '0 4px 16px rgba(0,0,0,0.25)', textAlign: 'center', lineHeight: '1.5' }}>
+                        <div style={{ fontWeight: 800, color: gaugeTooltip.color, fontSize: '13px' }}>{gaugeTooltip.label} · {gaugeTooltip.range}</div>
+                        <div style={{ color: '#c4b5fd', marginTop: '2px' }}>{gaugeTooltip.desc}</div>
+                        <div style={{ position: 'absolute', bottom: '-6px', left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '6px solid #1e1b4b' }} />
+                      </div>
                     )}
-                    {/* Needle */}
-                    <line x1={cx} y1={cy} x2={nx} y2={ny} stroke="white" strokeWidth="3" strokeLinecap="round" />
-                    <circle cx={cx} cy={cy} r="7" fill={color} />
-                    {/* Score inside arc */}
-                    <text x={cx} y="82" textAnchor="middle" fontSize="44" fontWeight="900" fill={color}>{score}</text>
-                    <text x={cx} y="100" textAnchor="middle" fontSize="13" fontWeight="600" fill="#9ca3af">/ 100</text>
-                    {/* Corner labels */}
-                    <text x="16" y="128" textAnchor="middle" fontSize="11" fill="#d1d5db">0</text>
-                    <text x="204" y="128" textAnchor="middle" fontSize="11" fill="#d1d5db">100</text>
-                  </svg>
+                    <svg width="220" height="120" viewBox="0 0 220 120" style={{ overflow: 'visible', marginBottom: '4px' }}>
+                      {/* Zone backgrounds — hoverable */}
+                      <path d={`M 25 115 A ${r} ${r} 0 0 1 ${rx2} ${ry2}`} fill="none" stroke="#fecaca" strokeWidth="14" strokeLinecap="butt"
+                        {...zoneHover('🔴 NOT FOUND', '0 – 40', 'AI tools rarely mention you', '#ef4444')} />
+                      <path d={`M ${rx2} ${ry2} A ${r} ${r} 0 0 1 ${yx2} ${yy2}`} fill="none" stroke="#fde68a" strokeWidth="14" strokeLinecap="butt"
+                        {...zoneHover('🟡 GETTING FOUND', '41 – 70', 'AI sometimes mentions you, inconsistently', '#d97706')} />
+                      <path d={`M ${yx2} ${yy2} A ${r} ${r} 0 0 1 195 115`} fill="none" stroke="#bbf7d0" strokeWidth="14" strokeLinecap="butt"
+                        {...zoneHover('🟢 FOUND', '71 – 100', 'AI actively recommends you', '#16a34a')} />
+                      {/* Progress arc */}
+                      {score > 0 && (
+                        <path d={`M 25 115 A ${r} ${r} 0 0 1 ${ex} ${ey}`} fill="none" stroke={color} strokeWidth="14" strokeLinecap="round" />
+                      )}
+                      {/* Needle */}
+                      <line x1={cx} y1={cy} x2={nx} y2={ny} stroke="white" strokeWidth="3" strokeLinecap="round" />
+                      <circle cx={cx} cy={cy} r="7" fill={color} />
+                      {/* Score inside arc */}
+                      <text x={cx} y="82" textAnchor="middle" fontSize="44" fontWeight="900" fill={color}>{score}</text>
+                      <text x={cx} y="100" textAnchor="middle" fontSize="13" fontWeight="600" fill="#9ca3af">/ 100</text>
+                      {/* Corner labels */}
+                      <text x="16" y="128" textAnchor="middle" fontSize="11" fill="#d1d5db">0</text>
+                      <text x="204" y="128" textAnchor="middle" fontSize="11" fill="#d1d5db">100</text>
+                    </svg>
+                  </div>
                 );
               })()}
 
