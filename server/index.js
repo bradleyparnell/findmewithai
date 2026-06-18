@@ -1311,15 +1311,11 @@ app.get('/api/founding-members-count', async (req, res) => {
     const lifetimePriceId = PRICE_IDS.lifetime;
     let count = 0;
     for (const s of sessions.data) {
-      if (s.amount_total === 24900 || (s.metadata && s.metadata.plan === 'lifetime')) {
-        count++;
-      } else {
-        // Check line items if needed
-        try {
-          const lineItems = await stripe.checkout.sessions.listLineItems(s.id, { limit: 5 });
-          if (lineItems.data.some(li => li.price && li.price.id === lifetimePriceId)) count++;
-        } catch (_) {}
-      }
+      // Only match by price ID (amount check was incorrectly catching $249/yr Pro annual subs)
+      try {
+        const lineItems = await stripe.checkout.sessions.listLineItems(s.id, { limit: 5 });
+        if (lineItems.data.some(li => li.price && li.price.id === lifetimePriceId)) count++;
+      } catch (_) {}
     }
     res.json({ count, spotsLeft: Math.max(0, 50 - count) });
   } catch (err) {
