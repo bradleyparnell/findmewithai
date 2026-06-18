@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, CreditCard, Shield, Trash2, CheckCircle, AlertCircle, User, Mail } from 'lucide-react';
+import { ArrowLeft, CreditCard, Shield, Trash2, CheckCircle, AlertCircle, User, Mail, Zap } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://findmewithai-production.up.railway.app';
@@ -164,8 +164,32 @@ export const AccountPage: React.FC<Props> = ({ user, isPro, onBack, onUpgrade, o
                 <span style={{ background: '#e5e7eb', color: '#6b7280', fontSize: '11px', fontWeight: 800, padding: '4px 10px', borderRadius: '99px', letterSpacing: '0.05em' }}>FREE</span>
               </div>
 
+              {/* Founding Member featured card */}
+              <div style={{ background: 'linear-gradient(135deg, #2e1065 0%, #5b21b6 100%)', borderRadius: '16px', padding: '20px 22px', marginBottom: '12px', position: 'relative', overflow: 'hidden' }}>
+                <div style={{ position: 'absolute', top: 0, right: 0, background: '#f59e0b', color: '#1a0533', fontSize: '10px', fontWeight: 900, padding: '4px 10px', borderBottomLeftRadius: '10px', letterSpacing: '0.05em' }}>
+                  LIMITED TIME
+                </div>
+                <div style={{ fontSize: '11px', fontWeight: 800, color: '#fcd34d', letterSpacing: '0.1em', marginBottom: '6px' }}>
+                  ⚡ FOUNDING MEMBER
+                </div>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '4px' }}>
+                  <span style={{ fontSize: '28px', fontWeight: 900, color: 'white' }}>$249</span>
+                  <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)', fontWeight: 500 }}>one time · yours forever</span>
+                </div>
+                <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)', marginBottom: '14px', lineHeight: 1.5 }}>
+                  Full Pro access, no monthly bill, ever. Only 50 spots available — once they're gone, this price is gone.
+                </div>
+                <button
+                  onClick={onUpgrade}
+                  style={{ background: '#f59e0b', color: '#1a0533', border: 'none', borderRadius: '10px', padding: '11px 20px', fontSize: '14px', fontWeight: 800, cursor: 'pointer', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 4px 16px rgba(245,158,11,0.4)' }}
+                >
+                  <Zap size={15} fill="#1a0533" /> Claim Your Founding Member Spot →
+                </button>
+              </div>
+
+              {/* Standard Pro upgrade card */}
               <div style={{ background: 'linear-gradient(135deg, #f5f3ff, #ede9fe)', border: '1.5px solid #ddd6fe', borderRadius: '14px', padding: '20px 24px', marginBottom: '4px' }}>
-                <div style={{ fontSize: '15px', fontWeight: 800, color: '#5b21b6', marginBottom: '12px' }}>What you get with Pro — $29/mo</div>
+                <div style={{ fontSize: '15px', fontWeight: 800, color: '#5b21b6', marginBottom: '12px' }}>Upgrade to Pro — $29/mo</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '18px' }}>
                   {['Weekly automated re-scans', 'Score change email alerts', 'Competitor tracking', 'AI content writer', 'Full code snippet library'].map(item => (
                     <div key={item} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', color: '#374151' }}>
