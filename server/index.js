@@ -682,6 +682,26 @@ app.get('/api/admin/recent-upgrades', (req, res) => {
   res.json(recent);
 });
 
+// ── GET /api/admin/nurture-log ────────────────────────────────────────────────
+// Shows recent nurture emails sent so Brad can verify the drip is healthy
+app.get('/api/admin/nurture-log', async (req, res) => {
+  const secret = req.query.secret;
+  const adminSecret = process.env.ADMIN_SECRET || 'fmw-admin-2024';
+  if (secret !== adminSecret) return res.status(401).json({ error: 'unauthorized' });
+  if (!supabaseAdmin) return res.status(503).json({ error: 'Supabase not configured' });
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('nurture_log')
+      .select('email, step, url, sent_at')
+      .order('sent_at', { ascending: false })
+      .limit(100);
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data || []);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── In-memory lead store ──────────────────────────────────────────────────────
 const leads = [];
 

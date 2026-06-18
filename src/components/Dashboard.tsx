@@ -344,6 +344,23 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
 
   const latestScan = scans[0] ?? null;
 
+  // Previous scan for the same site (for trend arrow)
+  const prevScan = React.useMemo(() => {
+    if (!latestScan) return null;
+    const domain = latestScan.url.replace(/^https?:\/\//, '').replace(/\/$/, '').split('/')[0];
+    return scans.find((s, i) => i > 0 && s.url.replace(/^https?:\/\//, '').replace(/\/$/, '').split('/')[0] === domain) ?? null;
+  }, [scans, latestScan]);
+
+  // All unique sites (for agency multi-site view)
+  const uniqueSites = React.useMemo(() => {
+    const seen = new Map<string, typeof scans[0]>();
+    for (const s of scans) {
+      const domain = s.url.replace(/^https?:\/\//, '').replace(/\/$/, '').split('/')[0];
+      if (!seen.has(domain)) seen.set(domain, s);
+    }
+    return Array.from(seen.values());
+  }, [scans]);
+
   const loadData = useCallback(async () => {
     setLoading(true);
     const [scansRes, compRes] = await Promise.all([
@@ -809,6 +826,16 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
               })()}
 
               <span style={{ fontSize: '18px', fontWeight: 800, color: scoreColor(latestScan.score) }}>{scoreLabel(latestScan.score)}</span>
+              {prevScan && (() => {
+                const delta = latestScan.score - prevScan.score;
+                if (delta === 0) return null;
+                const up = delta > 0;
+                return (
+                  <span style={{ fontSize: '13px', fontWeight: 700, color: up ? '#059669' : '#dc2626', background: up ? '#f0fdf4' : '#fef2f2', borderRadius: '99px', padding: '3px 10px', marginTop: '2px' }}>
+                    {up ? '↑' : '↓'}{Math.abs(delta)} pts since last scan
+                  </span>
+                );
+              })()}
               <span style={{ fontSize: '13px', color: '#9ca3af', marginTop: '6px' }}>{formatDate(latestScan.created_at)}</span>
               <button
                 onClick={() => onViewScan(latestScan)}
@@ -1517,6 +1544,43 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
             <span style={{ fontSize: '15px', fontWeight: 800, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>📋 Scan History</span>
             <div style={{ flex: 1, height: '2px', background: '#f3f4f6' }} />
           </div>
+
+          {/* ── MY SITES (shown when user has scanned 2+ unique domains) ── */}
+          {uniqueSites.length > 1 && (
+            <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '24px', padding: '40px 48px', marginBottom: '24px' }}>
+              <div style={{ fontSize: '24px', fontWeight: 800, color: '#111827', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Target size={22} style={{ color: '#7c3aed' }} />
+                My Sites
+                <span style={{ fontSize: '15px', fontWeight: 600, color: '#9ca3af', background: '#f3f4f6', borderRadius: '99px', padding: '2px 12px' }}>{uniqueSites.length}</span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '14px' }}>
+                {uniqueSites.map(site => {
+                  const domain = site.url.replace(/^https?:\/\//, '').replace(/\/$/, '').split('/')[0];
+                  const color = scoreColor(site.score);
+                  const isActive = latestScan?.url.replace(/^https?:\/\//, '').replace(/\/$/, '').split('/')[0] === domain;
+                  return (
+                    <div
+                      key={site.id}
+                      onClick={() => onViewScan(site)}
+                      style={{ border: isActive ? `2px solid #7c3aed` : '1.5px solid #f3f4f6', borderRadius: '18px', padding: '20px', cursor: 'pointer', background: isActive ? '#faf5ff' : 'white', transition: 'all 0.15s' }}
+                      onMouseEnter={e => { e.currentTarget.style.borderColor = '#c4b5fd'; e.currentTarget.style.background = '#faf5ff'; }}
+                      onMouseLeave={e => { e.currentTarget.style.borderColor = isActive ? '#7c3aed' : '#f3f4f6'; e.currentTarget.style.background = isActive ? '#faf5ff' : 'white'; }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                        <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: `${color}18`, border: `3px solid ${color}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <span style={{ fontSize: '15px', fontWeight: 900, color }}>{site.score}</span>
+                        </div>
+                        {isActive && <span style={{ fontSize: '11px', fontWeight: 700, color: '#7c3aed', background: '#ede9fe', borderRadius: '99px', padding: '2px 8px' }}>ACTIVE</span>}
+                      </div>
+                      <div style={{ fontSize: '14px', fontWeight: 700, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{domain}</div>
+                      <div style={{ fontSize: '12px', color: color, fontWeight: 600, marginTop: '4px' }}>{scoreLabel(site.score)}</div>
+                      <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '2px' }}>{formatDate(site.created_at)}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* ── SCAN HISTORY ── */}
           <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '24px', padding: '40px 48px', marginBottom: '24px' }}>
