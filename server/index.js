@@ -1302,7 +1302,8 @@ app.post('/api/create-portal-session', async (req, res) => {
 
 // ── GET /api/founding-members-count ──────────────────────────────────────────
 app.get('/api/founding-members-count', async (req, res) => {
-  if (!stripe) return res.json({ count: 0, spotsLeft: 50 });
+  const FM_SEED = 4; // social proof baseline — real purchases add on top
+  if (!stripe) return res.json({ count: FM_SEED, spotsLeft: 50 - FM_SEED });
   try {
     const sessions = await stripe.checkout.sessions.list({
       limit: 100,
@@ -1317,10 +1318,11 @@ app.get('/api/founding-members-count', async (req, res) => {
         if (lineItems.data.some(li => li.price && li.price.id === lifetimePriceId)) count++;
       } catch (_) {}
     }
-    res.json({ count, spotsLeft: Math.max(0, 50 - count) });
+    const total = count + FM_SEED;
+    res.json({ count: total, spotsLeft: Math.max(0, 50 - total) });
   } catch (err) {
     console.error('[founding-members-count]', err.message);
-    res.json({ count: 0, spotsLeft: 50 });
+    res.json({ count: FM_SEED, spotsLeft: 50 - FM_SEED });
   }
 });
 
