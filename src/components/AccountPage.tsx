@@ -14,7 +14,8 @@ interface Props {
   onSignOut: () => void;
 }
 
-export const AccountPage: React.FC<Props> = ({ user, isPro, onBack, onUpgrade, onSignOut }) => {
+export const AccountPage: React.FC<Props> = ({ user, isPro, previewFree, setPreviewFree, onBack, onUpgrade, onSignOut }) => {
+  const isAdmin = user?.email === 'hello@genierocket.com';
   const [pwCurrent, setPwCurrent] = useState('');
   const [pwNew, setPwNew]         = useState('');
   const [pwConfirm, setPwConfirm] = useState('');
