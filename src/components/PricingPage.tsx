@@ -138,6 +138,36 @@ export const PricingPage: React.FC<Props> = ({ onBack, onProActivated, userEmail
           </span>
         </div>
 
+        {/* ── Founding Member Banner ─────────────────────────────────────── */}
+        {!isPro && (
+          <div style={{ background: 'linear-gradient(135deg, #78350f 0%, #d97706 100%)', borderRadius: '20px', padding: '28px 32px', marginBottom: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '24px', flexWrap: 'wrap', boxShadow: '0 8px 40px rgba(217,119,6,0.25)' }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+                <span style={{ background: 'rgba(255,255,255,0.2)', color: 'white', borderRadius: '100px', padding: '3px 12px', fontSize: '11px', fontWeight: 800, letterSpacing: '0.5px' }}>⚡ LIMITED — 50 SPOTS ONLY</span>
+              </div>
+              <h3 style={{ color: 'white', fontSize: '22px', fontWeight: 900, margin: '0 0 4px', letterSpacing: '-0.3px' }}>Founding Member — $249 one time</h3>
+              <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: '14px', margin: 0, lineHeight: 1.5 }}>Lock in everything Pro includes — forever, no monthly bill, no renewals. Early supporters only.</p>
+              <div style={{ display: 'flex', gap: '16px', marginTop: '12px', flexWrap: 'wrap' }}>
+                {['All Pro features, forever', 'Weekly AI score monitoring', 'All content generators', 'All code snippets'].map(f => (
+                  <span key={f} style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', color: 'rgba(255,255,255,0.9)', fontWeight: 600 }}>
+                    <Check size={12} color="white" /> {f}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div style={{ textAlign: 'center', flexShrink: 0 }}>
+              <button
+                onClick={() => handleCheckout('lifetime')}
+                disabled={!!activating}
+                style={{ background: 'white', color: '#92400e', border: 'none', borderRadius: '12px', padding: '14px 28px', fontSize: '15px', fontWeight: 800, cursor: activating ? 'wait' : 'pointer', whiteSpace: 'nowrap', opacity: activating ? 0.8 : 1 }}
+              >
+                {activating === 'lifetime' ? 'Redirecting…' : 'Get Founding Member Access →'}
+              </button>
+              <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '11px', marginTop: '8px' }}>One payment · yours forever · 7-day refund guarantee</p>
+            </div>
+          </div>
+        )}
+
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', alignItems: 'start' }}>
           {plans.map(plan => (
             <div key={plan.name} style={{ background: 'white', border: plan.highlight ? '2px solid #7c3aed' : '1px solid #e5e7eb', borderRadius: '20px', overflow: 'hidden', boxShadow: plan.highlight ? '0 8px 40px rgba(124, 58, 237, 0.15)' : '0 2px 12px rgba(0,0,0,0.04)' }}>

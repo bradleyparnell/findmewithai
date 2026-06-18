@@ -18,6 +18,7 @@ const PRICE_IDS = {
   pro_yearly:     process.env.STRIPE_PRO_YEARLY_PRICE_ID,
   agency_monthly: process.env.STRIPE_AGENCY_MONTHLY_PRICE_ID,
   agency_yearly:  process.env.STRIPE_AGENCY_YEARLY_PRICE_ID,
+  lifetime:       process.env.STRIPE_LIFETIME_PRICE_ID,
 };
 
 const APP_URL = process.env.APP_URL || 'https://www.findmewith.ai';
@@ -1177,18 +1178,21 @@ app.post('/api/create-checkout-session', async (req, res) => {
   const priceId = PRICE_IDS[plan];
   if (!priceId) return res.status(400).json({ error: `Unknown plan: ${plan}` });
   try {
+    const isLifetime = plan === 'lifetime';
     const session = await stripe.checkout.sessions.create({
-      mode: 'subscription',
+      mode: isLifetime ? 'payment' : 'subscription',
       payment_method_types: ['card'],
       line_items: [{ price: priceId, quantity: 1 }],
       // {CHECKOUT_SESSION_ID} is replaced by Stripe automatically
       success_url: `${APP_URL}/?payment=success&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url:  `${APP_URL}/?payment=cancelled`,
       metadata: { plan },
-      subscription_data: {
-        trial_period_days: 7,
-        metadata: { plan },
-      },
+      ...(isLifetime ? {} : {
+        subscription_data: {
+          trial_period_days: 7,
+          metadata: { plan },
+        },
+      }),
       ...(email ? { customer_email: email } : {}),
     });
     res.json({ url: session.url });
