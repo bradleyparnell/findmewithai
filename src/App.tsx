@@ -287,6 +287,8 @@ const App: React.FC = () => {
         <Dashboard
           user={user}
           isPro={effectiveIsPro}
+          previewFree={previewFree}
+          setPreviewFree={setPreviewFree}
           onViewScan={handleViewScan}
           onNewScan={handleNewCheck}
           onUpgrade={handleUpgrade}

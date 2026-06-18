@@ -223,6 +223,8 @@ interface Competitor {
 interface Props {
   user: { id?: string; email?: string };
   isPro: boolean;
+  previewFree?: boolean;
+  setPreviewFree?: (v: boolean) => void;
   onViewScan: (scan: Scan) => void;
   onNewScan: () => void;
   onUpgrade: () => void;
@@ -244,7 +246,8 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   );
 };
 
-export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan, onUpgrade, onSignOut, onAccount }) => {
+export const Dashboard: React.FC<Props> = ({ user, isPro, previewFree, setPreviewFree, onViewScan, onNewScan, onUpgrade, onSignOut, onAccount }) => {
+  const isAdmin = user?.email === 'hello@genierocket.com';
   const windowWidth = useWindowWidth();
   const isMobile = windowWidth < 768;
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -684,6 +687,32 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, onViewScan, onNewScan,
             {isPro && <span style={{ marginLeft: 'auto', fontSize: '10px', fontWeight: 700, color: '#a78bfa', background: 'rgba(124,58,237,0.2)', borderRadius: '5px', padding: '2px 7px' }}>PRO</span>}
           </button>
         </div>
+
+        {/* Admin: preview as free user toggle */}
+        {isAdmin && setPreviewFree && (
+          <div style={{ padding: '8px 16px' }}>
+            <button
+              onClick={() => setPreviewFree(!previewFree)}
+              style={{
+                width: '100%',
+                padding: '7px 10px',
+                borderRadius: '8px',
+                background: previewFree ? '#fef3c7' : 'rgba(255,255,255,0.06)',
+                border: `1.5px solid ${previewFree ? '#f59e0b' : 'rgba(255,255,255,0.12)'}`,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontSize: '11px',
+                fontWeight: 600,
+                color: previewFree ? '#92400e' : '#94a3b8',
+              }}
+            >
+              <span>{previewFree ? '👁️' : '🔒'}</span>
+              {previewFree ? 'Exit free preview' : 'Preview as free user'}
+            </button>
+          </div>
+        )}
 
         {/* User / sign out */}
         <div style={{ padding: '14px 16px', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: '10px' }}>
