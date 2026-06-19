@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { Copy, Check, Code2, Zap, RefreshCw, ShieldCheck, Lock } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Copy, Check, Code2, Zap, RefreshCw, ShieldCheck, Lock, Users, X, Trash2, UserPlus } from 'lucide-react';
+
+const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://findmewithai-production.up.railway.app';
 import { LockOverlay } from './LockOverlay';
 import type { AnalysisResult } from '../types';
 
@@ -19,8 +21,156 @@ interface Props {
   result: AnalysisResult | null;
   scanId?: string;
   isPro: boolean;
+  userEmail?: string;
   onUpgrade: () => void;
   onNewCheck: () => void;
+}
+
+// ── Team Members Modal ────────────────────────────────────────────────────────
+function TeamMembersModal({ ownerEmail, siteUrl, isPro, onClose }: {
+  ownerEmail: string; siteUrl: string; isPro: boolean; onClose: () => void;
+}) {
+  const [members, setMembers] = useState<{ id: string; member_email: string; created_at: string }[]>([]);
+  const [newEmail, setNewEmail] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [adding, setAdding] = useState(false);
+  const [removing, setRemoving] = useState<string | null>(null);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  const maxMembers = isPro ? Infinity : 2;
+
+  const loadMembers = useCallback(async () => {
+    setLoading(true);
+    try {
+      const r = await fetch(`${BACKEND}/api/team/members?ownerEmail=${encodeURIComponent(ownerEmail)}`);
+      const d = await r.json();
+      setMembers(d.members || []);
+    } catch { /* ignore */ }
+    setLoading(false);
+  }, [ownerEmail]);
+
+  useEffect(() => { loadMembers(); }, [loadMembers]);
+
+  const handleAdd = async () => {
+    setError(''); setSuccess('');
+    if (!newEmail.trim() || !newEmail.includes('@')) { setError('Enter a valid email address.'); return; }
+    setAdding(true);
+    try {
+      const r = await fetch(`${BACKEND}/api/team/invite`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ownerEmail, memberEmail: newEmail.trim(), siteUrl }),
+      });
+      const d = await r.json();
+      if (!r.ok) { setError(d.error || 'Could not add member.'); }
+      else { setSuccess(`Invite sent to ${newEmail.trim()}!`); setNewEmail(''); loadMembers(); }
+    } catch { setError('Something went wrong. Please try again.'); }
+    setAdding(false);
+  };
+
+  const handleRemove = async (id: string, email: string) => {
+    setRemoving(id);
+    try {
+      await fetch(`${BACKEND}/api/team/members/${id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ownerEmail }),
+      });
+      loadMembers();
+    } catch { /* ignore */ }
+    setRemoving(null);
+  };
+
+  const atLimit = !isPro && members.length >= 2;
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+      <div style={{ background: 'white', borderRadius: '20px', width: '100%', maxWidth: '480px', boxShadow: '0 20px 60px rgba(0,0,0,0.2)', overflow: 'hidden' }}>
+        {/* Header */}
+        <div style={{ background: '#1e1b4b', padding: '22px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <Users size={20} style={{ color: '#a78bfa' }} />
+            <span style={{ color: 'white', fontWeight: 700, fontSize: '17px' }}>Team Members</span>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#a78bfa', padding: '4px' }}>
+            <X size={20} />
+          </button>
+        </div>
+
+        <div style={{ padding: '24px' }}>
+          {/* Limit info */}
+          <div style={{ background: '#f5f3ff', borderRadius: '10px', padding: '12px 16px', marginBottom: '20px', fontSize: '13px', color: '#6b7280' }}>
+            {isPro
+              ? <span>✅ <strong>Pro account</strong> — unlimited team members</span>
+              : <span>Free plan: <strong>{members.length} of 2</strong> team members used. <span style={{ color: '#7c3aed', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => {}}>Upgrade to Pro</span> for unlimited.</span>
+            }
+          </div>
+
+          {/* Add member form */}
+          {atLimit ? (
+            <div style={{ textAlign: 'center', padding: '16px', background: '#fef3c7', borderRadius: '10px', marginBottom: '20px', color: '#92400e', fontSize: '14px' }}>
+              You've reached the 2-member limit on the free plan.
+            </div>
+          ) : (
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#374151', marginBottom: '8px' }}>
+                Invite by email
+              </label>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input
+                  type="email"
+                  placeholder="teammate@example.com"
+                  value={newEmail}
+                  onChange={e => setNewEmail(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleAdd()}
+                  style={{ flex: 1, border: '1.5px solid #d1d5db', borderRadius: '8px', padding: '9px 12px', fontSize: '14px', outline: 'none' }}
+                />
+                <button
+                  onClick={handleAdd}
+                  disabled={adding}
+                  style={{ background: '#7c3aed', color: 'white', border: 'none', borderRadius: '8px', padding: '9px 18px', fontWeight: 700, fontSize: '14px', cursor: adding ? 'not-allowed' : 'pointer', opacity: adding ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
+                >
+                  <UserPlus size={15} />
+                  {adding ? 'Sending…' : 'Add'}
+                </button>
+              </div>
+              {error && <p style={{ color: '#dc2626', fontSize: '13px', marginTop: '8px' }}>{error}</p>}
+              {success && <p style={{ color: '#059669', fontSize: '13px', marginTop: '8px' }}>✅ {success}</p>}
+            </div>
+          )}
+
+          {/* Members list */}
+          <div>
+            <p style={{ fontSize: '13px', fontWeight: 600, color: '#374151', marginBottom: '10px' }}>Current members</p>
+            {loading ? (
+              <p style={{ fontSize: '14px', color: '#9ca3af', textAlign: 'center', padding: '16px 0' }}>Loading…</p>
+            ) : members.length === 0 ? (
+              <p style={{ fontSize: '14px', color: '#9ca3af', textAlign: 'center', padding: '16px 0' }}>No team members yet. Add someone above.</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {members.map(m => (
+                  <div key={m.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '10px 14px' }}>
+                    <div>
+                      <p style={{ fontSize: '14px', fontWeight: 600, color: '#111827', margin: 0 }}>{m.member_email}</p>
+                      <p style={{ fontSize: '12px', color: '#9ca3af', margin: '2px 0 0' }}>Added {new Date(m.created_at).toLocaleDateString()}</p>
+                    </div>
+                    <button
+                      onClick={() => handleRemove(m.id, m.member_email)}
+                      disabled={removing === m.id}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: '4px', opacity: removing === m.id ? 0.5 : 1 }}
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function buildSnippets(siteUrl: string, result: AnalysisResult | null, scanId?: string) {
@@ -503,22 +653,43 @@ function QuickStartCard({ siteUrl, result, scanId, isPro, isMobile }: {
 }
 
 // ── Main export ───────────────────────────────────────────────────────────────
-export const CodeStep: React.FC<Props> = ({ siteUrl, result, scanId, isPro, onUpgrade, onNewCheck }) => {
+export const CodeStep: React.FC<Props> = ({ siteUrl, result, scanId, isPro, userEmail, onUpgrade, onNewCheck }) => {
   const width = useWindowWidth();
   const isMobile = width < 680;
   const snippets = buildSnippets(siteUrl, result, scanId);
+  const [showTeamModal, setShowTeamModal] = useState(false);
 
   return (
     <div style={{ maxWidth: '100%', padding: isMobile ? '24px 0 48px' : '40px 0 60px' }}>
 
+      {showTeamModal && userEmail && (
+        <TeamMembersModal
+          ownerEmail={userEmail}
+          siteUrl={siteUrl}
+          isPro={isPro}
+          onClose={() => setShowTeamModal(false)}
+        />
+      )}
+
       {/* Page header */}
-      <div style={{ marginBottom: '28px' }}>
-        <h1 style={{ fontSize: isMobile ? '26px' : '38px', fontWeight: 900, color: '#111827', marginBottom: '10px' }}>
-          Get found by AI search
-        </h1>
-        <p style={{ color: '#6b7280', fontSize: isMobile ? '16px' : '19px', lineHeight: 1.65, maxWidth: '640px' }}>
-          Two things get you found. Everything else makes you impossible to miss.
-        </p>
+      <div style={{ marginBottom: '28px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
+        <div>
+          <h1 style={{ fontSize: isMobile ? '26px' : '38px', fontWeight: 900, color: '#111827', marginBottom: '10px' }}>
+            Get found by AI search
+          </h1>
+          <p style={{ color: '#6b7280', fontSize: isMobile ? '16px' : '19px', lineHeight: 1.65, maxWidth: '640px' }}>
+            Two things get you found. Everything else makes you impossible to miss.
+          </p>
+        </div>
+        {userEmail && (
+          <button
+            onClick={() => setShowTeamModal(true)}
+            style={{ display: 'flex', alignItems: 'center', gap: '7px', background: 'white', border: '1.5px solid #e5e7eb', borderRadius: '10px', padding: '9px 16px', fontSize: '14px', fontWeight: 600, color: '#374151', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}
+          >
+            <Users size={16} style={{ color: '#7c3aed' }} />
+            Share with Team
+          </button>
+        )}
       </div>
 
       {/* ── QUICK START ── */}

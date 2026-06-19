@@ -1495,6 +1495,152 @@ app.get('/api/admin/stats', async (req, res) => {
   }
 });
 
+// ── Team Members ─────────────────────────────────────────────────────────────
+
+// POST /api/team/invite — add a team member
+app.post('/api/team/invite', async (req, res) => {
+  const { ownerEmail, memberEmail, siteUrl } = req.body;
+  if (!ownerEmail || !memberEmail) return res.status(400).json({ error: 'Missing ownerEmail or memberEmail' });
+  if (!supabaseAdmin) return res.status(503).json({ error: 'Database not configured' });
+
+  try {
+    const { data: existing, error: countErr } = await supabaseAdmin
+      .from('team_members')
+      .select('id')
+      .eq('owner_email', ownerEmail.toLowerCase());
+
+    if (countErr) return res.status(500).json({ error: countErr.message });
+
+    const { data: proData } = await supabaseAdmin
+      .from('pro_upgrades')
+      .select('email')
+      .eq('email', ownerEmail.toLowerCase())
+      .limit(1);
+    const isOwnerPro = (proData && proData.length > 0) || ownerEmail.toLowerCase() === 'hello@genierocket.com';
+    const maxMembers = isOwnerPro ? 999 : 2;
+
+    if ((existing || []).length >= maxMembers) {
+      return res.status(403).json({
+        error: isOwnerPro ? 'Member limit reached.' : 'Free accounts can add up to 2 team members. Upgrade to Pro for unlimited.',
+        limitReached: true,
+        isPro: isOwnerPro,
+      });
+    }
+
+    const { error: insertErr } = await supabaseAdmin
+      .from('team_members')
+      .upsert(
+        { owner_email: ownerEmail.toLowerCase(), member_email: memberEmail.toLowerCase(), site_url: siteUrl },
+        { onConflict: 'owner_email,member_email' }
+      );
+
+    if (insertErr) return res.status(500).json({ error: insertErr.message });
+
+    const domain = (siteUrl || ownerEmail).replace(/^https?:\/\//, '').split('/')[0];
+    await sendEmail({
+      to: memberEmail,
+      subject: `You've been added to ${domain} on findmewith.ai`,
+      html: `
+        <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;">
+          <h2 style="color:#1e1b4b;margin:0 0 12px;font-size:22px;">You've been added as a team member</h2>
+          <p style="color:#374151;line-height:1.6;">${ownerEmail} has added you to their <strong>findmewith.ai</strong> account so you can view AI search results for <strong>${domain}</strong>.</p>
+          <a href="https://www.findmewith.ai" style="display:inline-block;margin-top:20px;padding:12px 28px;background:#7c3aed;color:white;text-decoration:none;border-radius:8px;font-weight:700;">View Results</a>
+          <p style="margin-top:24px;color:#6b7280;font-size:13px;">Sign in or create a free account at findmewith.ai using this email address to access the shared dashboard.</p>
+          <p style="color:#9ca3af;font-size:12px;margin-top:16px;">Questions? Email us at hello@findmewith.ai</p>
+        </div>
+      `,
+    });
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/team/members?ownerEmail=X — list team members
+app.get('/api/team/members', async (req, res) => {
+  const { ownerEmail } = req.query;
+  if (!ownerEmail) return res.status(400).json({ error: 'ownerEmail required' });
+  if (!supabaseAdmin) return res.status(503).json({ error: 'Database not configured' });
+
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('team_members')
+      .select('*')
+      .eq('owner_email', ownerEmail.toLowerCase())
+      .order('created_at', { ascending: false });
+
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ members: data || [] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/team/members/:id — remove a team member
+app.delete('/api/team/members/:id', async (req, res) => {
+  const { id } = req.params;
+  const { ownerEmail } = req.body;
+  if (!supabaseAdmin) return res.status(503).json({ error: 'Database not configured' });
+
+  try {
+    const { error } = await supabaseAdmin
+      .from('team_members')
+      .delete()
+      .eq('id', id)
+      .eq('owner_email', (ownerEmail || '').toLowerCase());
+
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/team/check-member?memberEmail=X — check if user is a team member
+app.get('/api/team/check-member', async (req, res) => {
+  const { memberEmail } = req.query;
+  if (!memberEmail) return res.status(400).json({ error: 'memberEmail required' });
+  if (!supabaseAdmin) return res.status(503).json({ error: 'Database not configured' });
+
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('team_members')
+      .select('*')
+      .eq('member_email', memberEmail.toLowerCase())
+      .limit(1);
+
+    if (error) return res.status(500).json({ error: error.message });
+    if (!data || data.length === 0) return res.json({ isMember: false });
+
+    const membership = data[0];
+
+    const { data: scans } = await supabaseAdmin
+      .from('scans')
+      .select('*')
+      .eq('email', membership.owner_email)
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    const { data: proData } = await supabaseAdmin
+      .from('pro_upgrades')
+      .select('email')
+      .eq('email', membership.owner_email)
+      .limit(1);
+    const ownerIsPro = (proData && proData.length > 0) || membership.owner_email === 'hello@genierocket.com';
+
+    res.json({
+      isMember: true,
+      ownerEmail: membership.owner_email,
+      siteUrl: membership.site_url || scans?.[0]?.url,
+      ownerIsPro,
+      scan: scans?.[0] || null,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── SPA fallback ──────────────────────────────────────────────────────────────
 app.get('*', (_req, res) => {
   const index = join(__dirname, '../dist/index.html');

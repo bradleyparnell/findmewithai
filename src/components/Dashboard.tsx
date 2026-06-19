@@ -225,6 +225,8 @@ interface Props {
   isPro: boolean;
   previewFree?: boolean;
   setPreviewFree?: (v: boolean) => void;
+  teamOwnerEmail?: string;
+  teamOwnerScan?: any;
   onViewScan: (scan: Scan) => void;
   onNewScan: () => void;
   onUpgrade: () => void;
@@ -246,7 +248,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   );
 };
 
-export const Dashboard: React.FC<Props> = ({ user, isPro, previewFree, setPreviewFree, onViewScan, onNewScan, onUpgrade, onSignOut, onAccount }) => {
+export const Dashboard: React.FC<Props> = ({ user, isPro, previewFree, setPreviewFree, teamOwnerEmail, teamOwnerScan, onViewScan, onNewScan, onUpgrade, onSignOut, onAccount }) => {
   const isAdmin = user?.email === 'hello@genierocket.com';
   const windowWidth = useWindowWidth();
   const isMobile = windowWidth < 768;
@@ -376,6 +378,12 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, previewFree, setPrevie
 
   const loadData = useCallback(async () => {
     setLoading(true);
+    // If viewing as a team member, use the owner's scan directly
+    if (teamOwnerScan) {
+      setScans([teamOwnerScan]);
+      setLoading(false);
+      return;
+    }
     const [scansRes, compRes] = await Promise.all([
       supabase.from('scans').select('*').order('created_at', { ascending: false }),
       supabase.from('competitors').select('*').order('created_at', { ascending: false }),
@@ -383,7 +391,7 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, previewFree, setPrevie
     setScans((scansRes.data as Scan[]) ?? []);
     setCompetitors((compRes.data as Competitor[]) ?? []);
     setLoading(false);
-  }, []);
+  }, [teamOwnerScan]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -728,6 +736,17 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, previewFree, setPrevie
 
       {/* ── MAIN CONTENT ── */}
       <div style={{ marginLeft: isMobile ? 0 : '240px', flex: 1, padding: isMobile ? '16px 16px 80px' : '40px 48px 100px', minWidth: 0, overflowX: 'hidden' }}>
+        {/* Team member read-only banner */}
+        {teamOwnerEmail && (
+          <div style={{ background: '#ede9fe', border: '1.5px solid #c4b5fd', borderRadius: '12px', padding: '12px 18px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '18px' }}>👥</span>
+            <div style={{ flex: 1 }}>
+              <span style={{ fontSize: '14px', fontWeight: 600, color: '#5b21b6' }}>Viewing shared results</span>
+              <span style={{ fontSize: '13px', color: '#7c3aed', marginLeft: '8px' }}>from {teamOwnerEmail}</span>
+            </div>
+            <span style={{ fontSize: '12px', color: '#a78bfa', fontWeight: 500 }}>Read-only</span>
+          </div>
+        )}
 
         {/* Mobile top bar */}
         {isMobile && (

@@ -28,6 +28,8 @@ const App: React.FC = () => {
   const effectiveIsPro = previewFree ? false : isPro;
   const [user, setUser] = useState<any>(null);
   const [linkExpired, setLinkExpired] = useState(false);
+  // Team member view: when logged-in user is a team member of another account
+  const [teamView, setTeamView] = useState<{ ownerEmail: string; ownerIsPro: boolean } | null>(null);
 
   // Scroll to top on every step change
   useEffect(() => {
@@ -85,6 +87,18 @@ const App: React.FC = () => {
               localStorage.removeItem('fmw_pending_scan');
             } catch (_e) { /* fall through */ }
           }
+
+          // Check if this user is a team member of another account
+          try {
+            const tmRes = await fetch(`${BACKEND}/api/team/check-member?memberEmail=${encodeURIComponent(session.user.email || '')}`);
+            const tmData = await tmRes.json();
+            if (tmData.isMember && tmData.scan) {
+              setTeamView({ ownerEmail: tmData.ownerEmail, ownerIsPro: tmData.ownerIsPro });
+              setSiteUrl(tmData.siteUrl || tmData.scan.url || '');
+              setResult(tmData.scan.result as AnalysisResult);
+              setIsPro(tmData.ownerIsPro);
+            }
+          } catch (_e) { /* non-blocking */ }
 
           // Always land on dashboard — it loads the latest scan itself
           setStep('dashboard');
@@ -289,6 +303,8 @@ const App: React.FC = () => {
           isPro={effectiveIsPro}
           previewFree={previewFree}
           setPreviewFree={setPreviewFree}
+          teamOwnerEmail={teamView?.ownerEmail}
+          teamOwnerScan={teamView ? result : undefined}
           onViewScan={handleViewScan}
           onNewScan={handleNewCheck}
           onUpgrade={handleUpgrade}
@@ -361,6 +377,7 @@ const App: React.FC = () => {
           siteUrl={siteUrl}
           result={result}
           isPro={effectiveIsPro}
+          userEmail={userEmail}
           onUpgrade={handleUpgrade}
           onNewCheck={handleNewCheck}
         />
