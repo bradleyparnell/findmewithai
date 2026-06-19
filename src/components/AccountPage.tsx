@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ArrowLeft, CreditCard, Shield, Trash2, CheckCircle, AlertCircle, User, Mail, Zap } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowLeft, CreditCard, Shield, Trash2, CheckCircle, AlertCircle, User, Mail, Zap, Users, UserPlus, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://findmewithai-production.up.railway.app';
@@ -24,6 +24,54 @@ export const AccountPage: React.FC<Props> = ({ user, isPro, previewFree, setPrev
   const [deleteConfirm, setDeleteConfirm] = useState('');
   const [showDeleteZone, setShowDeleteZone] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [teamMembers, setTeamMembers] = useState<{ member_email: string }[]>([]);
+  const [teamEmail, setTeamEmail]     = useState('');
+  const [teamLoading, setTeamLoading] = useState(false);
+  const [teamMsg, setTeamMsg]         = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
+
+  const maxMembers = isPro ? Infinity : 2;
+
+  const loadTeamMembers = async () => {
+    if (!user.email) return;
+    try {
+      const r = await fetch(`${BACKEND}/api/team/list?ownerEmail=${encodeURIComponent(user.email)}`);
+      const d = await r.json();
+      setTeamMembers(d.members || []);
+    } catch { /* ignore */ }
+  };
+
+  useEffect(() => { loadTeamMembers(); }, [user.email]);
+
+  const addTeamMember = async () => {
+    if (!teamEmail.trim()) return;
+    if (teamMembers.length >= maxMembers) {
+      setTeamMsg({ type: 'err', text: `Free accounts can have up to ${maxMembers} team members. Upgrade to Pro for unlimited.` });
+      return;
+    }
+    setTeamLoading(true); setTeamMsg(null);
+    try {
+      const r = await fetch(`${BACKEND}/api/team/invite`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ownerEmail: user.email, memberEmail: teamEmail.trim() }),
+      });
+      const d = await r.json();
+      if (!r.ok) { setTeamMsg({ type: 'err', text: d.error || 'Could not add member.' }); }
+      else { setTeamMsg({ type: 'ok', text: `Invite sent to ${teamEmail.trim()}!` }); setTeamEmail(''); await loadTeamMembers(); }
+    } catch { setTeamMsg({ type: 'err', text: 'Something went wrong. Try again.' }); }
+    setTeamLoading(false);
+  };
+
+  const removeTeamMember = async (memberEmail: string) => {
+    try {
+      await fetch(`${BACKEND}/api/team/remove`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ownerEmail: user.email, memberEmail }),
+      });
+      await loadTeamMembers();
+    } catch { /* ignore */ }
+  };
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -283,6 +331,79 @@ export const AccountPage: React.FC<Props> = ({ user, isPro, previewFree, setPrev
               {pwLoading ? 'Updating…' : 'Update Password'}
             </button>
           </form>
+        </div>
+
+        {/* ── TEAM MEMBERS ── */}
+        <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '20px', padding: '28px 32px', marginBottom: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Users size={18} style={{ color: '#7c3aed' }} />
+              <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#111827' }}>Team Members</h2>
+            </div>
+            {!isPro && (
+              <span style={{ fontSize: '11px', fontWeight: 700, color: '#6b7280', background: '#f3f4f6', borderRadius: '99px', padding: '3px 10px' }}>
+                {teamMembers.length}/{maxMembers} · <span style={{ color: '#7c3aed', cursor: 'pointer' }} onClick={onUpgrade}>Upgrade for unlimited</span>
+              </span>
+            )}
+          </div>
+
+          <p style={{ margin: '0 0 18px', fontSize: '13px', color: '#6b7280', lineHeight: 1.6 }}>
+            Team members get view-only access to your dashboard — great for sharing results with your developer or marketing team.
+          </p>
+
+          {/* Add member */}
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '16px' }}>
+            <input
+              type="email"
+              value={teamEmail}
+              onChange={e => { setTeamEmail(e.target.value); setTeamMsg(null); }}
+              onKeyDown={e => e.key === 'Enter' && addTeamMember()}
+              placeholder="teammate@example.com"
+              style={{ flex: 1, padding: '11px 14px', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontSize: '14px', color: '#111827', outline: 'none', boxSizing: 'border-box' }}
+            />
+            <button
+              onClick={addTeamMember}
+              disabled={teamLoading || !teamEmail.trim()}
+              style={{ background: '#7c3aed', color: 'white', border: 'none', borderRadius: '10px', padding: '11px 18px', fontSize: '14px', fontWeight: 700, cursor: teamLoading ? 'not-allowed' : 'pointer', opacity: teamLoading ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
+            >
+              <UserPlus size={15} /> {teamLoading ? 'Sending…' : 'Invite'}
+            </button>
+          </div>
+
+          {teamMsg && (
+            <div style={{ padding: '10px 14px', borderRadius: '10px', marginBottom: '14px', background: teamMsg.type === 'ok' ? '#f0fdf4' : '#fef2f2', border: `1px solid ${teamMsg.type === 'ok' ? '#bbf7d0' : '#fecaca'}`, fontSize: '13px', color: teamMsg.type === 'ok' ? '#15803d' : '#b91c1c', fontWeight: 600 }}>
+              {teamMsg.text}
+            </div>
+          )}
+
+          {/* Member list */}
+          {teamMembers.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '20px', background: '#f9fafb', borderRadius: '12px', fontSize: '13px', color: '#9ca3af' }}>
+              No team members yet. Enter an email above to invite someone.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {teamMembers.map(m => (
+                <div key={m.member_email} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: '#f9fafb', borderRadius: '10px', border: '1px solid #f3f4f6' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: '#ede9fe', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <User size={14} style={{ color: '#7c3aed' }} />
+                    </div>
+                    <span style={{ fontSize: '14px', color: '#374151', fontWeight: 500 }}>{m.member_email}</span>
+                  </div>
+                  <button
+                    onClick={() => removeTeamMember(m.member_email)}
+                    title="Remove"
+                    style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#9ca3af', display: 'flex', padding: '4px' }}
+                    onMouseEnter={e => (e.currentTarget.style.color = '#ef4444')}
+                    onMouseLeave={e => (e.currentTarget.style.color = '#9ca3af')}
+                  >
+                    <X size={15} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* ── SIGN OUT ── */}

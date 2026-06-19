@@ -6,7 +6,7 @@ import {
 import {
   Search, Plus, LogOut, TrendingUp, ExternalLink, Zap, Target,
   AlertTriangle, CheckCircle, ChevronDown, ChevronUp, Trash2,
-  RefreshCw, Award, ArrowRight, Menu, X,
+  RefreshCw, Award, ArrowRight, Menu, X, Users, UserPlus, User,
 } from 'lucide-react';
 
 function useWindowWidth() {
@@ -262,6 +262,52 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, previewFree, setPrevie
       .then(d => setSpotsLeft(d.spotsLeft ?? 50))
       .catch(() => setSpotsLeft(50));
   }, [isPro]);
+  // Team member sidebar modal
+  const [showTeamModal, setShowTeamModal]   = useState(false);
+  const [sidebarTeamMembers, setSidebarTeamMembers] = useState<{ member_email: string }[]>([]);
+  const [sidebarTeamEmail, setSidebarTeamEmail]     = useState('');
+  const [sidebarTeamLoading, setSidebarTeamLoading] = useState(false);
+  const [sidebarTeamMsg, setSidebarTeamMsg]         = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
+  const maxSidebarMembers = isPro ? Infinity : 2;
+
+  const loadSidebarTeam = async () => {
+    if (!user?.email) return;
+    try {
+      const r = await fetch(`${BACKEND}/api/team/list?ownerEmail=${encodeURIComponent(user.email)}`);
+      const d = await r.json();
+      setSidebarTeamMembers(d.members || []);
+    } catch { /* ignore */ }
+  };
+
+  const addSidebarMember = async () => {
+    if (!sidebarTeamEmail.trim()) return;
+    if (sidebarTeamMembers.length >= maxSidebarMembers) {
+      setSidebarTeamMsg({ type: 'err', text: 'Free accounts support up to 2 members. Upgrade to Pro for unlimited.' });
+      return;
+    }
+    setSidebarTeamLoading(true); setSidebarTeamMsg(null);
+    try {
+      const r = await fetch(`${BACKEND}/api/team/invite`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ownerEmail: user.email, memberEmail: sidebarTeamEmail.trim() }),
+      });
+      const d = await r.json();
+      if (!r.ok) setSidebarTeamMsg({ type: 'err', text: d.error || 'Could not add member.' });
+      else { setSidebarTeamMsg({ type: 'ok', text: `Invite sent!` }); setSidebarTeamEmail(''); await loadSidebarTeam(); }
+    } catch { setSidebarTeamMsg({ type: 'err', text: 'Something went wrong.' }); }
+    setSidebarTeamLoading(false);
+  };
+
+  const removeSidebarMember = async (memberEmail: string) => {
+    try {
+      await fetch(`${BACKEND}/api/team/remove`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ownerEmail: user.email, memberEmail }),
+      });
+      await loadSidebarTeam();
+    } catch { /* ignore */ }
+  };
+
   const [scans, setScans] = useState<Scan[]>([]);
   const [competitors, setCompetitors] = useState<Competitor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -533,6 +579,7 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, previewFree, setPrevie
   ];
 
   return (
+    <>
     <div style={{ display: 'flex', minHeight: '100vh', background: '#f4f3f8' }}>
 
       {/* Mobile backdrop */}
@@ -636,6 +683,24 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, previewFree, setPrevie
             );
           })}
         </nav>
+
+        {/* Team Members quick-add */}
+        {!teamOwnerEmail && (
+          <div style={{ padding: '0 10px 8px' }}>
+            <button
+              onClick={() => { setShowTeamModal(true); loadSidebarTeam(); setSidebarTeamMsg(null); }}
+              style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '9px 12px', background: 'transparent', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '9px', color: '#94a3b8', fontSize: '14px', fontWeight: 500, cursor: 'pointer', textAlign: 'left', transition: 'all 0.12s' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.06)'; (e.currentTarget as HTMLButtonElement).style.color = '#e2e8f0'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = '#94a3b8'; }}
+            >
+              <Users size={15} style={{ flexShrink: 0 }} />
+              <span style={{ flex: 1 }}>Team</span>
+              <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'rgba(124,58,237,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Plus size={11} style={{ color: '#a78bfa' }} />
+              </div>
+            </button>
+          </div>
+        )}
 
         {/* Admin link — only for hello@genierocket.com */}
         {user.email === 'hello@genierocket.com' && (
@@ -1744,5 +1809,92 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, previewFree, setPrevie
       )}
       </div>
     </div>
+    {/* ── TEAM MEMBER MODAL ── */}
+    {showTeamModal && (
+      <div
+        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
+        onClick={e => { if (e.target === e.currentTarget) setShowTeamModal(false); }}
+      >
+        <div style={{ background: 'white', borderRadius: '20px', padding: '28px', width: '100%', maxWidth: '480px', boxShadow: '0 24px 60px rgba(0,0,0,0.18)' }}>
+          {/* Header */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Users size={20} style={{ color: '#7c3aed' }} />
+              <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#111827' }}>Team Members</h2>
+            </div>
+            <button onClick={() => setShowTeamModal(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#9ca3af', display: 'flex', padding: '4px' }}>
+              <X size={18} />
+            </button>
+          </div>
+
+          <p style={{ margin: '0 0 18px', fontSize: '13px', color: '#6b7280', lineHeight: 1.6 }}>
+            Invite someone to view your dashboard. They get read-only access — great for sharing with your developer or marketing team.
+          </p>
+
+          {/* Plan limit badge */}
+          {!isPro && (
+            <div style={{ background: '#f5f3ff', border: '1px solid #ddd6fe', borderRadius: '10px', padding: '10px 14px', marginBottom: '16px', fontSize: '13px', color: '#5b21b6', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span>{sidebarTeamMembers.length}/{maxSidebarMembers} members used</span>
+              <span style={{ color: '#7c3aed', cursor: 'pointer', fontWeight: 700 }} onClick={() => { setShowTeamModal(false); onUpgrade(); }}>Upgrade for unlimited →</span>
+            </div>
+          )}
+
+          {/* Add member input */}
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '14px' }}>
+            <input
+              type="email"
+              value={sidebarTeamEmail}
+              onChange={e => { setSidebarTeamEmail(e.target.value); setSidebarTeamMsg(null); }}
+              onKeyDown={e => e.key === 'Enter' && addSidebarMember()}
+              placeholder="teammate@example.com"
+              style={{ flex: 1, padding: '11px 14px', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontSize: '14px', color: '#111827', outline: 'none', boxSizing: 'border-box' }}
+            />
+            <button
+              onClick={addSidebarMember}
+              disabled={sidebarTeamLoading || !sidebarTeamEmail.trim()}
+              style={{ background: '#7c3aed', color: 'white', border: 'none', borderRadius: '10px', padding: '11px 16px', fontSize: '14px', fontWeight: 700, cursor: sidebarTeamLoading ? 'not-allowed' : 'pointer', opacity: sidebarTeamLoading ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
+            >
+              <UserPlus size={14} /> {sidebarTeamLoading ? 'Sending…' : 'Invite'}
+            </button>
+          </div>
+
+          {sidebarTeamMsg && (
+            <div style={{ padding: '10px 14px', borderRadius: '10px', marginBottom: '14px', background: sidebarTeamMsg.type === 'ok' ? '#f0fdf4' : '#fef2f2', border: `1px solid ${sidebarTeamMsg.type === 'ok' ? '#bbf7d0' : '#fecaca'}`, fontSize: '13px', color: sidebarTeamMsg.type === 'ok' ? '#15803d' : '#b91c1c', fontWeight: 600 }}>
+              {sidebarTeamMsg.text}
+            </div>
+          )}
+
+          {/* Member list */}
+          {sidebarTeamMembers.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '20px', background: '#f9fafb', borderRadius: '12px', fontSize: '13px', color: '#9ca3af' }}>
+              No team members yet.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {sidebarTeamMembers.map(m => (
+                <div key={m.member_email} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: '#f9fafb', borderRadius: '10px', border: '1px solid #f3f4f6' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#ede9fe', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <User size={13} style={{ color: '#7c3aed' }} />
+                    </div>
+                    <span style={{ fontSize: '14px', color: '#374151', fontWeight: 500 }}>{m.member_email}</span>
+                  </div>
+                  <button
+                    onClick={() => removeSidebarMember(m.member_email)}
+                    title="Remove"
+                    style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#9ca3af', display: 'flex', padding: '4px' }}
+                    onMouseEnter={e => (e.currentTarget.style.color = '#ef4444')}
+                    onMouseLeave={e => (e.currentTarget.style.color = '#9ca3af')}
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    )}
+    </>
   );
 };

@@ -1253,6 +1253,8 @@ app.get('/api/check-subscription', async (req, res) => {
       const customers = await stripe.customers.list({ email, limit: 1 });
       if (customers.data.length > 0) {
         const customerId = customers.data[0].id;
+
+        // Check recurring subscriptions first
         const subs = await stripe.subscriptions.list({ customer: customerId, status: 'active', limit: 1 });
         if (subs.data.length > 0) {
           const activeSub = subs.data[0];
@@ -1261,8 +1263,48 @@ app.get('/api/check-subscription', async (req, res) => {
           saveSubs();
           return res.json({ active: true, plan });
         }
+
+        // Also check one-time payments (Founding Member mode:'payment')
+        const FOUNDING_PRICE_ID = process.env.STRIPE_LIFETIME_PRICE_ID || 'price_1TjgumCNXRaRPz1uPqfh3uXF';
+        const sessions = await stripe.checkout.sessions.list({ customer: customerId, limit: 20 });
+        const foundingSession = sessions.data.find(s =>
+          s.payment_status === 'paid' &&
+          s.mode === 'payment' &&
+          s.line_items === undefined // line_items needs expand; check via metadata or price
+        );
+        // Expand line items to confirm price ID
+        for (const session of sessions.data) {
+          if (session.payment_status !== 'paid' || session.mode !== 'payment') continue;
+          try {
+            const expanded = await stripe.checkout.sessions.retrieve(session.id, { expand: ['line_items'] });
+            const hasFoundingPrice = expanded.line_items?.data?.some(li => li.price?.id === FOUNDING_PRICE_ID);
+            if (hasFoundingPrice) {
+              subscriptions.set(email, { customerId, subscriptionId: null, plan: 'lifetime', status: 'active' });
+              saveSubs();
+              return res.json({ active: true, plan: 'lifetime' });
+            }
+          } catch { /* skip */ }
+        }
       }
     } catch (e) { console.warn('[check-subscription]', e.message); }
+  }
+
+  // Final fallback: check Supabase pro_upgrades (catches webhook-activated users after restart)
+  if (supabaseAdmin) {
+    try {
+      const { data } = await supabaseAdmin
+        .from('pro_upgrades')
+        .select('plan, status')
+        .eq('email', email)
+        .eq('status', 'active')
+        .limit(1)
+        .single();
+      if (data) {
+        subscriptions.set(email, { customerId: null, subscriptionId: null, plan: data.plan || 'pro', status: 'active' });
+        saveSubs();
+        return res.json({ active: true, plan: data.plan || 'pro' });
+      }
+    } catch { /* not found */ }
   }
 
   res.json({ active: false });
