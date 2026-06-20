@@ -162,7 +162,7 @@ export const PricingPage: React.FC<Props> = ({ onBack, onProActivated, userEmail
             </div>
 
             {/* Headline */}
-            <h2 style={{ color: 'white', fontSize: '36px', fontWeight: 900, margin: '0 0 10px', letterSpacing: '-0.5px', lineHeight: 1.1 }}>
+            <h2 style={{ color: 'white', fontSize: isMobile ? '26px' : '36px', fontWeight: 900, margin: '0 0 10px', letterSpacing: '-0.5px', lineHeight: 1.1 }}>
               Get Pro access forever.<br />
               <span style={{ color: '#fbbf24' }}>One payment. $249.</span>
             </h2>

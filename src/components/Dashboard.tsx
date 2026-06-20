@@ -923,7 +923,7 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, previewFree, setPrevie
       ) : (
         <div style={{ maxWidth: '1100px' }}>
           {/* ── OVERVIEW: score + category bars ── */}
-          <div ref={scoreRef} style={{ display: 'grid', gridTemplateColumns: '300px minmax(0,1fr)', gap: '24px', marginBottom: '32px' }}>
+          <div ref={scoreRef} style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '300px minmax(0,1fr)', gap: '24px', marginBottom: '32px' }}>
 
             {/* Score circle */}
             <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '24px', padding: '32px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
@@ -1056,7 +1056,7 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, previewFree, setPrevie
             const isVisible = score >= 70;
 
             return (
-              <div ref={signalRef} style={{ background: 'white', borderRadius: '24px', padding: '48px 52px', marginBottom: '24px', border: '1px solid #e5e7eb', borderLeft: '6px solid #7c3aed', position: 'relative', overflow: 'hidden' }}>
+              <div ref={signalRef} style={{ background: 'white', borderRadius: '24px', padding: isMobile ? '24px 20px' : '48px 52px', marginBottom: '24px', border: '1px solid #e5e7eb', borderLeft: '6px solid #7c3aed', position: 'relative', overflow: 'hidden' }}>
                 <div style={{ position: 'relative', zIndex: 1 }}>
                   {/* Header row */}
                   <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '32px', flexWrap: 'wrap', gap: '24px' }}>
@@ -1151,7 +1151,7 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, previewFree, setPrevie
                           <div style={{ fontSize: '13px', fontWeight: 700, color: '#374151', marginBottom: '10px' }}>
                             🔍 Track your own search terms
                           </div>
-                          <div style={{ display: 'flex', gap: '10px' }}>
+                          <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '10px' }}>
                             <input
                               type="text"
                               value={customTerm}
@@ -1330,14 +1330,14 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, previewFree, setPrevie
                 </p>
 
                 {/* Score comparison pill */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '24px', background: isAhead ? '#f0fdf4' : '#fffbeb', border: `1.5px solid ${isAhead ? '#bbf7d0' : '#fde68a'}`, borderRadius: '20px', padding: '28px 32px', marginBottom: '28px', flexWrap: 'wrap' }}>
-                  <div style={{ textAlign: 'center', minWidth: '90px' }}>
-                    <div style={{ fontSize: '56px', fontWeight: 900, color: scoreColor(score), lineHeight: 1 }}>{score}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '12px' : '24px', background: isAhead ? '#f0fdf4' : '#fffbeb', border: `1.5px solid ${isAhead ? '#bbf7d0' : '#fde68a'}`, borderRadius: '20px', padding: isMobile ? '16px 20px' : '28px 32px', marginBottom: '28px', flexWrap: 'wrap' }}>
+                  <div style={{ textAlign: 'center', minWidth: isMobile ? '70px' : '90px' }}>
+                    <div style={{ fontSize: isMobile ? '40px' : '56px', fontWeight: 900, color: scoreColor(score), lineHeight: 1 }}>{score}</div>
                     <div style={{ fontSize: '14px', color: '#6b7280', fontWeight: 600, marginTop: '4px' }}>Your score</div>
                   </div>
                   <div style={{ fontSize: '28px', color: '#d1d5db', fontWeight: 300 }}>vs</div>
-                  <div style={{ textAlign: 'center', minWidth: '90px' }}>
-                    <div style={{ fontSize: '56px', fontWeight: 900, color: '#6b7280', lineHeight: 1 }}>{bench.avg}</div>
+                  <div style={{ textAlign: 'center', minWidth: isMobile ? '70px' : '90px' }}>
+                    <div style={{ fontSize: isMobile ? '40px' : '56px', fontWeight: 900, color: '#6b7280', lineHeight: 1 }}>{bench.avg}</div>
                     <div style={{ fontSize: '14px', color: '#6b7280', fontWeight: 600, marginTop: '4px' }}>Industry avg</div>
                   </div>
                   <div style={{ flex: 1, minWidth: '200px' }}>
@@ -1463,7 +1463,8 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, previewFree, setPrevie
             ) : (
               <>
                 {/* Score cards */}
-                <div style={{ display: 'grid', gridTemplateColumns: `repeat(${1 + competitors.length}, 1fr)`, gap: '10px', marginBottom: '24px' }}>
+                <div style={{ overflowX: isMobile ? 'auto' : 'visible', marginBottom: '24px', paddingBottom: isMobile ? '4px' : 0 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: `repeat(${1 + competitors.length}, minmax(${isMobile ? '140px' : '0'}, 1fr))`, gap: '10px', minWidth: isMobile ? `${(1 + competitors.length) * 150}px` : 'unset' }}>
                   <div style={{ background: '#f5f3ff', border: '2px solid #7c3aed', borderRadius: '16px', padding: '20px', textAlign: 'center' }}>
                     <div style={{ fontSize: '13px', fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>Your Site</div>
                     <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: '10px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -1498,6 +1499,7 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, previewFree, setPrevie
                       </div>
                     );
                   })}
+                </div>
                 </div>
 
                 {/* Gap analysis for each competitor */}
@@ -1625,7 +1627,7 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, previewFree, setPrevie
                   {warnItems.map(item => {
                     const cta = FIX_CTA[item.id];
                     return (
-                      <div key={item.id} style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '14px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '18px', padding: '20px 24px' }}>
+                      <div key={item.id} style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '14px', marginBottom: '10px', display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', flexWrap: 'wrap', gap: isMobile ? '10px' : '18px', padding: isMobile ? '16px' : '20px 24px' }}>
                         <div style={{ width: '11px', height: '11px', background: '#d97706', borderRadius: '50%', flexShrink: 0 }} />
                         <div style={{ flex: 1 }}>
                           <div style={{ fontSize: '17px', fontWeight: 700, color: '#111827' }}>{FINDING_PLAIN_LABELS[item.id] || item.label}</div>
@@ -1711,7 +1713,7 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, previewFree, setPrevie
 
           {/* ── MY SITES (shown when user has scanned 2+ unique domains) ── */}
           {uniqueSites.length > 1 && (
-            <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '24px', padding: '40px 48px', marginBottom: '24px' }}>
+            <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '24px', padding: isMobile ? '24px 20px' : '40px 48px', marginBottom: '24px' }}>
               <div style={{ fontSize: '24px', fontWeight: 800, color: '#111827', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <Target size={22} style={{ color: '#7c3aed' }} />
                 My Sites

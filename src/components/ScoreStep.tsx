@@ -1,6 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CheckCircle, ArrowRight, TrendingUp, Mail, Copy, Check, FileText, Share2 } from 'lucide-react';
 import type { AnalysisResult } from '../types';
+
+function useWindowWidth() {
+  const [w, setW] = useState(typeof window !== 'undefined' ? window.innerWidth : 1024);
+  useEffect(() => {
+    const h = () => setW(window.innerWidth);
+    window.addEventListener('resize', h);
+    return () => window.removeEventListener('resize', h);
+  }, []);
+  return w;
+}
 
 const CATEGORY_INFO: Record<string, { label: string; desc: string; max: number }> = {
   structured_data:  { label: 'Business Info Cards',  desc: 'Can AI identify your business?',          max: 35 },
@@ -490,6 +500,8 @@ function getBenchmarkLine(score: number): string {
 }
 
 export const ScoreStep: React.FC<Props> = ({ result, onFixContent, onGetCode, onUpgrade, isPro, isAuthenticated }) => {
+  const windowWidth = useWindowWidth();
+  const isMobile = windowWidth < 640;
   const { score, categories, findings } = result;
   const [copied, setCopied] = useState(false);
   const [shared, setShared] = useState(false);

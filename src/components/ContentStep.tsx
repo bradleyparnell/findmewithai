@@ -3,6 +3,16 @@ import { Copy, Check, HelpCircle, User, BookOpen, ArrowRight } from 'lucide-reac
 import { LockOverlay } from './LockOverlay';
 import type { AnalysisResult } from '../types';
 
+function useWindowWidth() {
+  const [w, setW] = useState(typeof window !== 'undefined' ? window.innerWidth : 1024);
+  useEffect(() => {
+    const h = () => setW(window.innerWidth);
+    window.addEventListener('resize', h);
+    return () => window.removeEventListener('resize', h);
+  }, []);
+  return w;
+}
+
 interface Props {
   siteUrl: string;
   result: AnalysisResult | null;
@@ -144,6 +154,8 @@ function suggestFaqQuestions(businessType: string): string {
 }
 
 export const ContentStep: React.FC<Props> = ({ siteUrl, result, isPro, onUpgrade, onNext }) => {
+  const windowWidth = useWindowWidth();
+  const isMobile = windowWidth < 640;
   const [tab, setTab] = useState<Tab>('faq');
   const [output, setOutput] = useState('');
   const [prefilled, setPrefilled] = useState(false);

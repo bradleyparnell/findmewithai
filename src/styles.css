@@ -72,6 +72,10 @@
 
 * { box-sizing: border-box; }
 
+html, body {
+  overflow-x: hidden;
+}
+
 body {
   background: var(--color-bg-white) !important;
   color: var(--color-text-body);
@@ -79,6 +83,20 @@ body {
   -webkit-font-smoothing: antialiased;
   margin: 0;
   padding: 0;
+}
+
+/* Prevent code blocks from blowing out mobile layouts */
+pre {
+  overflow-x: auto;
+  white-space: pre;
+  max-width: 100%;
+}
+
+/* Make keyword/volume rows wrap gracefully */
+@media (max-width: 480px) {
+  input, textarea, select {
+    font-size: 16px !important; /* prevents iOS zoom-in on focus */
+  }
 }
 
 .bg-base-100, .bg-base-200, .bg-base-300 {
