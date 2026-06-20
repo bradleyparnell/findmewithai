@@ -180,6 +180,57 @@ export const FoundingPage: React.FC = () => {
         </div>
       </div>
 
+      {/* ── WHAT IS THIS? ───────────────────────────────────────── */}
+      <div style={{ maxWidth: '760px', margin: '72px auto 0', padding: '0 24px' }}>
+        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+          <p style={{ fontSize: '12px', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#a78bfa', marginBottom: '10px' }}>
+            New here? Here's what findmewith.ai does
+          </p>
+          <h2 style={{ fontSize: isMobile ? '24px' : '34px', fontWeight: 900, color: 'white', lineHeight: 1.2, margin: 0 }}>
+            When someone types a question into ChatGPT, Gemini, or Perplexity<br />
+            — does your business come up?
+          </h2>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: '16px', marginBottom: '24px' }}>
+          {[
+            {
+              step: '1',
+              emoji: '🔍',
+              title: 'You enter your website',
+              desc: 'Takes 10 seconds. Just type your URL and we get to work.',
+            },
+            {
+              step: '2',
+              emoji: '📊',
+              title: 'We scan every AI search engine',
+              desc: 'We check how ChatGPT, Google Gemini, and Perplexity see your business right now.',
+            },
+            {
+              step: '3',
+              emoji: '✅',
+              title: 'You get a score and a fix list',
+              desc: 'See exactly where AI finds you and where it doesn\'t. We tell you what to add to your site to show up.',
+            },
+          ].map((card, i) => (
+            <div key={i} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: '16px', padding: '24px 20px', textAlign: 'center' }}>
+              <div style={{ fontSize: '32px', marginBottom: '12px' }}>{card.emoji}</div>
+              <div style={{ display: 'inline-block', background: 'rgba(124,58,237,0.25)', color: '#a78bfa', fontSize: '11px', fontWeight: 800, borderRadius: '100px', padding: '3px 10px', marginBottom: '10px', letterSpacing: '0.06em' }}>
+                STEP {card.step}
+              </div>
+              <div style={{ fontWeight: 800, fontSize: '15px', color: 'white', marginBottom: '8px' }}>{card.title}</div>
+              <div style={{ fontSize: '13px', color: '#9ca3af', lineHeight: 1.6 }}>{card.desc}</div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.25)', borderRadius: '14px', padding: '20px 24px', textAlign: 'center' }}>
+          <p style={{ margin: 0, fontSize: isMobile ? '14px' : '15px', color: '#c4b5fd', lineHeight: 1.7 }}>
+            <strong style={{ color: 'white' }}>The short version:</strong> AI search is replacing Google for millions of people. Most businesses are invisible in it and don't know it. findmewith.ai shows you exactly where you stand and exactly how to fix it. No tech skills needed.
+          </p>
+        </div>
+      </div>
+
       {/* ── WHAT'S INCLUDED ─────────────────────────────────────── */}
       <div style={{ maxWidth: '760px', margin: '64px auto 0', padding: '0 24px' }}>
         <h2 style={{ fontSize: isMobile ? '22px' : '28px', fontWeight: 800, textAlign: 'center', marginBottom: '8px', color: 'white' }}>
