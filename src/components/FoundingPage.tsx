@@ -56,6 +56,123 @@ const FAQS: { q: string; a: string }[] = [
   },
 ];
 
+// ── Confetti data (fixed so it doesn't re-randomise on render) ────────────────
+const CONFETTI_COLORS = ['#7c3aed', '#a78bfa', '#f59e0b', '#fbbf24', '#ffffff', '#ec4899', '#4f46e5'];
+const CONFETTI_PIECES = Array.from({ length: 52 }, (_, i) => ({
+  id: i,
+  left: (i * 1.97) % 100,
+  color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+  dur: 2.4 + (i % 9) * 0.28,
+  delay: (i % 13) * 0.18,
+  size: 6 + (i % 6) * 1.5,
+  isCircle: i % 3 !== 0,
+  drift: ((i % 5) - 2) * 30, // px horizontal drift
+}));
+
+const FounderSuccessScreen: React.FC = () => {
+  const width = useWindowWidth();
+  const isMobile = width < 640;
+
+  return (
+    <div style={{ minHeight: '100vh', background: '#0d0118', color: 'white', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', overflow: 'hidden', position: 'relative' }}>
+      {/* ── Confetti ── */}
+      <style>{`
+        @keyframes confettiFall {
+          0%   { transform: translateY(-20px) translateX(0) rotate(0deg); opacity: 1; }
+          80%  { opacity: 1; }
+          100% { transform: translateY(100vh) translateX(var(--drift)) rotate(540deg); opacity: 0; }
+        }
+        @keyframes popIn {
+          0%   { transform: scale(0.4); opacity: 0; }
+          70%  { transform: scale(1.1); }
+          100% { transform: scale(1); opacity: 1; }
+        }
+        @keyframes fadeUp {
+          from { opacity: 0; transform: translateY(20px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
+      {CONFETTI_PIECES.map(p => (
+        <div key={p.id} style={{
+          position: 'fixed',
+          top: '-12px',
+          left: `${p.left}%`,
+          width: `${p.size}px`,
+          height: p.isCircle ? `${p.size}px` : `${p.size * 1.6}px`,
+          borderRadius: p.isCircle ? '50%' : '2px',
+          background: p.color,
+          opacity: 0,
+          '--drift': `${p.drift}px`,
+          animation: `confettiFall ${p.dur}s ${p.delay}s ease-in forwards`,
+          pointerEvents: 'none',
+          zIndex: 10,
+        } as React.CSSProperties} />
+      ))}
+
+      {/* ── Content ── */}
+      <div style={{ maxWidth: '640px', margin: '0 auto', padding: isMobile ? '60px 20px 40px' : '80px 24px 60px', textAlign: 'center', position: 'relative', zIndex: 20 }}>
+
+        {/* Animated check circle */}
+        <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '88px', height: '88px', borderRadius: '50%', background: 'rgba(245,158,11,0.15)', border: '3px solid #f59e0b', marginBottom: '28px', animation: 'popIn 0.6s 0.3s both' }}>
+          <Check size={40} color="#f59e0b" strokeWidth={3} />
+        </div>
+
+        {/* Founder badge */}
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.4)', borderRadius: '100px', padding: '6px 16px', fontSize: '11px', fontWeight: 800, letterSpacing: '0.1em', color: '#fbbf24', marginBottom: '20px', textTransform: 'uppercase', animation: 'fadeUp 0.5s 0.5s both' }}>
+          <Flame size={12} /> Founding Member
+        </div>
+
+        <h1 style={{ fontSize: isMobile ? '30px' : '40px', fontWeight: 900, margin: '0 0 16px', lineHeight: 1.15, animation: 'fadeUp 0.5s 0.65s both' }}>
+          Welcome to the club. 🎉
+        </h1>
+        <p style={{ fontSize: isMobile ? '16px' : '18px', color: '#c4b5fd', lineHeight: 1.7, margin: '0 0 40px', animation: 'fadeUp 0.5s 0.8s both' }}>
+          You're officially one of the 50 Founding Members of findmewith.ai. Your lifetime Pro access is active and every feature we ever ship is yours automatically.
+        </p>
+
+        {/* What you unlocked — 3 cards */}
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: '12px', marginBottom: '40px', animation: 'fadeUp 0.5s 0.95s both' }}>
+          {[
+            { icon: <Zap size={20} color="#f59e0b" />, title: 'Full Pro Access', desc: 'Everything unlocked right now.' },
+            { icon: <Repeat size={20} color="#f59e0b" />, title: 'Weekly Monitoring', desc: 'Your site re-scanned automatically.' },
+            { icon: <Shield size={20} color="#f59e0b" />, title: 'Every Future Feature', desc: 'Grandfathered in forever.' },
+          ].map((card, i) => (
+            <div key={i} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: '12px', padding: '18px 16px', textAlign: 'center' }}>
+              <div style={{ marginBottom: '8px' }}>{card.icon}</div>
+              <div style={{ fontWeight: 700, fontSize: '14px', marginBottom: '4px' }}>{card.title}</div>
+              <div style={{ fontSize: '12px', color: '#9ca3af' }}>{card.desc}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* What happens next */}
+        <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', padding: isMobile ? '24px 20px' : '28px 32px', textAlign: 'left', marginBottom: '32px', animation: 'fadeUp 0.5s 1.1s both' }}>
+          <p style={{ margin: '0 0 16px', fontWeight: 700, fontSize: '15px', color: '#f3f4f6' }}>What happens next</p>
+          {[
+            'Check your inbox — a welcome email is on its way with everything you need.',
+            'Log in to your dashboard and run your first scan (or keep the one you already have).',
+            'As new features ship, they just appear in your account. No action needed.',
+          ].map((step, i) => (
+            <div key={i} style={{ display: 'flex', gap: '12px', marginBottom: i < 2 ? '12px' : 0, alignItems: 'flex-start' }}>
+              <div style={{ flexShrink: 0, width: '22px', height: '22px', borderRadius: '50%', background: '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, marginTop: '1px' }}>{i + 1}</div>
+              <p style={{ margin: 0, fontSize: '14px', color: '#d1d5db', lineHeight: 1.6 }}>{step}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* CTA */}
+        <div style={{ animation: 'fadeUp 0.5s 1.25s both' }}>
+          <a href="/" style={{ display: 'inline-block', background: 'linear-gradient(135deg, #7c3aed, #4f46e5)', color: 'white', fontWeight: 700, fontSize: '16px', padding: '16px 40px', borderRadius: '12px', textDecoration: 'none', marginBottom: '16px' }}>
+            Go to my dashboard →
+          </a>
+          <p style={{ margin: '12px 0 0', fontSize: '13px', color: '#6b7280' }}>
+            Questions? We're at <a href="mailto:hello@findmewith.ai" style={{ color: '#a78bfa', textDecoration: 'none' }}>hello@findmewith.ai</a>
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const FoundingPage: React.FC = () => {
   const width = useWindowWidth();
   const isMobile = width < 700;
@@ -66,6 +183,15 @@ export const FoundingPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState('');
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('payment') === 'success') {
+      setShowSuccess(true);
+      window.history.replaceState({}, '', '/founding');
+    }
+  }, []);
 
   useEffect(() => {
     fetch(`${BACKEND}/api/founding-members-count`)
@@ -73,6 +199,8 @@ export const FoundingPage: React.FC = () => {
       .then(d => { setSpotsLeft(d.spotsLeft ?? (TOTAL_SPOTS - SEED)); setSpotsLoaded(true); })
       .catch(() => { setSpotsLeft(TOTAL_SPOTS - SEED); setSpotsLoaded(true); });
   }, []);
+
+  if (showSuccess) return <FounderSuccessScreen />;
 
   const spotsFilled = TOTAL_SPOTS - spotsLeft;
   const fillPct = Math.min(100, Math.round((spotsFilled / TOTAL_SPOTS) * 100));

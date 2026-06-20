@@ -627,6 +627,134 @@ app.post('/api/webhook',
             console.warn(`[webhook] could not auto-cancel subscription for ${email}:`, cancelErr.message);
           }
         }
+        // Send founder welcome email for lifetime (Founding Member) purchases
+        if (session.metadata?.plan === 'lifetime' && email) {
+          const founderEmailHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Welcome to the Founding Member club</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f4f5;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;padding:32px 16px;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width:580px;">
+
+          <!-- Founder badge -->
+          <tr>
+            <td align="center" style="padding-bottom:24px;">
+              <span style="display:inline-block;background-color:#fef3c7;border:1px solid #f59e0b;border-radius:999px;padding:6px 16px;font-size:12px;font-weight:700;color:#92400e;letter-spacing:0.08em;text-transform:uppercase;">Founding Member</span>
+            </td>
+          </tr>
+
+          <!-- Main card -->
+          <tr>
+            <td style="background-color:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.06);">
+
+              <!-- Purple top bar -->
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="background-color:#4f1d96;padding:36px 40px 32px;">
+                    <p style="margin:0 0 10px;font-size:12px;font-weight:700;color:#f59e0b;letter-spacing:0.12em;text-transform:uppercase;">You're in. Welcome.</p>
+                    <h1 style="margin:0 0 14px;font-size:30px;font-weight:800;color:#ffffff;line-height:1.2;">You just claimed a Founding Member spot.</h1>
+                    <p style="margin:0;font-size:16px;color:#c4b5fd;line-height:1.6;">One of 50. Lifetime Pro access. Every feature we ever ship. $0/month forever.</p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Body -->
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="padding:36px 40px 32px;">
+                    <p style="margin:0 0 20px;font-size:16px;color:#374151;line-height:1.7;">
+                      I'm genuinely glad you're here. findmewith.ai is early and we're building it fast. As a Founding Member you're not just getting a great deal, you're also shaping what this becomes.
+                    </p>
+
+                    <!-- What's active now -->
+                    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f3ff;border-radius:12px;margin-bottom:28px;">
+                      <tr>
+                        <td style="padding:20px 24px;">
+                          <p style="margin:0 0 14px;font-size:13px;font-weight:700;color:#6d28d9;text-transform:uppercase;letter-spacing:0.08em;">What's active in your account right now</p>
+                          <table cellpadding="0" cellspacing="0">
+                            <tr><td style="padding:4px 0;font-size:14px;color:#374151;">&#9989;&nbsp; Full AI Visibility Score and scan history</td></tr>
+                            <tr><td style="padding:4px 0;font-size:14px;color:#374151;">&#9989;&nbsp; Unlimited site scans</td></tr>
+                            <tr><td style="padding:4px 0;font-size:14px;color:#374151;">&#9989;&nbsp; Weekly automatic re-scan and monitoring</td></tr>
+                            <tr><td style="padding:4px 0;font-size:14px;color:#374151;">&#9989;&nbsp; Full snippet library and schema code</td></tr>
+                            <tr><td style="padding:4px 0;font-size:14px;color:#374151;">&#9989;&nbsp; Unlimited team member access</td></tr>
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <!-- Coming soon -->
+                    <table width="100%" cellpadding="0" cellspacing="0" style="background:#fffbeb;border:1px solid #fcd34d;border-radius:12px;margin-bottom:28px;">
+                      <tr>
+                        <td style="padding:20px 24px;">
+                          <p style="margin:0 0 14px;font-size:13px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:0.08em;">Coming soon, yours automatically</p>
+                          <table cellpadding="0" cellspacing="0">
+                            <tr><td style="padding:3px 0;font-size:14px;color:#374151;">&#8594;&nbsp; Competitor intelligence in AI search</td></tr>
+                            <tr><td style="padding:3px 0;font-size:14px;color:#374151;">&#8594;&nbsp; Keyword gap reports</td></tr>
+                            <tr><td style="padding:3px 0;font-size:14px;color:#374151;">&#8594;&nbsp; Industry benchmarks and scoring</td></tr>
+                            <tr><td style="padding:3px 0;font-size:14px;color:#374151;">&#8594;&nbsp; WordPress plugin for one-click setup</td></tr>
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <p style="margin:0 0 24px;font-size:15px;color:#374151;line-height:1.7;">
+                      Head to your dashboard and run a scan if you haven't yet. If something doesn't look right or you have a question, reply to this email and I'll personally get back to you.
+                    </p>
+
+                    <!-- CTA -->
+                    <table cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
+                      <tr>
+                        <td style="background-color:#7c3aed;border-radius:10px;">
+                          <a href="https://www.findmewith.ai" style="display:inline-block;padding:14px 32px;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;">Go to my dashboard &rarr;</a>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <p style="margin:0;font-size:15px;color:#374151;line-height:1.7;">
+                      Thank you for being early. It means a lot.<br><br>
+                      Brad Parnell<br>
+                      <span style="color:#6b7280;">Founder, findmewith.ai</span>
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Footer -->
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="padding:20px 40px 28px;border-top:1px solid #f3f4f6;">
+                    <p style="margin:0;font-size:12px;color:#9ca3af;text-align:center;">
+                      findmewith.ai &nbsp;|&nbsp; <a href="mailto:hello@findmewith.ai" style="color:#9ca3af;">hello@findmewith.ai</a>
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+          try {
+            await sendEmail({
+              to: email,
+              subject: 'Welcome to the Founding Member club',
+              html: founderEmailHtml,
+            });
+            console.log(`[webhook] founder welcome email sent to ${email}`);
+          } catch (emailErr) {
+            console.warn(`[webhook] could not send founder welcome email to ${email}:`, emailErr.message);
+          }
+        }
         // Also persist to Supabase for cross-process visibility
         if (supabaseAdmin) {
           supabaseAdmin.from('pro_upgrades').upsert({
