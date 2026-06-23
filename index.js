@@ -1272,6 +1272,34 @@ app.post('/api/leads', (req, res) => {
   res.json({ ok: true });
 });
 
+// ── POST /api/admin/bulk-send ─────────────────────────────────────────────────
+app.post('/api/admin/bulk-send', async (req, res) => {
+  const { secret, recipients, subject, html } = req.body;
+  if (secret !== 'fmw-admin-2024') return res.status(403).json({ error: 'Forbidden' });
+  if (!recipients || !subject || !html) return res.status(400).json({ error: 'Missing fields' });
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return res.status(500).json({ error: 'RESEND_API_KEY not set' });
+
+  const results = [];
+  for (const to of recipients) {
+    try {
+      const r = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ from: 'Brad at findmewith.ai <hello@findmewith.ai>', to, subject, html }),
+      });
+      const d = await r.json();
+      results.push({ to, ok: r.ok, id: d.id, error: d.message });
+      console.log(`[bulk-send] ${to} → ${r.ok ? 'ok' : 'error: ' + d.message}`);
+      // Small delay to respect Resend rate limits
+      await new Promise(resolve => setTimeout(resolve, 300));
+    } catch (e) {
+      results.push({ to, ok: false, error: e.message });
+    }
+  }
+  res.json({ sent: results.filter(r => r.ok).length, failed: results.filter(r => !r.ok).length, results });
+});
+
 // ── GET /api/debug-email (temp) ───────────────────────────────────────────────
 app.get('/api/debug-email', async (req, res) => {
   const apiKey = process.env.RESEND_API_KEY;
