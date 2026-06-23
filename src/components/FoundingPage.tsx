@@ -3,7 +3,7 @@ import { Flame, Check, Lock, Zap, BarChart2, Users, Globe, Repeat, Shield, Chevr
 
 const BACKEND = import.meta.env.VITE_BACKEND_URL || 'https://findmewithai-production.up.railway.app';
 const TOTAL_SPOTS = 50;
-const SEED = 4; // pre-seeded claimed count so it never shows 0
+const SEED = 26; // pre-seeded claimed count so it never shows 0
 
 function useWindowWidth() {
   const [width, setWidth] = useState(window.innerWidth);
