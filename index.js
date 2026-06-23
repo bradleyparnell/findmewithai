@@ -1272,7 +1272,7 @@ app.post('/api/leads', (req, res) => {
   res.json({ ok: true });
 });
 
-// ── POST /api/admin/bulk-send ─────────────────────────────────────────────────
+// ── POST /api/admin/bulk-send (v2) ───────────────────────────────────────────
 app.post('/api/admin/bulk-send', async (req, res) => {
   const { secret, recipients, subject, html } = req.body;
   if (secret !== 'fmw-admin-2024') return res.status(403).json({ error: 'Forbidden' });
