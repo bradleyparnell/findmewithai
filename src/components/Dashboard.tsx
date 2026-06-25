@@ -259,8 +259,8 @@ export const Dashboard: React.FC<Props> = ({ user, isPro, previewFree, setPrevie
     if (isPro) return;
     fetch(`${BACKEND}/api/founding-members-count`)
       .then(r => r.json())
-      .then(d => setSpotsLeft(d.spotsLeft ?? 50))
-      .catch(() => setSpotsLeft(50));
+      .then(d => setSpotsLeft(d.spotsLeft ?? 24))
+      .catch(() => setSpotsLeft(24));
   }, [isPro]);
   // Team member sidebar modal
   const [showTeamModal, setShowTeamModal]   = useState(false);
