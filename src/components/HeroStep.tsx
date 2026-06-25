@@ -19,6 +19,14 @@ interface Props {
   onGoToLogin?: () => void;
 }
 
+const SCAN_SIGNALS = [
+  { label: 'Checking your homepage content', msgIdx: 0 },
+  { label: 'Looking for business info signals', msgIdx: 1 },
+  { label: 'Scanning for AI visibility gaps', msgIdx: 2 },
+  { label: 'Measuring your competitor exposure', msgIdx: 3 },
+  { label: 'Building your action plan', msgIdx: 4 },
+];
+
 const LOADING_MESSAGES = [
   { text: 'Checking if ChatGPT knows your business exists…', fear: '68% of businesses are completely invisible to AI search.' },
   { text: 'Looking at what your competitors tell AI about themselves…', fear: 'Your competitors may already be showing up where you aren\'t.' },
