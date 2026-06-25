@@ -105,20 +105,20 @@ export const HeroStep: React.FC<Props> = ({ onAnalyzed, user, onGoToDashboard, o
     {
       icon: <Search size={20} />,
       num: '1',
-      title: 'See Where You Stand',
-      desc: 'Get a free score showing exactly what AI knows about your business right now — no jargon, just plain English.',
+      title: 'We scan ChatGPT right now',
+      desc: 'We check whether ChatGPT, Google AI, and Perplexity would recommend your business to a customer — and give you a score out of 100.',
     },
     {
       icon: <FileText size={20} />,
       num: '2',
-      title: 'Learn What to Fix',
-      desc: 'We show you the specific gaps holding you back and give you the exact words to add to your website.',
+      title: 'You get a plain-English checklist',
+      desc: 'Your score page shows exactly what\'s missing — no tech jargon. Just a simple list of what to fix and why it matters.',
     },
     {
       icon: <Code2 size={20} />,
       num: '3',
-      title: 'Get Found by AI',
-      desc: 'One simple addition to your site tells AI tools who you are, what you do, and why to recommend you.',
+      title: 'We give you the exact words to add',
+      desc: 'Copy and paste our suggested text onto your website. Most fixes take under 15 minutes — and then AI starts recommending you.',
     },
   ];
 
@@ -134,15 +134,38 @@ export const HeroStep: React.FC<Props> = ({ onAnalyzed, user, onGoToDashboard, o
 
       <div style={{ maxWidth: '800px', margin: '0 auto', padding: isMobile ? '32px 20px 60px' : '64px 28px 80px', textAlign: 'center' }}>
 
-        {/* Main headline — big and clean */}
+        {/* Context strip — the concrete "aha" scenario */}
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'white', border: '1.5px solid #e9d5ff', borderRadius: '100px', padding: '8px 18px', marginBottom: '24px', boxShadow: '0 2px 10px rgba(124,58,237,0.08)' }}>
+          <span style={{ fontSize: '16px' }}>🤖</span>
+          <span style={{ fontSize: isMobile ? '13px' : '14px', color: '#374151', fontWeight: 500 }}>
+            Customers now ask ChatGPT "find me a plumber near me" — not just Google.
+          </span>
+        </div>
+
+        {/* Main headline */}
         <h1 style={{ fontSize: isMobile ? '38px' : '60px', fontWeight: 900, lineHeight: 1.1, color: '#111827', marginBottom: '16px', letterSpacing: isMobile ? '-1px' : '-2px' }}>
           Does AI recommend<br />
           <span style={{ color: '#7c3aed' }}>your business?</span>
         </h1>
 
-        {/* One-line subtext only */}
-        <p style={{ fontSize: isMobile ? '16px' : '20px', color: '#6b7280', marginBottom: isMobile ? '28px' : '48px', lineHeight: 1.5, fontWeight: 400 }}>
-          Find out in 30 seconds — free, no credit card.
+        {/* Subtext — what it does + who it's for */}
+        <p style={{ fontSize: isMobile ? '16px' : '20px', color: '#6b7280', lineHeight: 1.6, fontWeight: 400, maxWidth: '580px', margin: '0 auto', marginBottom: '12px' }}>
+          Type your website below. We check ChatGPT, Google AI, and Perplexity — and give you a free score plus a plain-English list of exactly what to fix. No tech knowledge needed.
+        </p>
+
+        {/* Who it's for — business type chips */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: isMobile ? '28px' : '40px' }}>
+          <span style={{ fontSize: '13px', color: '#9ca3af', marginRight: '2px' }}>For:</span>
+          {['Plumbers', 'Dentists', 'Restaurants', 'Realtors', 'Lawyers', 'Contractors', 'Shops'].map(type => (
+            <span key={type} style={{ background: '#f5f3ff', color: '#7c3aed', border: '1px solid #e9d5ff', borderRadius: '100px', padding: '3px 10px', fontSize: '12px', fontWeight: 600 }}>
+              {type}
+            </span>
+          ))}
+        </div>
+
+        {/* Input label */}
+        <p style={{ fontSize: '14px', fontWeight: 600, color: '#374151', marginBottom: '10px', textAlign: 'center' }}>
+          Enter your business website address:
         </p>
 
         {/* SEMrush-style: pill bar + separate pill button */}
