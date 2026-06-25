@@ -133,7 +133,7 @@ export const HeroStep: React.FC<Props> = ({ onAnalyzed, user, onGoToDashboard, o
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(150deg, #ede9fe 0%, #ffffff 55%, #fef3c7 100%)' }}>
       {/* Logo bar */}
-      <div style={{ padding: isMobile ? '16px 20px' : '20px 28px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+      <div style={{ padding: isMobile ? '16px 20px' : '20px 28px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
         <div style={{ width: '34px', height: '34px', background: '#7c3aed', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <Search size={17} color="white" />
         </div>
