@@ -1395,6 +1395,37 @@ app.get('/api/admin/stats', async (req, res) => {
   }
 });
 
+// ── GET /api/admin/recent-signups ─────────────────────────────────────────────
+app.get('/api/admin/recent-signups', async (req, res) => {
+  if (req.query.secret !== 'fmw-admin-2024') return res.status(403).json({ error: 'Forbidden' });
+  if (!supabaseAdmin) return res.status(503).json({ error: 'Supabase not configured' });
+  const since = req.query.since || new Date(Date.now() - 15 * 60 * 1000).toISOString();
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('scans')
+      .select('email, url, score, created_at')
+      .gt('created_at', since)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    res.json(data || []);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── GET /api/admin/recent-upgrades ────────────────────────────────────────────
+app.get('/api/admin/recent-upgrades', async (req, res) => {
+  if (req.query.secret !== 'fmw-admin-2024') return res.status(403).json({ error: 'Forbidden' });
+  const since = req.query.since ? new Date(req.query.since) : new Date(Date.now() - 15 * 60 * 1000);
+  const recent = [];
+  for (const [email, sub] of subscriptions.entries()) {
+    if (sub.createdAt && new Date(sub.createdAt) > since) {
+      recent.push({ email, plan: sub.plan, createdAt: sub.createdAt });
+    }
+  }
+  res.json(recent);
+});
+
 // ── SPA fallback ──────────────────────────────────────────────────────────────
 app.get('*', (_req, res) => {
   const index = join(__dirname, '../dist/index.html');
