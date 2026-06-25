@@ -69,6 +69,26 @@ const FINDING_WEB_INSTRUCTIONS: Record<string, string> = {
   has_og_tags:             'Add Open Graph meta tags to every page: og:title, og:description, og:image, and og:url. This controls how the page looks when shared on social media and in AI-generated summaries.',
 };
 
+// --- Inline copy templates (ready-to-paste text for each fix) ---
+const INLINE_COPY_TEMPLATES: Record<string, (siteTitle: string, url: string) => string> = {
+  has_meta_description: (t) =>
+    `${t || 'Your business'} — [describe what you do in 15 words]. Serving [your city or region]. [Short CTA, e.g. "Free consultation available."]`,
+  has_title_tag: (t) =>
+    `${t || 'Your Business'} — [Primary Service] in [City, State]`,
+  has_contact_info: (_t, url) => {
+    const domain = url.replace(/^https?:\/\//, '').replace(/\/$/, '');
+    return `Phone: [xxx-xxx-xxxx]\nEmail: [hello@${domain}]\nAddress: [Street, City, State, ZIP]\nHours: [Mon–Fri 9am–5pm]\nWebsite: ${url}`;
+  },
+  has_llms_txt: (t, url) =>
+    `# ${t || 'About Us'}\n\nBusiness: ${t || '[Your Business Name]'}\nWebsite: ${url}\nWhat we do: [1–2 sentences describing your service]\nWho we serve: [Your ideal customer]\nLocation: [City, State]\nContact: [email or phone]\n\n## Key Services\n- [Service 1]\n- [Service 2]\n- [Service 3]\n\n## Why choose us\n[What makes you different — 1–2 sentences]`,
+  has_about_page: (t) =>
+    `[Your business name] has been [what you do] since [year].\n\nWe help [your ideal customer] with [the main problem you solve].\n\nFounded by [name], we've helped [number or type of customers] [achieve what result].\n\n[Your values or what makes you different in 1–2 sentences.]\n\nHave a question? We'd love to hear from you.`,
+  has_faq_schema: (t) =>
+    `Q: What does ${t || 'your business'} do?\nA: [Answer in 1–2 sentences]\n\nQ: Who do you typically help?\nA: [Describe your ideal customer]\n\nQ: How much does it cost?\nA: [Give a price range, or "Contact us for a free quote"]\n\nQ: How do I get started?\nA: [Simple 1–2 step process — e.g. "Call us or book online"]\n\nQ: Where are you located?\nA: [Your city/region and service area]`,
+  has_og_tags: (t, url) =>
+    `og:title: ${t || '[Business Name]'} — [5-word description of what you do]\nog:description: [1–2 sentence summary of your business and who you serve]\nog:image: ${url}/your-logo.jpg\nog:url: ${url}`,
+};
+
 // --- Orchard tier config ---
 const TIER_1_IDS = ['has_llms_txt', 'has_meta_description', 'has_contact_info', 'has_robots_txt', 'has_title_tag', 'has_og_tags'];
 const TIER_2_IDS = ['has_schema_org', 'has_organization_schema', 'has_faq_schema', 'has_about_page', 'has_sitemap', 'has_h1', 'https_enabled'];
@@ -302,10 +322,14 @@ interface OrchardTierProps {
   accentColor: string;
   bgColor: string;
   borderColor: string;
+  siteUrl?: string;
+  siteTitle?: string;
 }
 
-const OrchardTier: React.FC<OrchardTierProps> = ({ emoji, title, subtitle, items, checked, onToggle, onNavigate, onUpgrade, isPro, accentColor, bgColor, borderColor }) => {
+const OrchardTier: React.FC<OrchardTierProps> = ({ emoji, title, subtitle, items, checked, onToggle, onNavigate, onUpgrade, isPro, accentColor, bgColor, borderColor, siteUrl = '', siteTitle = '' }) => {
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [showCopy, setShowCopy] = useState<string | null>(null);
+  const [copiedItem, setCopiedItem] = useState<string | null>(null);
   const allChecked = items.every(f => checked.has(f.id));
   const checkedCount = items.filter(f => checked.has(f.id)).length;
 
@@ -438,6 +462,45 @@ const OrchardTier: React.FC<OrchardTierProps> = ({ emoji, title, subtitle, items
                         </button>
                       )
                     )}
+                    {/* ✨ Inline copy generator */}
+                    {INLINE_COPY_TEMPLATES[f.id] && (() => {
+                      const tmpl = INLINE_COPY_TEMPLATES[f.id]!(siteTitle, siteUrl);
+                      const rows = Math.min(12, tmpl.split('\n').length + 2);
+                      return (
+                        <div>
+                          <button
+                            onClick={() => setShowCopy(showCopy === f.id ? null : f.id)}
+                            style={{ fontSize: '12px', fontWeight: 700, color: '#5b21b6', background: '#f5f3ff', border: '1.5px solid #ddd6fe', borderRadius: '8px', padding: '7px 14px', cursor: 'pointer', width: '100%', textAlign: 'left' }}
+                          >
+                            ✨ {showCopy === f.id ? 'Hide template' : 'Get ready-to-paste text →'}
+                          </button>
+                          {showCopy === f.id && (
+                            <div style={{ marginTop: '8px' }}>
+                              <textarea
+                                readOnly
+                                value={tmpl}
+                                rows={rows}
+                                style={{ width: '100%', fontSize: '12px', color: '#374151', background: '#f9fafb', border: '1px solid #ddd6fe', borderRadius: '8px', padding: '10px 12px', fontFamily: 'monospace', resize: 'vertical', lineHeight: 1.6, boxSizing: 'border-box' }}
+                                onFocus={e => (e.target as HTMLTextAreaElement).select()}
+                              />
+                              <button
+                                onClick={() => {
+                                  navigator.clipboard.writeText(tmpl).catch(() => {});
+                                  setCopiedItem(f.id);
+                                  setTimeout(() => setCopiedItem(null), 2500);
+                                }}
+                                style={{ marginTop: '6px', fontSize: '12px', fontWeight: 700, color: copiedItem === f.id ? '#16a34a' : '#5b21b6', background: copiedItem === f.id ? '#f0fdf4' : 'white', border: `1.5px solid ${copiedItem === f.id ? '#86efac' : '#ddd6fe'}`, borderRadius: '8px', padding: '6px 14px', cursor: 'pointer', width: '100%' }}
+                              >
+                                {copiedItem === f.id ? '✓ Copied!' : '📋 Copy to clipboard'}
+                              </button>
+                              <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '5px', lineHeight: 1.5 }}>
+                                Fill in the [bracketed] parts, then paste it wherever the fix asks you to.
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                     {/* Mark as done */}
                     <button
                       onClick={() => { onToggle(f.id); setExpanded(null); }}
@@ -643,6 +706,77 @@ export const ScoreStep: React.FC<Props> = ({ result, onFixContent, onGetCode, on
         </div>
       </div>
 
+      {/* AI Market Activity — competitor context */}
+      {result.ai_market_data && (result.ai_market_data.total_volume ?? 0) > 0 && (() => {
+        const { top_keyword, top_volume, trend_direction } = result.ai_market_data!;
+        const vol = (top_volume ?? 0) >= 1000
+          ? `${((top_volume ?? 0) / 1000).toFixed(1)}K`
+          : String(top_volume ?? 0);
+        return (
+          <div style={{ background: '#0D0D1A', border: '1.5px solid rgba(124,58,237,0.35)', borderRadius: '16px', padding: '20px 24px', marginBottom: '20px', position: 'relative', overflow: 'hidden' }}>
+            {/* Subtle radar ring */}
+            <div style={{ position: 'absolute', top: '50%', right: '-30px', width: '160px', height: '160px', borderRadius: '50%', border: '1px solid rgba(124,58,237,0.12)', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+            <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(124,58,237,0.8)', marginBottom: '10px', position: 'relative' }}>
+              📡 AI Market Activity
+            </div>
+            <div style={{ fontSize: '19px', fontWeight: 800, color: 'white', marginBottom: '6px', lineHeight: 1.35, position: 'relative' }}>
+              "{top_keyword}" is searched {vol} times a month
+            </div>
+            <div style={{ fontSize: '14px', color: 'rgba(255,255,255,0.55)', lineHeight: 1.65, marginBottom: trend_direction === 'growing' ? '12px' : '0', position: 'relative' }}>
+              AI tools are recommending someone for that search right now.{' '}
+              {score < 70
+                ? "Based on your score, it's probably not you — yet. The fixes below change that."
+                : "You're well positioned to be that recommendation — keep your signals strong."}
+            </div>
+            {trend_direction === 'growing' && (
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: '100px', padding: '5px 14px', fontSize: '12px', color: '#fbbf24', fontWeight: 600, position: 'relative' }}>
+                ↗ This search is growing — the window is open right now
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* Top 3 Blind Spots — diagnosis cards */}
+      {failing.length > 0 && (() => {
+        const top3 = failing.slice(0, 3);
+        return (
+          <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '20px', padding: '24px', marginBottom: '20px' }}>
+            <div style={{ fontSize: '17px', fontWeight: 800, color: '#111827', marginBottom: '4px' }}>🔍 Your top {Math.min(3, failing.length)} AI blind spots</div>
+            <div style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '16px' }}>
+              These specific gaps are the biggest reasons AI isn't recommending your business right now.
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {top3.map((f, i) => {
+                const plain = FINDING_PLAIN_ENGLISH[f.id];
+                return (
+                  <div key={f.id} style={{ display: 'flex', gap: '14px', alignItems: 'flex-start', background: i === 0 ? '#fffbeb' : '#f9fafb', border: `1.5px solid ${i === 0 ? '#fde68a' : '#f0f0f0'}`, borderRadius: '14px', padding: '16px' }}>
+                    <div style={{ width: '28px', height: '28px', flexShrink: 0, background: i === 0 ? '#d97706' : '#e5e7eb', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: 800, color: i === 0 ? 'white' : '#6b7280', marginTop: '1px' }}>
+                      {i + 1}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '14px', fontWeight: 700, color: '#111827', marginBottom: plain ? '5px' : '0', lineHeight: 1.4 }}>
+                        {FINDING_QUESTIONS[f.id] ?? f.label}
+                      </div>
+                      {plain && (
+                        <div style={{ fontSize: '13px', color: i === 0 ? '#78350f' : '#6b7280', lineHeight: 1.6 }}>
+                          {plain.why}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {failing.length > 3 && (
+              <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '10px', textAlign: 'center' }}>
+                + {failing.length - 3} more in the action plan below
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       {/* 🌳 Orchard action plan */}
       {failing.length > 0 && (
         <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '20px', padding: '24px', marginBottom: '20px' }}>
@@ -770,6 +904,8 @@ export const ScoreStep: React.FC<Props> = ({ result, onFixContent, onGetCode, on
               accentColor="#7c3aed"
               bgColor="#f5f3ff"
               borderColor="#ddd6fe"
+              siteUrl={result.url}
+              siteTitle={result.site_info?.title ?? ''}
             />
           )}
 

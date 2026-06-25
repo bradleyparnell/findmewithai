@@ -309,6 +309,25 @@ export const HeroStep: React.FC<Props> = ({ onAnalyzed, user, onGoToDashboard, o
               <div style={{ height: '100%', background: 'linear-gradient(90deg, #7c3aed, #f59e0b)', borderRadius: '99px', width: `${((loadingMsg + 1) / LOADING_MESSAGES.length) * 100}%`, transition: 'width 0.6s ease' }} />
             </div>
 
+            {/* Signal checklist — ticks off one by one */}
+            <div style={{ marginBottom: '14px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {SCAN_SIGNALS.map((sig, i) => {
+                const done = loadingMsg > sig.msgIdx;
+                const active = loadingMsg === sig.msgIdx;
+                return (
+                  <div key={sig.label} style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(255,255,255,0.04)', borderRadius: '8px', padding: '7px 12px', opacity: done || active ? 1 : 0.35, transition: 'opacity 0.4s ease' }}>
+                    <div style={{ width: '18px', height: '18px', borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 800, background: done ? 'rgba(16,185,129,0.2)' : active ? 'rgba(124,58,237,0.2)' : 'rgba(255,255,255,0.06)', border: `1.5px solid ${done ? '#34d399' : active ? '#7c3aed' : 'rgba(255,255,255,0.1)'}`, transition: 'all 0.3s ease' }}>
+                      {done ? <span style={{ color: '#34d399' }}>✓</span> : active ? <span style={{ color: '#7c3aed', animation: 'pingPulse 1s ease-in-out infinite' }}>·</span> : null}
+                    </div>
+                    <span style={{ fontSize: '12px', fontWeight: active ? 600 : 500, color: done ? '#34d399' : active ? 'white' : 'rgba(255,255,255,0.4)', transition: 'color 0.3s ease' }}>
+                      {sig.label}
+                      {active && <span style={{ marginLeft: '6px', color: 'rgba(124,58,237,0.8)', animation: 'fadeInUp 0.3s ease' }}>scanning…</span>}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+
             {/* Fear/hope fact */}
             <div style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: '10px', padding: '10px 14px', fontSize: '13px', color: '#fbbf24', fontWeight: 500, textAlign: 'left' }}>
               ⚡ {LOADING_MESSAGES[loadingMsg].fear}

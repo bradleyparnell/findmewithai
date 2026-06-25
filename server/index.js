@@ -43,12 +43,21 @@ async function sendEmail({ to, subject, html }) {
 }
 
 // ── Weekly report email builder ───────────────────────────────────────────────
-function buildWeeklyEmailHtml({ email, url, score, previousScore, topFix }) {
-  const delta = previousScore !== null ? score - previousScore : null;
-  const deltaText = delta === null ? '' : delta > 0 ? `▲ ${delta} pts from last week` : delta < 0 ? `▼ ${Math.abs(delta)} pts from last week` : 'No change from last week';
-  const deltaColor = delta > 0 ? '#16a34a' : delta < 0 ? '#dc2626' : '#6b7280';
+function buildWeeklyEmailHtml({ email, url, score, previousScore, topFix, topFixes }) {
+  const fixes = topFixes && topFixes.length ? topFixes : (topFix ? [topFix] : []);
+  const delta = previousScore !== null && previousScore !== undefined ? score - previousScore : null;
+  const deltaColor = delta !== null && delta > 0 ? '#16a34a' : delta !== null && delta < 0 ? '#dc2626' : '#6b7280';
   const scoreColor = score >= 70 ? '#16a34a' : score >= 45 ? '#f59e0b' : '#dc2626';
   const scoreLabel = score >= 70 ? 'Great visibility' : score >= 45 ? 'Getting there' : 'Needs attention';
+
+  const deltaHeadline = delta === null ? null
+    : delta > 0 ? `Your score went up ${delta} point${delta !== 1 ? 's' : ''} this week`
+    : delta < 0 ? `Your score dropped ${Math.abs(delta)} point${Math.abs(delta) !== 1 ? 's' : ''} this week`
+    : 'Your score held steady this week';
+  const deltaSubtext = delta === null ? null
+    : delta > 0 ? `Nice progress. Keep going and those improvements compound fast.`
+    : delta < 0 ? `Small dip — check the fix list below and knock one out this week.`
+    : `No change from last week. Pick one fix below and move the needle.`;
 
   return `<!DOCTYPE html>
 <html>
@@ -66,34 +75,40 @@ function buildWeeklyEmailHtml({ email, url, score, previousScore, topFix }) {
 
         <!-- Score card -->
         <tr><td style="background:white;padding:36px 40px;border-left:1px solid #e5e7eb;border-right:1px solid #e5e7eb;">
-          <div style="text-align:center;margin-bottom:28px;">
-            <div style="font-size:13px;color:#6b7280;margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;">Your AI Visibility Score</div>
-            <div style="font-size:72px;font-weight:900;color:${scoreColor};line-height:1;">${score}</div>
-            <div style="font-size:14px;font-weight:700;color:${scoreColor};margin-top:4px;">${scoreLabel}</div>
-            ${delta !== null ? `<div style="font-size:13px;color:${deltaColor};margin-top:8px;font-weight:600;">${deltaText}</div>` : ''}
+
+          ${deltaHeadline ? `<!-- Delta headline — leads the email -->
+          <div style="background:${delta > 0 ? '#f0fdf4' : delta < 0 ? '#fff1f1' : '#f9fafb'};border:1.5px solid ${delta > 0 ? '#86efac' : delta < 0 ? '#fca5a5' : '#e5e7eb'};border-radius:14px;padding:22px 26px;margin-bottom:24px;text-align:center;">
+            <div style="font-size:13px;font-weight:700;color:${deltaColor};text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">
+              ${delta > 0 ? '▲' : delta < 0 ? '▼' : '→'} Weekly Score Update
+            </div>
+            <div style="font-size:20px;font-weight:800;color:#111827;margin-bottom:4px;">${deltaHeadline}</div>
+            <div style="font-size:14px;color:#6b7280;line-height:1.6;">${deltaSubtext}</div>
+          </div>` : ''}
+
+          <!-- Score number -->
+          <div style="text-align:center;margin-bottom:24px;">
+            <div style="font-size:11px;color:#9ca3af;margin-bottom:6px;text-transform:uppercase;letter-spacing:1px;">Your AI Visibility Score</div>
+            <div style="font-size:64px;font-weight:900;color:${scoreColor};line-height:1;">${score}<span style="font-size:24px;font-weight:600;">/100</span></div>
+            <div style="font-size:13px;font-weight:700;color:${scoreColor};margin-top:4px;">${scoreLabel}</div>
           </div>
 
-          <div style="background:#f3f4f6;border-radius:10px;padding:14px 18px;margin-bottom:24px;font-size:13px;color:#374151;">
+          <div style="background:#f3f4f6;border-radius:10px;padding:12px 18px;margin-bottom:24px;font-size:13px;color:#374151;">
             <strong>Site scanned:</strong> <a href="${url}" style="color:#7c3aed;">${url}</a>
           </div>
 
-          <!-- Plain English summary -->
-          <div style="background:#fdf4ff;border:1.5px solid #e9d5ff;border-radius:12px;padding:20px 24px;margin-bottom:24px;">
-            <div style="font-size:15px;font-weight:700;color:#111827;margin-bottom:8px;">What this means for your business</div>
-            <div style="font-size:14px;color:#374151;line-height:1.7;">
-              ${score >= 70
-                ? 'AI tools like ChatGPT and Google AI are finding your business well. Keep it up — stay consistent and consider adding more detailed content.'
-                : score >= 45
-                ? 'You\'re on the radar for AI search, but there\'s room to grow. A few targeted improvements could get you recommended significantly more often.'
-                : 'Right now, AI tools would likely miss your business in search results. The good news: most fixes are straightforward and don\'t require technical expertise.'}
+          <!-- Top fixes -->
+          ${fixes.length > 0 ? `<div style="margin-bottom:28px;">
+            <div style="font-size:14px;font-weight:800;color:#111827;margin-bottom:12px;">
+              ${fixes.length === 1 ? '⚡ Your #1 priority this week' : `⚡ Top ${fixes.length} fixes to work on this week`}
             </div>
-          </div>
-
-          ${topFix ? `<!-- #1 Priority -->
-          <div style="background:linear-gradient(135deg,#f5f3ff,#fff);border:1.5px solid #c4b5fd;border-radius:12px;padding:20px 24px;margin-bottom:28px;">
-            <div style="font-size:11px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">⚡ Your #1 priority this week</div>
-            <div style="font-size:16px;font-weight:800;color:#111827;margin-bottom:8px;">${topFix.title}</div>
-            <div style="font-size:14px;color:#4b5563;line-height:1.65;">${topFix.description}</div>
+            ${fixes.map((fix, i) => `
+            <div style="background:${i === 0 ? 'linear-gradient(135deg,#fffbeb,#fff)' : '#f9fafb'};border:1.5px solid ${i === 0 ? '#fde68a' : '#e5e7eb'};border-radius:12px;padding:16px 20px;margin-bottom:10px;">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                <span style="font-size:11px;font-weight:800;color:${i === 0 ? '#d97706' : '#6b7280'};background:${i === 0 ? '#fef3c7' : '#f3f4f6'};border-radius:6px;padding:2px 8px;">#${i + 1}</span>
+              </div>
+              <div style="font-size:15px;font-weight:700;color:#111827;margin-bottom:5px;">${fix.title}</div>
+              <div style="font-size:13px;color:#4b5563;line-height:1.65;">${fix.description}</div>
+            </div>`).join('')}
           </div>` : ''}
 
           <!-- CTA -->
@@ -161,7 +176,8 @@ async function runWeeklyReports() {
 
       // Build and send email
       const topFix = newResult.suggestions?.[0] || null;
-      const html = buildWeeklyEmailHtml({ email, url: lastScan.url, score: newScore, previousScore, topFix });
+      const topFixes = newResult.suggestions?.slice(0, 3) || [];
+      const html = buildWeeklyEmailHtml({ email, url: lastScan.url, score: newScore, previousScore, topFix, topFixes });
       await sendEmail({
         to: email,
         subject: `Your AI visibility score this week: ${newScore}/100`,
