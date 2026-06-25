@@ -18,7 +18,6 @@ const PRICE_IDS = {
   pro_yearly:     process.env.STRIPE_PRO_YEARLY_PRICE_ID,
   agency_monthly: process.env.STRIPE_AGENCY_MONTHLY_PRICE_ID,
   agency_yearly:  process.env.STRIPE_AGENCY_YEARLY_PRICE_ID,
-  lifetime:       process.env.STRIPE_LIFETIME_PRICE_ID || 'price_1TjgumCNXRaRPz1uPqfh3uXF',
 };
 
 const APP_URL = process.env.APP_URL || 'https://www.findmewith.ai';
@@ -600,20 +599,6 @@ app.post('/api/webhook',
         });
         saveSubs();
         console.log(`[webhook] activated: ${email}`);
-        // Also persist to Supabase for cross-process visibility
-        if (supabaseAdmin) {
-          supabaseAdmin.from('pro_upgrades').upsert({
-            email,
-            customer_id: session.customer,
-            subscription_id: session.subscription || null,
-            plan: session.metadata?.plan || 'pro',
-            status: 'active',
-            upgraded_at: new Date().toISOString(),
-          }, { onConflict: 'email' }).then(({ error: sbErr }) => {
-            if (sbErr) console.warn('[webhook] supabase pro_upgrades write failed:', sbErr.message);
-            else console.log(`[webhook] supabase pro_upgrades saved for ${email}`);
-          });
-        }
       }
     }
 
@@ -646,62 +631,6 @@ app.post('/api/webhook',
 
 // ── JSON body parser (after webhook route) ────────────────────────────────────
 app.use(express.json());
-
-// ── GET /api/admin/recent-signups ────────────────────────────────────────────
-// Used by Tasklet trigger to check for new signups every 15 minutes
-app.get('/api/admin/recent-signups', async (req, res) => {
-  const secret = req.query.secret;
-  const adminSecret = process.env.ADMIN_SECRET || 'fmw-admin-2024';
-  if (secret !== adminSecret) return res.status(401).json({ error: 'unauthorized' });
-  const since = req.query.since ? new Date(req.query.since) : new Date(Date.now() - 60 * 60 * 1000);
-  try {
-    const { data, error } = await supabaseAdmin
-      .from('scans')
-      .select('email, url, score, created_at')
-      .gte('created_at', since.toISOString())
-      .order('created_at', { ascending: false });
-    if (error) return res.status(500).json({ error: error.message });
-    res.json(data || []);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ── GET /api/admin/recent-upgrades ───────────────────────────────────────────
-// Used by Tasklet trigger to check for new Pro upgrades every 15 minutes
-app.get('/api/admin/recent-upgrades', (req, res) => {
-  const secret = req.query.secret;
-  const adminSecret = process.env.ADMIN_SECRET || 'fmw-admin-2024';
-  if (secret !== adminSecret) return res.status(401).json({ error: 'unauthorized' });
-  const since = req.query.since ? new Date(req.query.since) : new Date(Date.now() - 60 * 60 * 1000);
-  const recent = [];
-  for (const [email, data] of subscriptions.entries()) {
-    if (data.status === 'active' && data.createdAt && new Date(data.createdAt) > since) {
-      recent.push({ email, plan: data.plan, createdAt: data.createdAt });
-    }
-  }
-  res.json(recent);
-});
-
-// ── GET /api/admin/nurture-log ────────────────────────────────────────────────
-// Shows recent nurture emails sent so Brad can verify the drip is healthy
-app.get('/api/admin/nurture-log', async (req, res) => {
-  const secret = req.query.secret;
-  const adminSecret = process.env.ADMIN_SECRET || 'fmw-admin-2024';
-  if (secret !== adminSecret) return res.status(401).json({ error: 'unauthorized' });
-  if (!supabaseAdmin) return res.status(503).json({ error: 'Supabase not configured' });
-  try {
-    const { data, error } = await supabaseAdmin
-      .from('nurture_log')
-      .select('email, step, url, sent_at')
-      .order('sent_at', { ascending: false })
-      .limit(100);
-    if (error) return res.status(500).json({ error: error.message });
-    res.json(data || []);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
 
 // ── In-memory lead store ──────────────────────────────────────────────────────
 const leads = [];
@@ -1178,21 +1107,18 @@ app.post('/api/create-checkout-session', async (req, res) => {
   const priceId = PRICE_IDS[plan];
   if (!priceId) return res.status(400).json({ error: `Unknown plan: ${plan}` });
   try {
-    const isLifetime = plan === 'lifetime';
     const session = await stripe.checkout.sessions.create({
-      mode: isLifetime ? 'payment' : 'subscription',
+      mode: 'subscription',
       payment_method_types: ['card'],
       line_items: [{ price: priceId, quantity: 1 }],
       // {CHECKOUT_SESSION_ID} is replaced by Stripe automatically
       success_url: `${APP_URL}/?payment=success&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url:  `${APP_URL}/?payment=cancelled`,
       metadata: { plan },
-      ...(isLifetime ? {} : {
-        subscription_data: {
-          trial_period_days: 7,
-          metadata: { plan },
-        },
-      }),
+      subscription_data: {
+        trial_period_days: 7,
+        metadata: { plan },
+      },
       ...(email ? { customer_email: email } : {}),
     });
     res.json({ url: session.url });
@@ -1253,8 +1179,6 @@ app.get('/api/check-subscription', async (req, res) => {
       const customers = await stripe.customers.list({ email, limit: 1 });
       if (customers.data.length > 0) {
         const customerId = customers.data[0].id;
-
-        // Check recurring subscriptions first
         const subs = await stripe.subscriptions.list({ customer: customerId, status: 'active', limit: 1 });
         if (subs.data.length > 0) {
           const activeSub = subs.data[0];
@@ -1263,48 +1187,8 @@ app.get('/api/check-subscription', async (req, res) => {
           saveSubs();
           return res.json({ active: true, plan });
         }
-
-        // Also check one-time payments (Founding Member mode:'payment')
-        const FOUNDING_PRICE_ID = process.env.STRIPE_LIFETIME_PRICE_ID || 'price_1TjgumCNXRaRPz1uPqfh3uXF';
-        const sessions = await stripe.checkout.sessions.list({ customer: customerId, limit: 20 });
-        const foundingSession = sessions.data.find(s =>
-          s.payment_status === 'paid' &&
-          s.mode === 'payment' &&
-          s.line_items === undefined // line_items needs expand; check via metadata or price
-        );
-        // Expand line items to confirm price ID
-        for (const session of sessions.data) {
-          if (session.payment_status !== 'paid' || session.mode !== 'payment') continue;
-          try {
-            const expanded = await stripe.checkout.sessions.retrieve(session.id, { expand: ['line_items'] });
-            const hasFoundingPrice = expanded.line_items?.data?.some(li => li.price?.id === FOUNDING_PRICE_ID);
-            if (hasFoundingPrice) {
-              subscriptions.set(email, { customerId, subscriptionId: null, plan: 'lifetime', status: 'active' });
-              saveSubs();
-              return res.json({ active: true, plan: 'lifetime' });
-            }
-          } catch { /* skip */ }
-        }
       }
     } catch (e) { console.warn('[check-subscription]', e.message); }
-  }
-
-  // Final fallback: check Supabase pro_upgrades (catches webhook-activated users after restart)
-  if (supabaseAdmin) {
-    try {
-      const { data } = await supabaseAdmin
-        .from('pro_upgrades')
-        .select('plan, status')
-        .eq('email', email)
-        .eq('status', 'active')
-        .limit(1)
-        .single();
-      if (data) {
-        subscriptions.set(email, { customerId: null, subscriptionId: null, plan: data.plan || 'pro', status: 'active' });
-        saveSubs();
-        return res.json({ active: true, plan: data.plan || 'pro' });
-      }
-    } catch { /* not found */ }
   }
 
   res.json({ active: false });
@@ -1339,32 +1223,6 @@ app.post('/api/create-portal-session', async (req, res) => {
   } catch (err) {
     console.error('[portal error]', err.message);
     res.status(500).json({ error: err.message });
-  }
-});
-
-// ── GET /api/founding-members-count ──────────────────────────────────────────
-app.get('/api/founding-members-count', async (req, res) => {
-  const FM_SEED = 4; // social proof baseline — real purchases add on top
-  if (!stripe) return res.json({ count: FM_SEED, spotsLeft: 50 - FM_SEED });
-  try {
-    const sessions = await stripe.checkout.sessions.list({
-      limit: 100,
-      status: 'complete',
-    });
-    const lifetimePriceId = PRICE_IDS.lifetime;
-    let count = 0;
-    for (const s of sessions.data) {
-      // Only match by price ID (amount check was incorrectly catching $249/yr Pro annual subs)
-      try {
-        const lineItems = await stripe.checkout.sessions.listLineItems(s.id, { limit: 5 });
-        if (lineItems.data.some(li => li.price && li.price.id === lifetimePriceId)) count++;
-      } catch (_) {}
-    }
-    const total = count + FM_SEED;
-    res.json({ count: total, spotsLeft: Math.max(0, 50 - total) });
-  } catch (err) {
-    console.error('[founding-members-count]', err.message);
-    res.json({ count: FM_SEED, spotsLeft: 50 - FM_SEED });
   }
 });
 
@@ -1537,157 +1395,38 @@ app.get('/api/admin/stats', async (req, res) => {
   }
 });
 
-// ── Team Members ─────────────────────────────────────────────────────────────
-
-// POST /api/team/invite — add a team member
-app.post('/api/team/invite', async (req, res) => {
-  const { ownerEmail, memberEmail, siteUrl } = req.body;
-  if (!ownerEmail || !memberEmail) return res.status(400).json({ error: 'Missing ownerEmail or memberEmail' });
-  if (!supabaseAdmin) return res.status(503).json({ error: 'Database not configured' });
-
-  try {
-    const { data: existing, error: countErr } = await supabaseAdmin
-      .from('team_members')
-      .select('id')
-      .eq('owner_email', ownerEmail.toLowerCase());
-
-    if (countErr) return res.status(500).json({ error: countErr.message });
-
-    const { data: proData } = await supabaseAdmin
-      .from('pro_upgrades')
-      .select('email')
-      .eq('email', ownerEmail.toLowerCase())
-      .limit(1);
-    const isOwnerPro = (proData && proData.length > 0) || ownerEmail.toLowerCase() === 'hello@genierocket.com';
-    const maxMembers = isOwnerPro ? 999 : 2;
-
-    if ((existing || []).length >= maxMembers) {
-      return res.status(403).json({
-        error: isOwnerPro ? 'Member limit reached.' : 'Free accounts can add up to 2 team members. Upgrade to Pro for unlimited.',
-        limitReached: true,
-        isPro: isOwnerPro,
-      });
-    }
-
-    const { error: insertErr } = await supabaseAdmin
-      .from('team_members')
-      .upsert(
-        { owner_email: ownerEmail.toLowerCase(), member_email: memberEmail.toLowerCase(), site_url: siteUrl },
-        { onConflict: 'owner_email,member_email' }
-      );
-
-    if (insertErr) return res.status(500).json({ error: insertErr.message });
-
-    const domain = (siteUrl || ownerEmail).replace(/^https?:\/\//, '').split('/')[0];
-    await sendEmail({
-      to: memberEmail,
-      subject: `You've been added to ${domain} on findmewith.ai`,
-      html: `
-        <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;">
-          <h2 style="color:#1e1b4b;margin:0 0 12px;font-size:22px;">You've been added as a team member</h2>
-          <p style="color:#374151;line-height:1.6;">${ownerEmail} has added you to their <strong>findmewith.ai</strong> account so you can view AI search results for <strong>${domain}</strong>.</p>
-          <a href="https://www.findmewith.ai" style="display:inline-block;margin-top:20px;padding:12px 28px;background:#7c3aed;color:white;text-decoration:none;border-radius:8px;font-weight:700;">View Results</a>
-          <p style="margin-top:24px;color:#6b7280;font-size:13px;">Sign in or create a free account at findmewith.ai using this email address to access the shared dashboard.</p>
-          <p style="color:#9ca3af;font-size:12px;margin-top:16px;">Questions? Email us at hello@findmewith.ai</p>
-        </div>
-      `,
-    });
-
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// GET /api/team/members?ownerEmail=X — list team members
-app.get('/api/team/members', async (req, res) => {
-  const { ownerEmail } = req.query;
-  if (!ownerEmail) return res.status(400).json({ error: 'ownerEmail required' });
-  if (!supabaseAdmin) return res.status(503).json({ error: 'Database not configured' });
-
-  try {
-    const { data, error } = await supabaseAdmin
-      .from('team_members')
-      .select('*')
-      .eq('owner_email', ownerEmail.toLowerCase())
-      .order('created_at', { ascending: false });
-
-    if (error) return res.status(500).json({ error: error.message });
-    res.json({ members: data || [] });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// DELETE /api/team/members/:id — remove a team member
-app.delete('/api/team/members/:id', async (req, res) => {
-  const { id } = req.params;
-  const { ownerEmail } = req.body;
-  if (!supabaseAdmin) return res.status(503).json({ error: 'Database not configured' });
-
-  try {
-    const { error } = await supabaseAdmin
-      .from('team_members')
-      .delete()
-      .eq('id', id)
-      .eq('owner_email', (ownerEmail || '').toLowerCase());
-
-    if (error) return res.status(500).json({ error: error.message });
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// GET /api/team/check-member?memberEmail=X — check if user is a team member
-app.get('/api/team/check-member', async (req, res) => {
-  const { memberEmail } = req.query;
-  if (!memberEmail) return res.status(400).json({ error: 'memberEmail required' });
-  if (!supabaseAdmin) return res.status(503).json({ error: 'Database not configured' });
-
-  try {
-    const { data, error } = await supabaseAdmin
-      .from('team_members')
-      .select('*')
-      .eq('member_email', memberEmail.toLowerCase())
-      .limit(1);
-
-    if (error) return res.status(500).json({ error: error.message });
-    if (!data || data.length === 0) return res.json({ isMember: false });
-
-    const membership = data[0];
-
-    const { data: scans } = await supabaseAdmin
-      .from('scans')
-      .select('*')
-      .eq('email', membership.owner_email)
-      .order('created_at', { ascending: false })
-      .limit(1);
-
-    const { data: proData } = await supabaseAdmin
-      .from('pro_upgrades')
-      .select('email')
-      .eq('email', membership.owner_email)
-      .limit(1);
-    const ownerIsPro = (proData && proData.length > 0) || membership.owner_email === 'hello@genierocket.com';
-
-    res.json({
-      isMember: true,
-      ownerEmail: membership.owner_email,
-      siteUrl: membership.site_url || scans?.[0]?.url,
-      ownerIsPro,
-      scan: scans?.[0] || null,
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
 // ── SPA fallback ──────────────────────────────────────────────────────────────
 app.get('*', (_req, res) => {
   const index = join(__dirname, '../dist/index.html');
   if (fs.existsSync(index)) return res.sendFile(index);
   res.send('findmewith.ai API server is running ✓');
+});
+
+// ── POST /api/admin/bulk-send ─────────────────────────────────────────────────
+app.post('/api/admin/bulk-send', async (req, res) => {
+  const { secret, recipients, subject, html } = req.body;
+  if (secret !== 'fmw-admin-2024') return res.status(403).json({ error: 'Forbidden' });
+  if (!recipients || !subject || !html) return res.status(400).json({ error: 'Missing fields' });
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return res.status(500).json({ error: 'RESEND_API_KEY not set' });
+
+  const results = [];
+  for (const to of recipients) {
+    try {
+      const r = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ from: 'Brad at findmewith.ai <hello@findmewith.ai>', to, subject, html }),
+      });
+      const d = await r.json();
+      results.push({ to, ok: r.ok, id: d.id, error: d.message });
+      console.log(`[bulk-send] ${to} → ${r.ok ? 'ok' : 'error: ' + d.message}`);
+      await new Promise(resolve => setTimeout(resolve, 300));
+    } catch (e) {
+      results.push({ to, ok: false, error: e.message });
+    }
+  }
+  res.json({ sent: results.filter(r => r.ok).length, failed: results.filter(r => !r.ok).length, results });
 });
 
 const PORT = process.env.PORT || 3001;
